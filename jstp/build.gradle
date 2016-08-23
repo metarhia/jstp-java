@@ -1,0 +1,100 @@
+apply plugin: 'java'
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+
+targetCompatibility = '1.7'
+sourceCompatibility = '1.7'
+
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+//install {
+//    repositories.mavenInstaller {
+//        pom.project {
+//            name 'JSTP'
+//            description 'Java JSTP parser'
+//            url 'https://github.com/JSTPMobile/Android'
+//
+//            packaging 'jar'
+//            groupId 'com.metarhia.jstp'
+//            artifactId 'jstp'
+//            version '0.1'
+//
+//            licenses {
+//                license {
+//                    name 'MIT'
+//                    url 'https://opensource.org/licenses/MIT'
+//                    distribution 'repo'
+//                }
+//            }
+//
+//            scm {
+//                connection 'https://github.com/googlesamples/easygoogle'
+//                url 'https://github.com/JSTPMobile/Android'
+//            }
+//
+//            developers {
+//                developer {
+//                    name 'lundibundi'
+//                }
+//                developer {
+//                    name 'lidaamber'
+//                }
+//            }
+//        }
+//    }
+//}
+
+def jstpVersion = '0.1.4'
+def packetName = 'jstp'
+
+task javaJar(type: Task) {
+    files("../out/artifacts/jstp/jstp.jar")
+}
+
+task sourceJar(type: Task) {
+    files("../out/artifacts/jstp_sources_jar/jstp-sources.jar")
+//    classifier 'sources'
+}
+
+//artifacts {
+//    archives sourcesJar, javadocJar
+//}
+
+publishing {
+    publications {
+        DefaultPublication(MavenPublication) {
+            artifact file("../out/artifacts/jstp/jstp.jar")
+            artifact source: file("../out/artifacts/jstp_sources_jar/jstp-sources.jar"), classifier: 'sources'
+            groupId 'com.metarhia.jstp'
+            artifactId packetName
+            version jstpVersion
+        }
+    }
+}
+
+bintray {
+    user = properties.getProperty('bintray.user')
+    key = properties.getProperty('bintray.apikey')
+
+    publications = ['DefaultPublication']
+
+    pkg {
+        repo = 'maven'
+        name = packetName
+
+        version {
+            name = jstpVersion
+            desc = 'Java JSTP parser'
+            released = new Date()
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: ':lib')
+    testCompile 'junit:junit:4.12'
+
+    compile project(':jstp-core')
+}

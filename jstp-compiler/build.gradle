@@ -1,0 +1,101 @@
+apply plugin: 'java'
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+
+targetCompatibility = '1.7'
+sourceCompatibility = '1.7'
+
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+//install {
+//    repositories.mavenInstaller {
+//        pom.project {
+//            name 'jstp-compiler'
+//            description 'JSTP compiler to generate package handlers for you'
+//            url 'https://github.com/JSTPMobile/Android'
+//
+//            packaging 'jar'
+//            groupId 'com.metarhia.jstp'
+//            artifactId 'jstp-compiler'
+//            version '0.1'
+//
+//            licenses {
+//                license {
+//                    name 'MIT'
+//                    url 'https://opensource.org/licenses/MIT'
+//                    distribution 'repo'
+//                }
+//            }
+//
+//            scm {
+//                connection 'https://github.com/googlesamples/easygoogle'
+//                url 'https://github.com/JSTPMobile/Android'
+//            }
+//
+//            developers {
+//                developer {
+//                    name 'lundibundi'
+//                }
+//                developer {
+//                    name 'lidaamber'
+//                }
+//            }
+//        }
+//    }
+//}
+
+def compilerVersion = '0.1.4'
+def packetName = 'jstp-compiler'
+
+//task javaJar(type: Jar) {
+//    files("../out/artifacts/jstp_compiler_jar/jstp-compiler.jar")
+//}
+//
+//task sourceJar(type: Jar) {
+//    files("../out/artifacts/jstp_compiler_sources_jar/jstp-compiler-sources.jar")
+//    classifier 'sources'
+//}
+
+publishing {
+    publications {
+        DefaultPublication(MavenPublication) {
+//            artifact jstp-compiler
+//            artifact jstp-compiler-sources
+            artifact file("../out/artifacts/jstp_compiler_jar/jstp-compiler.jar")
+            artifact source: file("../out/artifacts/jstp_compiler_sources_jar/jstp-compiler-sources.jar"), classifier: 'sources'
+            groupId 'com.metarhia.jstp'
+            artifactId packetName
+            version compilerVersion
+        }
+    }
+}
+
+bintray {
+    user = properties.getProperty('bintray.user')
+    key = properties.getProperty('bintray.apikey')
+
+    publications = ['DefaultPublication']
+
+    pkg {
+        repo = 'maven'
+        name = packetName
+
+        version {
+            name = compilerVersion
+            desc = 'JSTP compiler to generate package handlers for you'
+            released  = new Date()
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+
+    compile 'com.google.auto.service:auto-service:1.0-rc2'
+
+    compile project(':jstp-core')
+
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}

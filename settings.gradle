@@ -1,0 +1,4 @@
+include 'jstp'
+include 'jstp-core'
+include 'jstp-compiler'
+

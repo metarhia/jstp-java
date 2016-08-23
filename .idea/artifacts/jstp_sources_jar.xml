@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="jstp-sources:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/jstp_sources_jar</output-path>
+    <root id="archive" name="jstp-sources.jar">
+      <element id="dir-copy" path="$PROJECT_DIR$/jstp/src/main/java" />
+      <element id="dir-copy" path="$PROJECT_DIR$/jstp-core/src/main/java" />
+    </root>
+  </artifact>
+</component>
