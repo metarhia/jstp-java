@@ -9,60 +9,12 @@ sourceCompatibility = '1.7'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
-//install {
-//    repositories.mavenInstaller {
-//        pom.project {
-//            name 'jstp-compiler'
-//            description 'JSTP compiler to generate package handlers for you'
-//            url 'https://github.com/JSTPMobile/Android'
-//
-//            packaging 'jar'
-//            groupId 'com.metarhia.jstp'
-//            artifactId 'jstp-compiler'
-//            version '0.1'
-//
-//            licenses {
-//                license {
-//                    name 'MIT'
-//                    url 'https://opensource.org/licenses/MIT'
-//                    distribution 'repo'
-//                }
-//            }
-//
-//            scm {
-//                connection 'https://github.com/googlesamples/easygoogle'
-//                url 'https://github.com/JSTPMobile/Android'
-//            }
-//
-//            developers {
-//                developer {
-//                    name 'lundibundi'
-//                }
-//                developer {
-//                    name 'lidaamber'
-//                }
-//            }
-//        }
-//    }
-//}
-
-def compilerVersion = '0.1.4'
+def compilerVersion = '0.2'
 def packetName = 'jstp-compiler'
-
-//task javaJar(type: Jar) {
-//    files("../out/artifacts/jstp_compiler_jar/jstp-compiler.jar")
-//}
-//
-//task sourceJar(type: Jar) {
-//    files("../out/artifacts/jstp_compiler_sources_jar/jstp-compiler-sources.jar")
-//    classifier 'sources'
-//}
 
 publishing {
     publications {
         DefaultPublication(MavenPublication) {
-//            artifact jstp-compiler
-//            artifact jstp-compiler-sources
             artifact file("../out/artifacts/jstp_compiler_jar/jstp-compiler.jar")
             artifact source: file("../out/artifacts/jstp_compiler_sources_jar/jstp-compiler-sources.jar"), classifier: 'sources'
             groupId 'com.metarhia.jstp'

@@ -9,58 +9,8 @@ sourceCompatibility = '1.7'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
-//install {
-//    repositories.mavenInstaller {
-//        pom.project {
-//            name 'JSTP'
-//            description 'Java JSTP parser'
-//            url 'https://github.com/JSTPMobile/Android'
-//
-//            packaging 'jar'
-//            groupId 'com.metarhia.jstp'
-//            artifactId 'jstp'
-//            version '0.1'
-//
-//            licenses {
-//                license {
-//                    name 'MIT'
-//                    url 'https://opensource.org/licenses/MIT'
-//                    distribution 'repo'
-//                }
-//            }
-//
-//            scm {
-//                connection 'https://github.com/googlesamples/easygoogle'
-//                url 'https://github.com/JSTPMobile/Android'
-//            }
-//
-//            developers {
-//                developer {
-//                    name 'lundibundi'
-//                }
-//                developer {
-//                    name 'lidaamber'
-//                }
-//            }
-//        }
-//    }
-//}
-
-def jstpVersion = '0.1.4'
+def jstpVersion = '0.2'
 def packetName = 'jstp'
-
-task javaJar(type: Task) {
-    files("../out/artifacts/jstp/jstp.jar")
-}
-
-task sourceJar(type: Task) {
-    files("../out/artifacts/jstp_sources_jar/jstp-sources.jar")
-//    classifier 'sources'
-}
-
-//artifacts {
-//    archives sourcesJar, javadocJar
-//}
 
 publishing {
     publications {

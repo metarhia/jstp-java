@@ -17,7 +17,9 @@ import java.util.Map;
 /**
  * Created by Lida on 27.06.16.
  */
-public class JSTPConnection extends TCPClient.TCPMessageReceiver {
+public class JSTPConnection implements
+        TCPClient.TCPMessageReceiver,
+        TCPClient.OnErrorListener {
 
     // Package types
     private static final String HANDSHAKE = "handshake";
@@ -75,17 +77,20 @@ public class JSTPConnection extends TCPClient.TCPMessageReceiver {
      */
     private JSArray clientMethodNames;
 
+    private OnErrorListener errorListener;
+
     public JSTPConnection(String host, int port) {
-        this.tcpClient = new TCPClient(host, port);
+        tcpClient = new TCPClient(host, port);
+        tcpClient.setErrorListener(this);
+        tcpClient.setMessageReceiver(this);
         handlers = new HashMap<>();
         eventHandlers = new HashMap<>();
         callHandlers = new HashMap<>();
         messageBuilder = new StringBuilder();
-        tcpClient.setMessageReceiver(this);
         clientMethodNames = new JSArray();
     }
 
-    public void handshake(String applicationName, ManualHandler... handler) {
+    public void handshake(String applicationName, boolean useSSL, ManualHandler... handler) {
         if (handler.length != 0) {
             handlers.put(packageCounter, handler[0]);
         }
@@ -93,7 +98,7 @@ public class JSTPConnection extends TCPClient.TCPMessageReceiver {
         JSTPMessage hm = new JSTPMessage(packageCounter, HANDSHAKE);
         hm.addProtocolArg(applicationName);
 
-        tcpClient.openConnection(hm.getMessage(), TERMINATOR);
+        tcpClient.openConnection(hm.getMessage() + TERMINATOR, useSSL);
         packageCounter++;
     }
 
@@ -152,7 +157,15 @@ public class JSTPConnection extends TCPClient.TCPMessageReceiver {
     }
 
     @Override
-    protected void onMessageReceived(String received) {
+    public void onNetworkError(String message, Exception e) {
+        if (errorListener != null) {
+            JSTPConnectionException connectionException = new JSTPConnectionException(message, e);
+            errorListener.onNetworkError(connectionException);
+        }
+    }
+
+    @Override
+    public void onMessageReceived(String received) {
         messageBuilder.append(received);
 
         int startMessageIndex = 0;
@@ -252,7 +265,7 @@ public class JSTPConnection extends TCPClient.TCPMessageReceiver {
     }
 
     public void stop() {
-        tcpClient.stop();
+        tcpClient.pause();
     }
 
     public void closeConnection() {
@@ -265,49 +278,11 @@ public class JSTPConnection extends TCPClient.TCPMessageReceiver {
                 .getValue();
     }
 
-//    private static class Handler {
-//        public Class clazz;
-//        public Object receiver;
-//        public List<String> fields;
-//
-//        public Handler(Class clazz, Object receiver) {
-//            this(clazz, receiver, null);
-//        }
-//
-//        public Handler(Class clazz, Object receiver, List<String> fields) {
-//            this.receiver = receiver;
-//            this.clazz = clazz;
-//            this.fields = fields;
-//        }
-//
-//        public void invoke(JSValue message) {
-//            List<JSValue> fieldArgs = new LinkedList<>();
-//
-//            JSObject msg = (JSObject) message;
-//
-//            if (fields == null) {
-//                Iterator<Map.Entry<String, JSValue>> iterator = msg.entrySet().iterator();
-//                if (iterator.hasNext()) {
-//                    JSValue args = ((JSArray) iterator.next().getValue()).get(1);
-//                    fieldArgs.add(args);
-//                }
-//            } else {
-//                for (String f : fields) {
-//                    JSValue args = msg.get(f);
-//                    fieldArgs.add(args);
-//                }
-//            }
-//
-//            for (Method m : clazz.getDeclaredMethods()) {
-//                Object[] args = matchArgumentsToTypes(fieldArgs, m.getParameterTypes());
-//                try {
-//                    m.invoke(receiver, args);
-//                } catch (IllegalAccessException e) {
-//                    e.printStackTrace();
-//                } catch (InvocationTargetException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }
-//
+    public void setErrorListener(OnErrorListener errorListener) {
+        this.errorListener = errorListener;
+    }
+
+    public interface OnErrorListener {
+        void onNetworkError(JSTPConnectionException e);
+    }
 }
