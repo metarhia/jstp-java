@@ -15,14 +15,31 @@ public class JSObject implements JSValue {
         orderedKeys = new ArrayList<>();
     }
 
-    public void put(String key, JSValue value) {
-        values.put(key, value);
-        orderedKeys.add(key);
+    public JSObject(Map<String, JSValue> values) {
+        this.values = new LinkedHashMap<>(values);
+        orderedKeys = new ArrayList<>(values.keySet());
     }
 
-    public void put(Entry entry) {
+    public JSObject put(String key, JSValue value) {
+        values.put(key, value);
+        orderedKeys.add(key);
+        return this;
+    }
+
+    public JSObject put(Entry entry) {
         values.put(entry.key, entry.value);
         orderedKeys.add(entry.key);
+        return this;
+    }
+
+    /**
+     * Parses {@param value} with {@link JSTypesUtil#javaToJS(Object)},
+     * see supported types in the link
+     */
+    public JSObject put(String key, Object value) {
+        values.put(key, JSTypesUtil.javaToJS(value));
+        orderedKeys.add(key);
+        return this;
     }
 
     public JSValue get(String key) {
@@ -105,6 +122,20 @@ public class JSObject implements JSValue {
         public Entry(String key, JSValue value) {
             this.key = key;
             this.value = value;
+        }
+
+        /**
+         * Parses {@param value} with {@link JSTypesUtil#javaToJS(Object)},
+         * see supported types in the link
+         */
+        public Entry(String key, Object value) {
+            this.key = key;
+            this.value = JSTypesUtil.javaToJS(value);
+        }
+
+        @Override
+        public String toString() {
+            return key + " : " + value.toString();
         }
     }
 }

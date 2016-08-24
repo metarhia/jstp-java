@@ -21,12 +21,3 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
-
-task deploy() {
-    println("Starting deploy")
-}
-
-deploy.dependsOn {
-    tasks.findAll { task -> task.name.startsWith('deployJSTP') }
-}
-

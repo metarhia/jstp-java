@@ -16,6 +16,43 @@ public class JSArray implements JSValue {
         values = new ArrayList<>();
     }
 
+    /**
+     * Parses {@param values} with {@link JSTypesUtil#javaToJS(Object)},
+     * see supported types in the link
+     */
+    public JSArray(Collection<Object> values) {
+        this.values = new ArrayList<>(values.size());
+        for (Object value : values) {
+            JSValue jsValue = JSTypesUtil.javaToJS(value);
+            this.values.add(jsValue);
+        }
+    }
+
+    public JSArray(Object[] values) {
+        this.values = new ArrayList<>(values.length);
+        for (Object value : values) {
+            JSValue jsValue = JSTypesUtil.javaToJS(value);
+            this.values.add(jsValue);
+        }
+    }
+
+    public boolean contains(JSValue value) {
+        return values.contains(value);
+    }
+
+    /**
+     * Parses {@param value} with {@link JSTypesUtil#javaToJS(Object)},
+     * see supported types in the link
+     */
+    public boolean contains(Object value) {
+        JSValue jsValue = JSTypesUtil.javaToJS(value);
+        return values.contains(jsValue);
+    }
+
+    public void clear() {
+        values.clear();
+    }
+
     public void add(JSValue value) {
         values.add(value);
     }
@@ -24,8 +61,8 @@ public class JSArray implements JSValue {
         values.add(new JSString(value));
     }
 
-    public void add(double number) {
-        values.add(new JSNumber(number));
+    public void add(double value) {
+        values.add(new JSNumber(value));
     }
 
     public void add(boolean value) {

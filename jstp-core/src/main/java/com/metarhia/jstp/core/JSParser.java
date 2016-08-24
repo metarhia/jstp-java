@@ -14,6 +14,10 @@ public class JSParser implements Serializable {
 
     private Tokenizer tokenizer;
 
+    public JSParser() {
+        tokenizer = new Tokenizer("");
+    }
+
     public JSParser(String input) {
         tokenizer = new Tokenizer(input);
     }
