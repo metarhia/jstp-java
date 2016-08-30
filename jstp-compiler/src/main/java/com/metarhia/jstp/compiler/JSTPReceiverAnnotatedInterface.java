@@ -234,7 +234,7 @@ public class JSTPReceiverAnnotatedInterface {
         TypeMirror payloadType = null;
         if (method.getAnnotation(Typed.class) != null) {
             try {
-                method.getAnnotation(Typed.class).payloadType();
+                method.getAnnotation(Typed.class).value();
             } catch (MirroredTypeException e) {
                 // intended ...
                 payloadType = e.getTypeMirror();
@@ -326,13 +326,13 @@ public class JSTPReceiverAnnotatedInterface {
     private static CodeBlock composeGetterFromAnnotations(CodeBlock name, Element element) throws PropertyFormatException {
         if (element.getAnnotation(CustomNamed.class) != null) {
             CustomNamed annotation = element.getAnnotation(CustomNamed.class);
-            return PropertyGetterUtils.composeCustomGetter(name, annotation.hierarchy());
+            return PropertyGetterUtils.composeCustomGetter(name, annotation.value());
         } else if (element.getAnnotation(Named.class) != null) {
             Named annotation = element.getAnnotation(Named.class);
-            return PropertyGetterUtils.composeObjectGetter(name, annotation.hierarchy());
+            return PropertyGetterUtils.composeObjectGetter(name, annotation.value());
         } else if (element.getAnnotation(Indexed.class) != null) {
             Indexed annotation = element.getAnnotation(Indexed.class);
-            return PropertyGetterUtils.composeArrayGetter(name, annotation.hierarchy());
+            return PropertyGetterUtils.composeArrayGetter(name, annotation.value());
         }
         return null;
     }

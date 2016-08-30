@@ -10,5 +10,5 @@ import java.lang.annotation.Target;
  */
 @Target({ElementType.METHOD})
 public @interface Typed {
-    Class payloadType() default JSValue.class;
+    Class value() default JSValue.class;
 }
