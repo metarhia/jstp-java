@@ -217,6 +217,7 @@ public class JSTPConnection implements
                         break;
                 }
             } catch (JSParsingException e) {
+                errorListener.onParsingError(e);
                 e.printStackTrace();
             } finally {
                 startMessageIndex = endMessageIndex + TERMINATOR.length();
@@ -284,5 +285,6 @@ public class JSTPConnection implements
 
     public interface OnErrorListener {
         void onNetworkError(JSTPConnectionException e);
+        void onParsingError(JSParsingException e);
     }
 }
