@@ -23,6 +23,11 @@ public class JSUndefined implements JSValue {
     @Override
     public boolean equals(Object obj) {
         return obj == this
+            || isUndefined(obj);
+    }
+
+    public static boolean isUndefined(Object obj) {
+        return obj == instance
                 || obj instanceof JSUndefined;
     }
 

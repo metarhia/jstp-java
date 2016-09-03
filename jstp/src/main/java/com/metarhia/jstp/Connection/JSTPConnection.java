@@ -2,24 +2,20 @@ package com.metarhia.jstp.Connection;
 
 import com.metarhia.jstp.Handlers.StateHandler;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
+import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSParsingException;
-import com.metarhia.jstp.core.JSTypes.JSNumber;
-import com.metarhia.jstp.JSTP;
-import com.metarhia.jstp.core.JSTypes.JSArray;
-import com.metarhia.jstp.core.JSTypes.JSObject;
-import com.metarhia.jstp.core.JSTypes.JSValue;
+import com.metarhia.jstp.core.JSTypes.*;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by Lida on 27.06.16.
  */
 public class JSTPConnection implements
-        TCPClient.TCPMessageReceiver,
-        TCPClient.OnErrorListener {
+    TCPClient.TCPMessageReceiver,
+    TCPClient.OnErrorListener {
 
     // Package types
     private static final String HANDSHAKE = "handshake";
@@ -33,7 +29,7 @@ public class JSTPConnection implements
     /**
      * Package terminator
      */
-    private static final String TERMINATOR = ",{\f},";
+    public static final String TERMINATOR = ",{\f},";
     public static final String STREAM_DATA = "data";
 
     /**
@@ -175,43 +171,45 @@ public class JSTPConnection implements
             int receiverIndex;
 
             try {
-                JSObject messageObject = JSTP.parse(msg);
+                JSValue parsed = new JSParser(msg).parse();
+                if (!(parsed instanceof JSObject)) continue;
+                JSObject messageObject = (JSObject) parsed;
+
                 List<String> keys = messageObject.getOrderedKeys();
                 switch (keys.get(0)) {
                     case CALLBACK:
                     case HANDSHAKE:
                     case STREAM:
-                        receiverIndex = getReceiverIndex(messageObject, keys.get(0));
+                        receiverIndex = getPacketIndex(messageObject, keys.get(0));
                         ManualHandler responseHandler = handlers.get(receiverIndex);
                         if (responseHandler != null) {
                             responseHandler.invoke(messageObject);
                         }
                         break;
                     case CALL:
-                        for (Map.Entry<String, ManualHandler> me : callHandlers.entrySet()) {
-                            if (messageObject.containsKey(me.getKey())) {
-                                me.getValue().invoke(messageObject);
-                                packageCounter++;
-                                break;
-                            }
+                        String methodName = keys.get(1);
+                        ManualHandler handler = callHandlers.get(methodName);
+                        if (handler != null) {
+                            handler.invoke(messageObject);
                         }
+                        packageCounter++;
                         break;
                     case EVENT:
-                        for (String interfaceName : eventHandlers.keySet()) {
-                            if (messageObject.containsKey(interfaceName)) {
-                                for (ManualHandler eh : eventHandlers.get(interfaceName)) {
-                                    eh.invoke(messageObject);
-                                }
-                                packageCounter++;
-                                break;
+                        String interfaceName = getInterfaceName(messageObject);
+                        final List<ManualHandler> handlers = eventHandlers.get(interfaceName);
+                        if (handlers != null) {
+                            for (ManualHandler eh : handlers) {
+                                eh.invoke(messageObject);
                             }
                         }
+                        packageCounter++;
                         break;
                     case STATE:
                         stateHandler.onState(messageObject);
                         break;
                     case INSPECT:
                         handleInspect();
+                        packageCounter++;
                         break;
                     default:
                         break;
@@ -228,7 +226,6 @@ public class JSTPConnection implements
 
     private void handleInspect() {
         callback(JSCallback.OK, clientMethodNames);
-        packageCounter++;
     }
 
     public int openStream(JSValue data) {
@@ -254,9 +251,14 @@ public class JSTPConnection implements
     public void addEventHandler(String eventInterfaceName, ManualHandler handler) {
         List<ManualHandler> ehs = eventHandlers.get(eventInterfaceName);
         if (ehs == null) {
-            ehs = eventHandlers.put(eventInterfaceName, new LinkedList<ManualHandler>());
+            eventHandlers.put(eventInterfaceName, new LinkedList<ManualHandler>());
+            ehs = eventHandlers.get(eventInterfaceName);
         }
         ehs.add(handler);
+    }
+
+    public void addHandler(int packetIndex, ManualHandler manualHandler) {
+        handlers.put(packetIndex, manualHandler);
     }
 
     public void removeEventHandler(String eventInterfaceName, ManualHandler handler) {
@@ -272,7 +274,13 @@ public class JSTPConnection implements
         tcpClient.close();
     }
 
-    private int getReceiverIndex(JSObject messageObject, String packageValue) {
+    private String getInterfaceName(JSObject messageObject) {
+        return (String) ((JSArray) messageObject.get(EVENT))
+            .get(1)
+            .getGeneralizedValue();
+    }
+
+    private int getPacketIndex(JSObject messageObject, String packageValue) {
         return (int) ((JSNumber) ((JSArray) messageObject.get(packageValue))
                 .get(0))
                 .getValue();

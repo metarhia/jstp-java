@@ -22,11 +22,11 @@ public class JSParser implements Serializable {
         tokenizer = new Tokenizer(input);
     }
 
-    public JSValue parseDeduce() throws JSParsingException {
-        return parseDeduce(true);
+    public JSValue parse() throws JSParsingException {
+        return parse(true);
     }
 
-    public JSValue parseDeduce(boolean skip) throws JSParsingException {
+    public JSValue parse(boolean skip) throws JSParsingException {
         if (skip) tokenizer.next();
 
         switch (tokenizer.getLastToken()) {
@@ -55,7 +55,7 @@ public class JSParser implements Serializable {
         JSArray jsArray = new JSArray();
         while (tokenizer.getLastToken() != Token.SQ_CLOSE
                 && tokenizer.next() != Token.SQ_CLOSE) {
-            jsArray.add(parseDeduce(false));
+            jsArray.add(parse(false));
             // skip comma
             if (tokenizer.next() != Token.COMMA && tokenizer.getLastToken() != Token.SQ_CLOSE) {
                 throw new JSParsingException("Error: expected ',' as separator of array elements");
@@ -88,7 +88,7 @@ public class JSParser implements Serializable {
             throw new JSParsingException("Error: ':' as separator of Key and Value");
         }
 
-        JSValue value = parseDeduce(true);
+        JSValue value = parse(true);
 
         return new JSObject.Entry(key, value);
     }

@@ -8,4 +8,6 @@ import java.io.Serializable;
  */
 public interface JSValue extends Serializable {
     Object getGeneralizedValue();
+
+    String toString();
 }
