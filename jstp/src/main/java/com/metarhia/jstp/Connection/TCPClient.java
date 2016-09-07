@@ -21,6 +21,7 @@ public class TCPClient {
 
     private String host;
     private int port;
+    private boolean sslEnabled;
 
     private boolean running;
     private boolean closing;
@@ -39,17 +40,22 @@ public class TCPClient {
     private OnErrorListener errorListener;
 
     public TCPClient(String host, int port) {
+       this(host, port, false);
+    }
+
+    public TCPClient(String host, int port, boolean sslEnabled) {
         this.host = host;
         this.port = port;
+        this.sslEnabled = sslEnabled;
         messageQueue = new ConcurrentLinkedQueue<>();
     }
 
-    public void openConnection(final String handshakeMessage, final boolean useSSL) {
+    public void openConnection(final String handshakeMessage) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (initConnection(useSSL)) {
+                    if (initConnection(sslEnabled)) {
                         startReceiverThread();
                         startSenderThread();
 
@@ -139,7 +145,7 @@ public class TCPClient {
 
         if (socket.isConnected()) {
             // TODO use it when TLS will be deployed to server
-//            if (useSSL) initSSL();
+//            if (sslEnabled) initSSL();
 
             running = true;
             out = new OutputStreamWriter(socket.getOutputStream());
@@ -216,6 +222,30 @@ public class TCPClient {
         } catch (IOException e) {
             if (errorListener != null) errorListener.onNetworkError("Cannot close connection", e);
         }
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public boolean isSSLEnabled() {
+        return sslEnabled;
+    }
+
+    public void setSSLEnabled(boolean sslEnabled) {
+        this.sslEnabled = sslEnabled;
     }
 
     public void setMessageReceiver(TCPMessageReceiver receiver) {

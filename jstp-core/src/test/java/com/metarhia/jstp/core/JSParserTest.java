@@ -73,7 +73,7 @@ public class JSParserTest {
     }
 
     @Test
-    public void parseDeduce() throws Exception {
+    public void parse() throws Exception {
         String input = "true false 10 63.52 undefined null";
         JSParser parser = new JSParser(input);
         try {

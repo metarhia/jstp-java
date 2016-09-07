@@ -23,7 +23,7 @@ public class JSTPConnectionTest {
 
     @After
     public void tearDown() {
-        mConnection.stop();
+        mConnection.close();
         mConnection = null;
     }
 
@@ -47,7 +47,6 @@ public class JSTPConnectionTest {
     @Test
     public void onMessageReceivedEvent() throws Exception {
         String packet = "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
-
 
         final Boolean[] success = {false};
         mConnection.addEventHandler("auth", new ManualHandler() {
@@ -78,6 +77,32 @@ public class JSTPConnectionTest {
         mConnection.onMessageReceived(packet);
 
         assertTrue(success[0]);
+    }
+
+    @Test
+    public void onMessageReceivedMultiple() throws Exception {
+        String packet = "{error:}" + JSTPConnection.TERMINATOR
+            + "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
+            + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
+
+        final Boolean[] success = {false, false};
+        mConnection.addEventHandler("auth", new ManualHandler() {
+            @Override
+            public void invoke(JSValue packet) {
+                success[0] = true;
+            }
+        });
+
+        mConnection.addHandler(17, new ManualHandler() {
+            @Override
+            public void invoke(JSValue packet) {
+                success[1] = true;
+            }
+        });
+
+        mConnection.onMessageReceived(packet);
+
+        assertTrue(success[0] && success[1]);
     }
 
     @Test

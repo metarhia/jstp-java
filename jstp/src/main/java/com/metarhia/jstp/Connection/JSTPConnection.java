@@ -29,7 +29,8 @@ public class JSTPConnection implements
     /**
      * Package terminator
      */
-    public static final String TERMINATOR = ",{\f},";
+    public static final String TERMINATOR = "\0";
+
     public static final String STREAM_DATA = "data";
 
     /**
@@ -64,7 +65,8 @@ public class JSTPConnection implements
     private StateHandler stateHandler;
 
     /**
-     * Builder used to make up messages while terminator isn't present in incoming segment
+     * Container used to store packet data until it can be parsed with {@link JSParser}
+     * (until {@link #TERMINATOR} is not present)
      */
     private StringBuilder messageBuilder;
 
@@ -73,10 +75,25 @@ public class JSTPConnection implements
      */
     private JSArray clientMethodNames;
 
+    /**
+     * Listener that is used to report errors
+     * (note that network errors may come from different thread)
+     */
     private OnErrorListener errorListener;
 
     public JSTPConnection(String host, int port) {
-        tcpClient = new TCPClient(host, port);
+        this(host, port, false);
+    }
+
+    /**
+     * Creates new JSTP connection
+     *
+     * @param host       of the server
+     * @param port       of the server
+     * @param sslEnabled determines whether connection will use SSL or not (see {@link #setSSLEnabled})
+     */
+    public JSTPConnection(String host, int port, boolean sslEnabled) {
+        tcpClient = new TCPClient(host, port, sslEnabled);
         tcpClient.setErrorListener(this);
         tcpClient.setMessageReceiver(this);
         handlers = new HashMap<>();
@@ -86,7 +103,15 @@ public class JSTPConnection implements
         clientMethodNames = new JSArray();
     }
 
-    public void handshake(String applicationName, boolean useSSL, ManualHandler... handler) {
+    /**
+     * Opens connection to the specified in constructor (host, port) (see {@link TCPClient})
+     * And sends handshake message through it
+     *
+     * @param applicationName name used during handshake
+     * @param handler         optional handler that will be called when response handshake message comes from the
+     *                        server
+     */
+    public void handshake(String applicationName, ManualHandler... handler) {
         if (handler.length != 0) {
             handlers.put(packageCounter, handler[0]);
         }
@@ -94,7 +119,7 @@ public class JSTPConnection implements
         JSTPMessage hm = new JSTPMessage(packageCounter, HANDSHAKE);
         hm.addProtocolArg(applicationName);
 
-        tcpClient.openConnection(hm.getMessage() + TERMINATOR, useSSL);
+        tcpClient.openConnection(hm.getMessage() + TERMINATOR);
         packageCounter++;
     }
 
@@ -215,7 +240,7 @@ public class JSTPConnection implements
                         break;
                 }
             } catch (JSParsingException e) {
-                errorListener.onParsingError(e);
+                if (errorListener != null) errorListener.onParsingError(e);
             } finally {
                 startMessageIndex = endMessageIndex + TERMINATOR.length();
                 endMessageIndex = messageBuilder.indexOf(TERMINATOR, startMessageIndex);
@@ -266,8 +291,24 @@ public class JSTPConnection implements
         ehs.remove(handler);
     }
 
-    public void stop() {
+    public void close() {
+        tcpClient.close();
+    }
+
+    public void pause() {
         tcpClient.pause();
+    }
+
+    public void pause(boolean clear) {
+        tcpClient.pause(clear);
+    }
+
+    public void resume() {
+        tcpClient.resume();
+    }
+
+    public void resume(boolean clear) {
+        tcpClient.resume(clear);
     }
 
     public void closeConnection() {
@@ -282,8 +323,68 @@ public class JSTPConnection implements
 
     private int getPacketIndex(JSObject messageObject, String packageValue) {
         return (int) ((JSNumber) ((JSArray) messageObject.get(packageValue))
-                .get(0))
-                .getValue();
+            .get(0))
+            .getValue();
+    }
+
+    /**
+     * <p>Determines whether connection will use SSL or not</p>
+     *
+     * <p>Must be set before calling {@link #handshake(String, ManualHandler...)}
+     * as it will open the connection</p>
+     *
+     * <p>To apply the changed value (after handshake has been done) tcp connection must be
+     * restarted: call {@link #close()} and then {@link #handshake(String, ManualHandler...)}
+     * again to create connection with new settings</p>
+     *
+     * @param sslEnabled If true then connection will be opened with ssl enabled else ssl will not be used
+     */
+    public void setSSLEnabled(boolean sslEnabled) {
+        tcpClient.setSSLEnabled(sslEnabled);
+    }
+
+    public boolean isSSLEnabled() {
+        return tcpClient.isSSLEnabled();
+    }
+
+    public String getHost() {
+        return tcpClient.getHost();
+    }
+
+    /**
+     * <p>Set address of the server</p>
+     *
+     * <p>Must be set before calling {@link #handshake(String, ManualHandler...)}
+     * as it will open the connection</p>
+     *
+     * <p>To apply the changed value (after handshake has been done) tcp connection must be
+     * restarted: call {@link #close()} and then {@link #handshake(String, ManualHandler...)}
+     * again to create connection with new settings</p>
+     *
+     * @param host address of the server (see {@link java.net.InetAddress#getByName(String)})
+     */
+    public void setHost(String host) {
+        tcpClient.setHost(host);
+    }
+
+    public int getPort() {
+        return tcpClient.getPort();
+    }
+
+    /**
+     * <p>Set port number to connect to on the server</p>
+     *
+     * <p>Must be set before calling {@link #handshake(String, ManualHandler...)}
+     * as it will open the connection</p>
+     *
+     * <p>To apply the changed value (after handshake has been done) tcp connection must be
+     * restarted: call {@link #close()} and then {@link #handshake(String, ManualHandler...)}
+     * again to create connection with new settings</p>
+     *
+     * @param port the port number
+     */
+    public void setPort(int port) {
+        tcpClient.setPort(port);
     }
 
     public void setErrorListener(OnErrorListener errorListener) {
@@ -292,6 +393,7 @@ public class JSTPConnection implements
 
     public interface OnErrorListener {
         void onNetworkError(JSTPConnectionException e);
+
         void onParsingError(JSParsingException e);
     }
 }
