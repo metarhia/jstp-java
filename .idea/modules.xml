@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/benchmarks/benchmarks.iml" filepath="$PROJECT_DIR$/benchmarks/benchmarks.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp/jstp.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp/jstp.iml" group="jstp" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler.iml" group="jstp-compiler" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler_main.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler_main.iml" group="jstp-compiler" />

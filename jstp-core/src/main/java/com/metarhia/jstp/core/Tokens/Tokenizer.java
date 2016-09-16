@@ -4,20 +4,27 @@ import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.core.JSTypes.JSBool;
 import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
+import com.sun.org.apache.xml.internal.dtm.ref.dom2dtm.DOM2DTM;
 
 /**
  * Created by lundibundi on 7/4/16.
  */
 public class Tokenizer {
-    private static CharRange numberRange = new CharRange(0x30, 0x39);
-    private static CharRange letterUpperRange = new CharRange(0x41, 0x5a);
-    private static CharRange letterLowerRange = new CharRange(0x61, 0x7a);
+    private static final String BOOL_TRUE_STR = new JSBool(true).toString();
+    private static final String BOOL_FALSE_STR = new JSBool(false).toString();
+    private static final String UNDEFINED_STR = JSUndefined.get().toString();
+    private static final String NULL_STR = JSNull.get().toString();
+
+    private static final CharRange numberRange = new CharRange(0x30, 0x39);
+    private static final CharRange letterUpperRange = new CharRange(0x41, 0x5a);
+    private static final CharRange letterLowerRange = new CharRange(0x61, 0x7a);
 
     private Double number;
     private String str;
 
     private String input;
     private int index;
+    private final int length;
 
     private Token lastToken;
 
@@ -25,6 +32,7 @@ public class Tokenizer {
         number = null;
         str = null;
         this.input = input;
+        length = input.length();
         index = 0;
         lastToken = null;
     }
@@ -36,28 +44,33 @@ public class Tokenizer {
 
         char ch = 0;
 
-        if (index >= input.length()) return lastToken = Token.NONE;
+        if (index >= length) return lastToken = Token.NONE;
 
         do {
             ch = input.charAt(index);
-        } while (++index < input.length()
-                && (ch == 0x20 || ch == 0x0a || ch == 0x09)); // space and \n and \t
+        } while (++index < length
+            && (ch == 0x20 || ch == 0x0a || ch == 0x09)); // space and \n and \t
 
 //        if (index >= input.length()) return lastToken = Token.NONE;
 
         switch (ch) {
             case '[':
+                return lastToken = Token.SQ_OPEN;
             case ']':
+                return lastToken = Token.SQ_CLOSE;
             case '{':
+                return lastToken = Token.CURLY_OPEN;
             case '}':
+                return lastToken = Token.CURLY_CLOSE;
             case ':':
+                return lastToken = Token.COLON;
             case ',':
-                return lastToken = Token.fromString(ch);
+                return lastToken = Token.COMMA;
         }
 
         if (ch == 0x22 || ch == 0x27) { // double and single quotes
 //        if (ch == '"' || ch == '\'') {
-            if (index >= input.length()) {
+            if (index >= length) {
                 throw new JSParsingException("Error: no closing quote '" + ch + "'");
             }
             int lastIndex = input.indexOf(ch, index);
@@ -73,13 +86,13 @@ public class Tokenizer {
             str = input.substring(index - 1, lastIndex);
             index = lastIndex;
 
-            if (str.equals(JSNull.get().toString())) {
+            if (str.equals(NULL_STR)) {
                 return lastToken = Token.NULL;
-            } else if (str.equals(JSUndefined.get().toString())) {
+            } else if (str.equals(UNDEFINED_STR)) {
                 return lastToken = Token.UNDEFINED;
-            } else if (str.equals(new JSBool(true).toString())) {
+            } else if (str.equals(BOOL_TRUE_STR)) {
                 return lastToken = Token.TRUE;
-            } else if (str.equals(new JSBool(false).toString())) {
+            } else if (str.equals(BOOL_FALSE_STR)) {
                 return lastToken = Token.FALSE;
             }
             return lastToken = Token.KEY;
@@ -96,7 +109,6 @@ public class Tokenizer {
             return lastToken = Token.NUMBER;
         }
 
-        // TODO what is NONE?
         return lastToken = Token.NONE;
     }
 
@@ -127,7 +139,7 @@ public class Tokenizer {
 
     private static int getPastLastIndex(String input, int index, MatchRange matcher) {
         while (index < input.length()
-                && matcher.matches(input.charAt(index))) {
+            && matcher.matches(input.charAt(index))) {
             ++index;
         }
         return index;

@@ -59,6 +59,7 @@ gradle-app.setting
 
 local.properties
 
+benchmarks/target
 # # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
 # gradle/wrapper/gradle-wrapper.properties
 
