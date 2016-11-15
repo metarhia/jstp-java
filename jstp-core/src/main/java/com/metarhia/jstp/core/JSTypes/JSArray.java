@@ -28,6 +28,10 @@ public class JSArray implements JSValue {
         }
     }
 
+    /**
+     * Parses {@param values} with {@link JSTypesUtil#javaToJS(Object)},
+     * see supported types in the link
+     */
     public JSArray(Object[] values) {
         this.values = new ArrayList<>(values.length);
         for (Object value : values) {
@@ -108,6 +112,18 @@ public class JSArray implements JSValue {
         return values;
     }
 
+    public void addAll(JSValue[] values) {
+        this.values.addAll(Arrays.asList(values));
+    }
+
+    public void addAll(Collection<JSValue> values) {
+        this.values.addAll(values);
+    }
+
+    public int size() {
+        return values.size();
+    }
+
     @Override
     public Object getGeneralizedValue() {
         return values;
@@ -126,13 +142,5 @@ public class JSArray implements JSValue {
             builder.append("]");
         }
         return builder.toString();
-    }
-
-    public void addAll(JSValue[] values) {
-        this.values.addAll(Arrays.asList(values));
-    }
-
-    public void addAll(Collection<JSValue> values) {
-        this.values.addAll(values);
     }
 }

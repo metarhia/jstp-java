@@ -4,7 +4,6 @@ import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.core.JSTypes.JSBool;
 import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
-import com.sun.org.apache.xml.internal.dtm.ref.dom2dtm.DOM2DTM;
 
 /**
  * Created by lundibundi on 7/4/16.
@@ -51,6 +50,10 @@ public class Tokenizer {
         } while (++index < length
             && (ch == 0x20 || ch == 0x0a || ch == 0x09)); // space and \n and \t
 
+        if (ch == '/' && input.charAt(index) == '/') {
+            index = input.indexOf('\n', index) + 1;
+            ch = input.charAt(index);
+        }
 //        if (index >= input.length()) return lastToken = Token.NONE;
 
         switch (ch) {

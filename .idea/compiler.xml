@@ -17,24 +17,11 @@
       <profile default="true" name="Default" enabled="false">
         <processorPath useClasspath="true" />
       </profile>
-      <profile default="false" name="Maven default annotation processors profile" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="true" />
-        <module name="benchmarks" />
-      </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="benchmarks" target="1.8" />
-      <module name="jstp-compiler_main" target="1.7" />
-      <module name="jstp-compiler_test" target="1.7" />
-      <module name="jstp-core_main" target="1.7" />
-      <module name="jstp-core_test" target="1.7" />
-      <module name="jstp-main_main" target="1.5" />
-      <module name="jstp-main_test" target="1.5" />
-      <module name="jstp_main" target="1.7" />
-      <module name="jstp_test" target="1.7" />
-    </bytecodeTargetLevel>
+  </component>
+  <component name="HaskellBuildOptions">
+    <ghcPath>/usr/bin/ghc</ghcPath>
+    <cabalPath>/usr/bin/cabal</cabalPath>
+    <stackPath>/usr/bin/stack</stackPath>
   </component>
 </project>

@@ -252,4 +252,42 @@ public class JSParserTest {
         JSParser parser = new JSParser(input);
         JSObject actual = parser.parseObject();
     }
+
+    @Test
+    public void arrayEmptyPlace() throws Exception {
+        String input = "[1,,300]";
+
+        JSArray expected = new JSArray();
+        expected.add(new JSNumber(1));
+        expected.add(JSUndefined.get());
+        expected.add(new JSNumber(300));
+
+        JSArray actual = (JSArray) new JSParser(input).parse();
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void longParsing() throws Exception {
+        String input = "{birth: -2051225940000}";
+
+        String actual = ((JSNumber) ((JSObject) new JSParser(input).parse()).get("birth")).toString();
+        String expected = String.valueOf(-2051225940000L);
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void arrayEmptyPlaceFirst() throws Exception {
+        String input = "[,,0]";
+
+        JSArray expected = new JSArray();
+        expected.add(JSUndefined.get());
+        expected.add(JSUndefined.get());
+        expected.add(new JSNumber(0));
+
+        JSArray actual = (JSArray) new JSParser(input).parse();
+
+        assertEquals(expected, actual);
+    }
 }

@@ -9,14 +9,14 @@ sourceCompatibility = '1.7'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
-def jstpVersion = '0.3'
+def jstpVersion = '0.8.2'
 def packetName = 'jstp'
 
 publishing {
     publications {
         DefaultPublication(MavenPublication) {
             artifact file("../out/artifacts/jstp/jstp.jar")
-            artifact source: file("../out/artifacts/jstp_sources_jar/jstp-sources.jar"), classifier: 'sources'
+            artifact source: file("../out/artifacts/jstp_sources/jstp_sources.jar"), classifier: 'sources'
             groupId 'com.metarhia.jstp'
             artifactId packetName
             version jstpVersion

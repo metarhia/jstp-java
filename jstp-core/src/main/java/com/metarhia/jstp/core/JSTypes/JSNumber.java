@@ -43,7 +43,7 @@ public class JSNumber implements JSValue {
     @Override
     public String toString() {
         if(value == Math.floor(value)) {
-            return String.valueOf((int) value);
+            return String.valueOf((long) value);
         } else {
             return String.valueOf(value);
         }

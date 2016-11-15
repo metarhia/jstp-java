@@ -55,7 +55,13 @@ public class JSParser implements Serializable {
         JSArray jsArray = new JSArray();
         while (tokenizer.getLastToken() != Token.SQ_CLOSE
                 && tokenizer.next() != Token.SQ_CLOSE) {
-            jsArray.add(parse(false));
+            if (tokenizer.getLastToken() == Token.COMMA) {
+                jsArray.add(JSUndefined.get());
+                continue;
+            }
+            else {
+                jsArray.add(parse(false));
+            }
             // skip comma
             if (tokenizer.next() != Token.COMMA && tokenizer.getLastToken() != Token.SQ_CLOSE) {
                 throw new JSParsingException("Error: expected ',' as separator of array elements");
@@ -80,7 +86,7 @@ public class JSParser implements Serializable {
     }
 
     public JSObject.Entry parseKeyValuePair() throws JSParsingException {
-        assureToken("Error: expected valid key", Token.KEY, Token.NUMBER);
+        assureToken("Error: expected valid key", Token.KEY, Token.NUMBER, Token.STRING);
 
         String key = tokenizer.getStr();
 

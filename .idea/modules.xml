@@ -2,17 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/benchmarks/benchmarks.iml" filepath="$PROJECT_DIR$/benchmarks/benchmarks.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp/jstp.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp/jstp.iml" group="jstp" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler.iml" group="jstp-compiler" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler_main.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler_main.iml" group="jstp-compiler" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler_test.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler_test.iml" group="jstp-compiler" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core.iml" group="jstp-core" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core_main.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core_main.iml" group="jstp-core" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core_test.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core_test.iml" group="jstp-core" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp/jstp.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp/jstp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-main.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp/jstp_main.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp/jstp_main.iml" group="jstp" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp/jstp_test.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp/jstp_test.iml" group="jstp" />
     </modules>
   </component>
 </project>

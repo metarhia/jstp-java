@@ -1,5 +1,6 @@
 package com.metarhia.jstp.Connection;
 
+import javax.net.ssl.SSLContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,8 +12,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import javax.net.ssl.SSLContext;
 
 /**
  * Created by Lida on 08.07.16.
@@ -82,9 +81,9 @@ public class TCPClient {
                                     senderLock.wait();
                                 }
                             }
-                            // System.out.println("com.metarhia.jstp.Connection: " + message);
                             // TODO add proper conditional logging
                             String message = messageQueue.poll();
+                            System.out.println("com.metarhia.jstp.Connection: " + message);
                             out.write(message.toCharArray());
                             out.flush();
                         }
@@ -115,7 +114,7 @@ public class TCPClient {
                                 sb.append((char) in.read());
                             }
                             if (sb.length() != 0 && messageReceiver != null) {
-                                // System.out.println("com.metarhia.jstp.Connection: " + sb.toString());
+                                 System.out.println("com.metarhia.jstp.Connection: " + sb.toString());
                                 // TODO add proper conditional logging
                                 messageReceiver.onMessageReceived(sb.toString());
                                 sb.delete(0, sb.length());
@@ -124,7 +123,7 @@ public class TCPClient {
                             Thread.sleep(10);
                         }
                         synchronized (pauseLock) {
-                           pauseLock.wait();
+                            pauseLock.wait();
                         }
                     }
                 } catch (InterruptedException | ClosedByInterruptException e) {
@@ -144,8 +143,8 @@ public class TCPClient {
         }
 
         if (socket.isConnected()) {
-            // TODO use it when TLS will be deployed to server
-//            if (sslEnabled) initSSL();
+            if (sslEnabled) initSSL();
+            if (!socket.isConnected()) return false;
 
             running = true;
             out = new OutputStreamWriter(socket.getOutputStream());
@@ -155,12 +154,9 @@ public class TCPClient {
         return false;
     }
 
-    // TODO adapt
     private void initSSL() {
         try {
-            SSLContext context = SSLContext.getInstance("TLS");
-
-            //TODO init with key manager and trust manager
+            SSLContext context = SSLContext.getInstance("TLSv1.2");
             context.init(null, null, new SecureRandom());
             socket = context.getSocketFactory().createSocket(socket, host, port, false);
         } catch (NoSuchAlgorithmException e) {
@@ -222,6 +218,7 @@ public class TCPClient {
         } catch (IOException e) {
             if (errorListener != null) errorListener.onNetworkError("Cannot close connection", e);
         }
+        closing = false;
     }
 
     public String getHost() {

@@ -243,7 +243,8 @@ public class JSTPConnection implements
                 if (errorListener != null) errorListener.onParsingError(e);
             } finally {
                 startMessageIndex = endMessageIndex + TERMINATOR.length();
-                endMessageIndex = messageBuilder.indexOf(TERMINATOR, startMessageIndex);
+                if (startMessageIndex == messageBuilder.length()) endMessageIndex = -1;
+                else endMessageIndex = messageBuilder.indexOf(TERMINATOR, startMessageIndex);
             }
         }
         if (startMessageIndex != 0) messageBuilder.delete(0, startMessageIndex);
@@ -291,8 +292,9 @@ public class JSTPConnection implements
         ehs.remove(handler);
     }
 
+    @Deprecated
     public void close() {
-        tcpClient.close();
+        closeConnection();
     }
 
     public void pause() {
@@ -312,6 +314,7 @@ public class JSTPConnection implements
     }
 
     public void closeConnection() {
+        packageCounter = 0;
         tcpClient.close();
     }
 
