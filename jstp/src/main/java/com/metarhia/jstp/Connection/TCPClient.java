@@ -1,6 +1,5 @@
 package com.metarhia.jstp.Connection;
 
-import javax.net.ssl.SSLContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -13,10 +12,12 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import javax.net.ssl.SSLContext;
+
 /**
  * Created by Lida on 08.07.16.
  */
-public class TCPClient {
+public class TCPClient extends AbstractSocket {
 
     private String host;
     private int port;
@@ -31,18 +32,17 @@ public class TCPClient {
     private final Object pauseLock = new Object();
 
     private Socket socket;
-    private TCPMessageReceiver messageReceiver;
 
     private OutputStreamWriter out;
     private BufferedReader in;
 
-    private OnErrorListener errorListener;
-
-    public TCPClient(String host, int port) {
-       this(host, port, false);
+    public TCPClient(String host, int port, AbstractSocket.AbstractSocketListener listener) {
+        this(host, port, false, listener);
     }
 
-    public TCPClient(String host, int port, boolean sslEnabled) {
+    public TCPClient(String host, int port, boolean sslEnabled, AbstractSocket.AbstractSocketListener listener) {
+        super(listener);
+
         this.host = host;
         this.port = port;
         this.sslEnabled = sslEnabled;
@@ -60,10 +60,10 @@ public class TCPClient {
 
                         sendMessage(handshakeMessage);
                     } else {
-                        if (errorListener != null) errorListener.onNetworkError("Cannot connect", null);
+                        getSocketListener().onConnectionFailed();
                     }
                 } catch (IOException e) {
-                    if (errorListener != null) errorListener.onNetworkError("Cannot initialize connection", e);
+                    getSocketListener().onConnectionClosed(e);
                 }
             }
         }).start();
@@ -95,7 +95,7 @@ public class TCPClient {
                     // all ok - manually closing
                     e.printStackTrace();
                 } catch (IOException e) {
-                    if (errorListener != null) errorListener.onNetworkError("Cannot send message", e);
+                    getSocketListener().onConnectionClosed(e);
                 }
             }
         });
@@ -113,10 +113,10 @@ public class TCPClient {
                             while (in.ready()) {
                                 sb.append((char) in.read());
                             }
-                            if (sb.length() != 0 && messageReceiver != null) {
-                                 System.out.println("com.metarhia.jstp.Connection: " + sb.toString());
+                            if (sb.length() != 0 && getSocketListener() != null) {
+                                System.out.println("com.metarhia.jstp.Connection: " + sb.toString());
                                 // TODO add proper conditional logging
-                                messageReceiver.onMessageReceived(sb.toString());
+                                getSocketListener().onMessageReceived(sb.toString());
                                 sb.delete(0, sb.length());
                             }
                             // little delay to ease the work of a scheduler
@@ -129,7 +129,7 @@ public class TCPClient {
                 } catch (InterruptedException | ClosedByInterruptException e) {
                     // all ok - manually closing
                 } catch (IOException e) {
-                    if (errorListener != null) errorListener.onNetworkError("Cannot receive message", e);
+                    getSocketListener().onConnectionClosed(e);
                 }
             }
         });
@@ -149,6 +149,7 @@ public class TCPClient {
             running = true;
             out = new OutputStreamWriter(socket.getOutputStream());
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            getSocketListener().onConnect();
             return true;
         }
         return false;
@@ -215,8 +216,9 @@ public class TCPClient {
             receiverThread = null;
             senderThread = null;
             socket = null;
+            getSocketListener().onConnectionClosed();
         } catch (IOException e) {
-            if (errorListener != null) errorListener.onNetworkError("Cannot close connection", e);
+            getSocketListener().onConnectionClosed(e);
         }
         closing = false;
     }
@@ -243,21 +245,5 @@ public class TCPClient {
 
     public void setSSLEnabled(boolean sslEnabled) {
         this.sslEnabled = sslEnabled;
-    }
-
-    public void setMessageReceiver(TCPMessageReceiver receiver) {
-        this.messageReceiver = receiver;
-    }
-
-    public void setErrorListener(OnErrorListener errorListener) {
-        this.errorListener = errorListener;
-    }
-
-    public interface OnErrorListener {
-        void onNetworkError(String message, Exception e);
-    }
-
-    public interface TCPMessageReceiver {
-        void onMessageReceived(String message);
     }
 }

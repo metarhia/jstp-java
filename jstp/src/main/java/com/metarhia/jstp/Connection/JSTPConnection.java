@@ -6,6 +6,7 @@ import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.core.JSTypes.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,9 +14,7 @@ import java.util.List;
 /**
  * Created by Lida on 27.06.16.
  */
-public class JSTPConnection implements
-    TCPClient.TCPMessageReceiver,
-    TCPClient.OnErrorListener {
+public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
 
     // Package types
     private static final String HANDSHAKE = "handshake";
@@ -41,7 +40,7 @@ public class JSTPConnection implements
     /**
      * TCP client
      */
-    private TCPClient tcpClient;
+    private AbstractSocket socket;
 
     /**
      * Call handlers table. Handlers are associated with names of methods they handle
@@ -75,11 +74,7 @@ public class JSTPConnection implements
      */
     private JSArray clientMethodNames;
 
-    /**
-     * Listener that is used to report errors
-     * (note that network errors may come from different thread)
-     */
-    private OnErrorListener errorListener;
+    private List<JSTPConnectionListener> socketListeners;
 
     public JSTPConnection(String host, int port) {
         this(host, port, false);
@@ -93,9 +88,9 @@ public class JSTPConnection implements
      * @param sslEnabled determines whether connection will use SSL or not (see {@link #setSSLEnabled})
      */
     public JSTPConnection(String host, int port, boolean sslEnabled) {
-        tcpClient = new TCPClient(host, port, sslEnabled);
-        tcpClient.setErrorListener(this);
-        tcpClient.setMessageReceiver(this);
+        socket = new TCPClient(host, port, sslEnabled, this);
+        socketListeners = new ArrayList<>();
+        socket.setSocketListener(this);
         handlers = new HashMap<>();
         eventHandlers = new HashMap<>();
         callHandlers = new HashMap<>();
@@ -119,7 +114,7 @@ public class JSTPConnection implements
         JSTPMessage hm = new JSTPMessage(packageCounter, HANDSHAKE);
         hm.addProtocolArg(applicationName);
 
-        tcpClient.openConnection(hm.getMessage() + TERMINATOR);
+        socket.openConnection(hm.getMessage() + TERMINATOR);
         packageCounter++;
     }
 
@@ -136,7 +131,7 @@ public class JSTPConnection implements
         handlers.put(packageCounter, handler);
         packageCounter++;
 
-        tcpClient.sendMessage(inspectMessage.getMessage() + TERMINATOR);
+        socket.sendMessage(inspectMessage.getMessage() + TERMINATOR);
     }
 
     public void event(String interfaceName, String methodName, JSArray args) {
@@ -145,7 +140,7 @@ public class JSTPConnection implements
 
         packageCounter++;
 
-        tcpClient.sendMessage(eventMessage.getMessage() + TERMINATOR);
+        socket.sendMessage(eventMessage.getMessage() + TERMINATOR);
     }
 
     public void call(String interfaceName,
@@ -162,7 +157,7 @@ public class JSTPConnection implements
 
         packageCounter++;
 
-        tcpClient.sendMessage(callMessage.getMessage() + TERMINATOR);
+        socket.sendMessage(callMessage.getMessage() + TERMINATOR);
     }
 
     public void callback(JSCallback value, JSValue args) {
@@ -174,15 +169,11 @@ public class JSTPConnection implements
 
         JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK, value.toString(), args);
 
-        tcpClient.sendMessage(callbackMessage.getMessage() + TERMINATOR);
+        socket.sendMessage(callbackMessage.getMessage() + TERMINATOR);
     }
 
-    @Override
-    public void onNetworkError(String message, Exception e) {
-        if (errorListener != null) {
-            JSTPConnectionException connectionException = new JSTPConnectionException(message, e);
-            errorListener.onNetworkError(connectionException);
-        }
+    public void addSocketListener(JSTPConnectionListener listener) {
+        this.socketListeners.add(listener);
     }
 
     @Override
@@ -240,7 +231,6 @@ public class JSTPConnection implements
                         break;
                 }
             } catch (JSParsingException e) {
-                if (errorListener != null) errorListener.onParsingError(e);
             } finally {
                 startMessageIndex = endMessageIndex + TERMINATOR.length();
                 if (startMessageIndex == messageBuilder.length()) endMessageIndex = -1;
@@ -256,14 +246,14 @@ public class JSTPConnection implements
 
     public int openStream(JSValue data) {
         JSTPMessage streamMessage = new JSTPMessage(packageCounter, STREAM, STREAM_DATA, data);
-        tcpClient.sendMessage(streamMessage.getMessage() + TERMINATOR);
+        socket.sendMessage(streamMessage.getMessage() + TERMINATOR);
 
         return packageCounter++;
     }
 
     public void writeStream(int packageNumber, JSValue data) {
         JSTPMessage streamMessage = new JSTPMessage(packageNumber, STREAM, STREAM_DATA, data);
-        tcpClient.sendMessage(streamMessage.getMessage() + TERMINATOR);
+        socket.sendMessage(streamMessage.getMessage() + TERMINATOR);
     }
 
     public void addCallHandler(String methodName, ManualHandler callHandler) {
@@ -298,24 +288,24 @@ public class JSTPConnection implements
     }
 
     public void pause() {
-        tcpClient.pause();
+        socket.pause();
     }
 
     public void pause(boolean clear) {
-        tcpClient.pause(clear);
+        socket.pause(clear);
     }
 
     public void resume() {
-        tcpClient.resume();
+        socket.resume();
     }
 
     public void resume(boolean clear) {
-        tcpClient.resume(clear);
+        socket.resume(clear);
     }
 
     public void closeConnection() {
         packageCounter = 0;
-        tcpClient.close();
+        socket.close();
     }
 
     private String getInterfaceName(JSObject messageObject) {
@@ -343,15 +333,15 @@ public class JSTPConnection implements
      * @param sslEnabled If true then connection will be opened with ssl enabled else ssl will not be used
      */
     public void setSSLEnabled(boolean sslEnabled) {
-        tcpClient.setSSLEnabled(sslEnabled);
+        socket.setSSLEnabled(sslEnabled);
     }
 
     public boolean isSSLEnabled() {
-        return tcpClient.isSSLEnabled();
+        return socket.isSSLEnabled();
     }
 
     public String getHost() {
-        return tcpClient.getHost();
+        return socket.getHost();
     }
 
     /**
@@ -367,11 +357,11 @@ public class JSTPConnection implements
      * @param host address of the server (see {@link java.net.InetAddress#getByName(String)})
      */
     public void setHost(String host) {
-        tcpClient.setHost(host);
+        socket.setHost(host);
     }
 
     public int getPort() {
-        return tcpClient.getPort();
+        return socket.getPort();
     }
 
     /**
@@ -387,16 +377,29 @@ public class JSTPConnection implements
      * @param port the port number
      */
     public void setPort(int port) {
-        tcpClient.setPort(port);
+        socket.setPort(port);
     }
 
-    public void setErrorListener(OnErrorListener errorListener) {
-        this.errorListener = errorListener;
+    @Override
+    public void onConnect() {
+        for(JSTPConnectionListener listener : socketListeners) listener.onConnect();
     }
 
-    public interface OnErrorListener {
-        void onNetworkError(JSTPConnectionException e);
+    @Override
+    public void onConnectionFailed() {
+        for(JSTPConnectionListener listener : socketListeners) listener.onConnectionFailed();
+    }
 
-        void onParsingError(JSParsingException e);
+    @Override
+    public void onConnectionClosed(Exception... e) {
+        for(JSTPConnectionListener listener : socketListeners) listener.onConnectionClosed();
+    }
+
+    public interface JSTPConnectionListener {
+        void onConnect();
+
+        void onConnectionFailed();
+
+        void onConnectionClosed();
     }
 }

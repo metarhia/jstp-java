@@ -2,10 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Java.iml" filepath="$PROJECT_DIR$/.idea/modules/Java.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp/jstp.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp/jstp.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-compiler/jstp-compiler.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-core/jstp-core.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/jstp-main.iml" filepath="$PROJECT_DIR$/.idea/modules/jstp-main.iml" />
     </modules>
   </component>
 </project>

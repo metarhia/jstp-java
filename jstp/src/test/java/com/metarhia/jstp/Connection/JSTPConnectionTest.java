@@ -1,13 +1,12 @@
 package com.metarhia.jstp.Connection;
 
 import com.metarhia.jstp.core.Handlers.ManualHandler;
-import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by lundibundi on 9/3/16.
@@ -103,16 +102,6 @@ public class JSTPConnectionTest {
         mConnection.onMessageReceived(packet);
 
         assertTrue(success[0] && success[1]);
-    }
-
-    @Test
-    public void addCallHandler() throws Exception {
-
-    }
-
-    @Test
-    public void addEventHandler() throws Exception {
-
     }
 
 }
