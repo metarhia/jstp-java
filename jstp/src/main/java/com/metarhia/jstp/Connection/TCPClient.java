@@ -1,18 +1,14 @@
 package com.metarhia.jstp.Connection;
 
-import java.io.BufferedReader;
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.InetAddress;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.channels.ClosedByInterruptException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import javax.net.ssl.SSLContext;
 
 /**
  * Created by Lida on 08.07.16.
@@ -33,8 +29,8 @@ public class TCPClient extends AbstractSocket {
 
     private Socket socket;
 
-    private OutputStreamWriter out;
-    private BufferedReader in;
+    private OutputStream out;
+    private InputStream in;
 
     public TCPClient(String host, int port, AbstractSocket.AbstractSocketListener listener) {
         this(host, port, false, listener);
@@ -84,7 +80,8 @@ public class TCPClient extends AbstractSocket {
                             // TODO add proper conditional logging
                             String message = messageQueue.poll();
                             System.out.println("com.metarhia.jstp.Connection: " + message);
-                            out.write(message.toCharArray());
+                            out.write(message.getBytes());
+                            out.write(0);
                             out.flush();
                         }
                         synchronized (pauseLock) {
@@ -110,7 +107,7 @@ public class TCPClient extends AbstractSocket {
                     StringBuilder sb = new StringBuilder();
                     while (!closing) {
                         while (running) {
-                            while (in.ready()) {
+                            while (in.available() > 0) {
                                 sb.append((char) in.read());
                             }
                             if (sb.length() != 0 && getSocketListener() != null) {
@@ -138,35 +135,34 @@ public class TCPClient extends AbstractSocket {
 
     private boolean initConnection(boolean useSSL) throws IOException {
         if (socket == null || !socket.isConnected() || socket.isClosed()) {
-            InetAddress host = InetAddress.getByName(this.host);
-            socket = new Socket(host, port);
+            if (sslEnabled) socket = createSSLSocket(host, port);
+            else socket = new Socket(host, port);
         }
 
-        if (socket.isConnected()) {
-            if (sslEnabled) initSSL();
-            if (!socket.isConnected()) return false;
-
+        if (socket != null && socket.isConnected()) {
             running = true;
-            out = new OutputStreamWriter(socket.getOutputStream());
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = socket.getOutputStream();
+            in = socket.getInputStream();
             getSocketListener().onConnect();
             return true;
         }
         return false;
     }
 
-    private void initSSL() {
+    private Socket createSSLSocket(String host, int port) {
         try {
             SSLContext context = SSLContext.getInstance("TLSv1.2");
-            context.init(null, null, new SecureRandom());
-            socket = context.getSocketFactory().createSocket(socket, host, port, false);
+            context.init(null, null, null);
+            return context.getSocketFactory().createSocket(host, port);
+//            return SSLContext.getDefault().getSocketFactory().createSocket(host, port);
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (KeyManagementException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (KeyManagementException e) {
+            e.printStackTrace();
         }
+        return null;
     }
 
     public void sendMessage(String message) {

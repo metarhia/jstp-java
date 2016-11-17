@@ -6,6 +6,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.net.ssl.SSLContext;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.InetAddress;
+import java.net.Socket;
+
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -48,7 +55,7 @@ public class JSTPConnectionTest {
         String packet = "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
 
         final Boolean[] success = {false};
-        mConnection.addEventHandler("auth", new ManualHandler() {
+        mConnection.addEventHandler("auth", "insert", new ManualHandler() {
             @Override
             public void invoke(JSValue packet) {
                 success[0] = true;
@@ -85,7 +92,7 @@ public class JSTPConnectionTest {
             + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
 
         final Boolean[] success = {false, false};
-        mConnection.addEventHandler("auth", new ManualHandler() {
+        mConnection.addEventHandler("auth", "insert", new ManualHandler() {
             @Override
             public void invoke(JSValue packet) {
                 success[0] = true;

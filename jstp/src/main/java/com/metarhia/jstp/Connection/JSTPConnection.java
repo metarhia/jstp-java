@@ -4,12 +4,15 @@ import com.metarhia.jstp.Handlers.StateHandler;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSParsingException;
-import com.metarhia.jstp.core.JSTypes.*;
+import com.metarhia.jstp.core.JSTypes.JSArray;
+import com.metarhia.jstp.core.JSTypes.JSNumber;
+import com.metarhia.jstp.core.JSTypes.JSObject;
+import com.metarhia.jstp.core.JSTypes.JSValue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Lida on 27.06.16.
@@ -50,7 +53,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     /**
      * Event handlers table. Handlers are associated with names of interfaces they handle
      */
-    private HashMap<String, List<ManualHandler>> eventHandlers;
+    private Map<String, Map<String, List<ManualHandler>>> eventHandlers;
 
     /**
      * Callback, stream and handshake handlers. Handlers are associated with numbers of
@@ -212,10 +215,14 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
                         break;
                     case EVENT:
                         String interfaceName = getInterfaceName(messageObject);
-                        final List<ManualHandler> handlers = eventHandlers.get(interfaceName);
-                        if (handlers != null) {
-                            for (ManualHandler eh : handlers) {
-                                eh.invoke(messageObject);
+                        Map<String, List<ManualHandler>> interfaceHandlers = eventHandlers.get(interfaceName);
+                        if (interfaceHandlers != null) {
+                            String eventName = getEventName(messageObject);
+                            List<ManualHandler> eventHandlers = interfaceHandlers.get(eventName);
+                            if (eventHandlers != null) {
+                                for (ManualHandler eh : eventHandlers) {
+                                    eh.invoke(messageObject);
+                                }
                             }
                         }
                         packageCounter++;
@@ -264,22 +271,31 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
         this.stateHandler = stateHandler;
     }
 
-    public void addEventHandler(String eventInterfaceName, ManualHandler handler) {
-        List<ManualHandler> ehs = eventHandlers.get(eventInterfaceName);
+    public void addEventHandler(String interfaceName, String eventName, ManualHandler handler) {
+        Map<String, List<ManualHandler>> ehs = eventHandlers.get(interfaceName);
         if (ehs == null) {
-            eventHandlers.put(eventInterfaceName, new LinkedList<ManualHandler>());
-            ehs = eventHandlers.get(eventInterfaceName);
+            eventHandlers.put(interfaceName, new HashMap<String, List<ManualHandler>>());
+            ehs = eventHandlers.get(interfaceName);
+            ehs.put(eventName, new ArrayList<ManualHandler>());
         }
-        ehs.add(handler);
+        List<ManualHandler> eventHandlers = ehs.get(eventName);
+        if (eventHandlers == null) {
+            ehs.put(eventName, new ArrayList<ManualHandler>());
+            eventHandlers = ehs.get(eventName);
+        }
+        eventHandlers.add(handler);
     }
 
     public void addHandler(int packetIndex, ManualHandler manualHandler) {
         handlers.put(packetIndex, manualHandler);
     }
 
-    public void removeEventHandler(String eventInterfaceName, ManualHandler handler) {
-        List<ManualHandler> ehs = eventHandlers.get(eventInterfaceName);
-        ehs.remove(handler);
+    public void removeEventHandler(String interfaceName, String eventName, ManualHandler handler) {
+        Map<String, List<ManualHandler>> ehs = eventHandlers.get(interfaceName);
+        if (ehs != null) {
+            List<ManualHandler> eventHandlers = ehs.get(eventName);
+            if (eventHandlers != null) eventHandlers.remove(handler);
+        }
     }
 
     @Deprecated
@@ -312,6 +328,10 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
         return (String) ((JSArray) messageObject.get(EVENT))
             .get(1)
             .getGeneralizedValue();
+    }
+
+    private String getEventName(JSObject messageObject) {
+        return messageObject.getOrderedKeys().get(1);
     }
 
     private int getPacketIndex(JSObject messageObject, String packageValue) {
