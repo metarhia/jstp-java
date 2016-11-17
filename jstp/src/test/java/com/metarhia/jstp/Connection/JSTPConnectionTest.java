@@ -56,7 +56,7 @@ public class JSTPConnectionTest {
     public void tlsConnection() throws Exception {
         final boolean[] valid = {false};
 
-        JSTPConnection connection = new JSTPConnection("since.tv", 3000, false);
+        JSTPConnection connection = new JSTPConnection("since.tv", 4000, true);
         connection.handshake("superIn", new ManualHandler() {
             @Override
             public void invoke(JSValue packet) {
