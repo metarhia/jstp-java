@@ -1,16 +1,14 @@
 package com.metarhia.jstp.Connection;
 
-import java.io.BufferedReader;
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.channels.ClosedByInterruptException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import javax.net.ssl.SSLContext;
 
 /**
  * Created by Lida on 08.07.16.
@@ -32,7 +30,7 @@ public class TCPClient extends AbstractSocket {
     private Socket socket;
 
     private OutputStream out;
-    private BufferedReader in;
+    private InputStream in;
 
     public TCPClient(String host, int port, AbstractSocket.AbstractSocketListener listener) {
         this(host, port, false, listener);
@@ -109,7 +107,7 @@ public class TCPClient extends AbstractSocket {
                     StringBuilder sb = new StringBuilder();
                     while (!closing) {
                         while (running) {
-                            while (in.ready()) {
+                            while (in.available() > 0) {
                                 sb.append((char) in.read());
                             }
                             if (sb.length() != 0 && getSocketListener() != null) {
@@ -144,7 +142,7 @@ public class TCPClient extends AbstractSocket {
         if (socket != null && socket.isConnected()) {
             running = true;
             out = socket.getOutputStream();
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            in = socket.getInputStream();
             getSocketListener().onConnect();
             return true;
         }

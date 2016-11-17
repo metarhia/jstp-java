@@ -6,6 +6,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.net.ssl.SSLContext;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.InetAddress;
+import java.net.Socket;
+
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -26,49 +33,46 @@ public class JSTPConnectionTest {
         mConnection = null;
     }
 
-//    @Test
-//    public void rawTlsConnection() throws Exception {
-//        Socket socket = null;
-//        InetAddress host = InetAddress.getByName("since.tv");
-//        socket = new Socket(host, 4000);
+    @Test
+    public void rawTlsConnection() throws Exception {
+        Socket socket = null;
+        InetAddress host = InetAddress.getByName("since.tv");
+//
+        SSLContext context = SSLContext.getInstance("TLSv1.2");
+        context.init(null, null, null);
+        socket = context.getSocketFactory().createSocket("since.tv", 4000);
+        socket = SSLContext.getDefault().getSocketFactory().createSocket("since.tv", 4000);
+        if (!socket.isConnected()) throw new RuntimeException("no connection");
 
-//        installCertificate();
-//        SSLContext context = SSLContext.getInstance("TLS");
-//        context.init(null, null, new SecureRandom());
-//        socket = context.getSocketFactory().createSocket(socket, "since.tv", 4000, true);
-//        SSLContext context = SSLContext.getInstance("TLSv1.2");
-//        context.init(null, null, null);
-//        socket = context.getSocketFactory().createSocket("since.tv", 4000);
-//        socket = SSLContext.getDefault().getSocketFactory().createSocket("since.tv", 4000);
-//        if (!socket.isConnected()) throw new RuntimeException("no connection");
+        final OutputStreamWriter out = new OutputStreamWriter(socket.getOutputStream());
+        final String s = "{ handshake: [ 0, 'superIn' ] }\0";
+        socket.getOutputStream().write(s.getBytes());
 
-//        final OutputStreamWriter out = new OutputStreamWriter(socket.getOutputStream());
-//        final String s = "{ handshake: [ 0, 'superIn' ] }\0";
-//        socket.getOutputStream().write(s.getBytes());
-//
-//        final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-//        System.out.println(in.readLine());
-//    }
+        final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        System.out.println(in.readLine());
+    }
 
-//    @Test
-//    public void tlsConnection() throws Exception {
-//        final boolean[] valid = {false};
-//
-//        JSTPConnection connection = new JSTPConnection("since.tv", 4000, true);
-//        connection.handshake("superIn", new ManualHandler() {
-//            @Override
-//            public void invoke(JSValue packet) {
-//                valid[0] = true;
-//                JSTPConnectionTest.this.notify();
-//            }
-//        });
-//
-//        synchronized (this) {
-//            wait();
-//        }
-//
-//        assertTrue(valid[0]);
-//    }
+    @Test
+    public void tlsConnection() throws Exception {
+        final boolean[] valid = {false};
+
+        JSTPConnection connection = new JSTPConnection("since.tv", 3000, false);
+        connection.handshake("superIn", new ManualHandler() {
+            @Override
+            public void invoke(JSValue packet) {
+                valid[0] = true;
+                synchronized (JSTPConnectionTest.this) {
+                    JSTPConnectionTest.this.notify();
+                }
+            }
+        });
+
+        synchronized (this) {
+            wait();
+        }
+
+        assertTrue(valid[0]);
+    }
 
     @Test
     public void onMessageReceivedCall() throws Exception {

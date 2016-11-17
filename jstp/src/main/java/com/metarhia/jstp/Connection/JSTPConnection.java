@@ -11,8 +11,8 @@ import com.metarhia.jstp.core.JSTypes.JSValue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Lida on 27.06.16.
