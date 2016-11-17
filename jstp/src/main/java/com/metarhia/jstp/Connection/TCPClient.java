@@ -105,19 +105,21 @@ public class TCPClient extends AbstractSocket {
             public void run() {
                 try {
                     StringBuilder sb = new StringBuilder();
+                    int b = -1;
                     while (!closing) {
                         while (running) {
-                            while (in.available() > 0) {
-                                sb.append((char) in.read());
+                            while ((b = in.read()) != 0) {
+                                sb.append((char) b);
                             }
                             if (sb.length() != 0 && getSocketListener() != null) {
+                                sb.append('\0');
                                 System.out.println("com.metarhia.jstp.Connection: " + sb.toString());
                                 // TODO add proper conditional logging
                                 getSocketListener().onMessageReceived(sb.toString());
                                 sb.delete(0, sb.length());
                             }
                             // little delay to ease the work of a scheduler
-                            Thread.sleep(10);
+//                            Thread.sleep(10);
                         }
                         synchronized (pauseLock) {
                             pauseLock.wait();
@@ -217,6 +219,11 @@ public class TCPClient extends AbstractSocket {
             getSocketListener().onConnectionClosed(e);
         }
         closing = false;
+    }
+
+    @Override
+    public boolean isConnected() {
+        return socket != null && socket.isConnected();
     }
 
     public String getHost() {

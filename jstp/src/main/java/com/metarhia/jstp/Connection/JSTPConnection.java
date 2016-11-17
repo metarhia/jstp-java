@@ -183,6 +183,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     public void onMessageReceived(String received) {
         messageBuilder.append(received);
 
+        // todo now we receive only one message at a time so remove code for splitting
         int startMessageIndex = 0;
         int endMessageIndex = messageBuilder.indexOf(TERMINATOR);
         while (endMessageIndex != -1) {
@@ -400,6 +401,9 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
         socket.setPort(port);
     }
 
+    public boolean isConnected() {
+        return socket.isConnected();
+    }
     @Override
     public void onConnect() {
         for(JSTPConnectionListener listener : socketListeners) listener.onConnect();

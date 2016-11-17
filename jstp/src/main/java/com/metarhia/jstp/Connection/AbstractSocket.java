@@ -41,9 +41,11 @@ public abstract class AbstractSocket {
         this.socketListener = listener;
     }
 
-    public AbstractSocketListener getSocketListener() {
+    protected AbstractSocketListener getSocketListener() {
         return this.socketListener;
     }
+
+    public abstract boolean isConnected();
 
     public interface AbstractSocketListener {
         void onConnect();
