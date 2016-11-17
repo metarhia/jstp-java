@@ -47,6 +47,8 @@ public abstract class AbstractSocket {
 
     public abstract boolean isConnected();
 
+    public abstract boolean isClosed();
+
     public interface AbstractSocketListener {
         void onConnect();
 

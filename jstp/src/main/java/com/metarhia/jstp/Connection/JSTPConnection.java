@@ -404,6 +404,11 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     public boolean isConnected() {
         return socket.isConnected();
     }
+
+    public boolean isClosed() {
+        return socket.isClosed();
+    }
+
     @Override
     public void onConnect() {
         for(JSTPConnectionListener listener : socketListeners) listener.onConnect();

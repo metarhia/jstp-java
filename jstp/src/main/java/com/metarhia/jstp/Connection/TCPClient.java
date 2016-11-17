@@ -108,7 +108,7 @@ public class TCPClient extends AbstractSocket {
                     int b = -1;
                     while (!closing) {
                         while (running) {
-                            while ((b = in.read()) != 0) {
+                            while ((b = in.read()) > 0) {
                                 sb.append((char) b);
                             }
                             if (sb.length() != 0 && getSocketListener() != null) {
@@ -117,6 +117,9 @@ public class TCPClient extends AbstractSocket {
                                 // TODO add proper conditional logging
                                 getSocketListener().onMessageReceived(sb.toString());
                                 sb.delete(0, sb.length());
+                            }
+                            if (b == -1) {
+                                close();
                             }
                             // little delay to ease the work of a scheduler
 //                            Thread.sleep(10);
@@ -211,6 +214,7 @@ public class TCPClient extends AbstractSocket {
             if (senderThread != null) senderThread.interrupt();
             if (in != null) in.close();
             if (socket != null) socket.close();
+            in = null;
             receiverThread = null;
             senderThread = null;
             socket = null;
@@ -224,6 +228,11 @@ public class TCPClient extends AbstractSocket {
     @Override
     public boolean isConnected() {
         return socket != null && socket.isConnected();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return socket == null || socket.isClosed();
     }
 
     public String getHost() {
