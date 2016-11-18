@@ -77,7 +77,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
      */
     private JSArray clientMethodNames;
 
-    private List<JSTPConnectionListener> socketListeners;
+    private List<JSTPConnectionListener> connectionListeners;
 
     public JSTPConnection(String host, int port) {
         this(host, port, false);
@@ -92,7 +92,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
      */
     public JSTPConnection(String host, int port, boolean sslEnabled) {
         socket = new TCPClient(host, port, sslEnabled, this);
-        socketListeners = new ArrayList<>();
+        connectionListeners = new ArrayList<>();
         socket.setSocketListener(this);
         handlers = new HashMap<>();
         eventHandlers = new HashMap<>();
@@ -176,7 +176,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     }
 
     public void addSocketListener(JSTPConnectionListener listener) {
-        this.socketListeners.add(listener);
+        this.connectionListeners.add(listener);
     }
 
     @Override
@@ -411,23 +411,16 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
 
     @Override
     public void onConnect() {
-        for(JSTPConnectionListener listener : socketListeners) listener.onConnect();
-    }
-
-    @Override
-    public void onConnectionFailed() {
-        for(JSTPConnectionListener listener : socketListeners) listener.onConnectionFailed();
+        for(JSTPConnectionListener listener : connectionListeners) listener.onConnect();
     }
 
     @Override
     public void onConnectionClosed(Exception... e) {
-        for(JSTPConnectionListener listener : socketListeners) listener.onConnectionClosed();
+        for(JSTPConnectionListener listener : connectionListeners) listener.onConnectionClosed();
     }
 
     public interface JSTPConnectionListener {
         void onConnect();
-
-        void onConnectionFailed();
 
         void onConnectionClosed();
     }

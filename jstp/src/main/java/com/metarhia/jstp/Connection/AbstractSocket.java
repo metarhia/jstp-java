@@ -52,8 +52,6 @@ public abstract class AbstractSocket {
     public interface AbstractSocketListener {
         void onConnect();
 
-        void onConnectionFailed();
-
         void onMessageReceived(String message);
 
         void onConnectionClosed(Exception ... e);
