@@ -1,17 +1,11 @@
 package com.metarhia.jstp.Connection;
 
 import com.metarhia.jstp.core.Handlers.ManualHandler;
+import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import javax.net.ssl.SSLContext;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.InetAddress;
-import java.net.Socket;
 
 import static org.junit.Assert.assertTrue;
 
@@ -32,22 +26,6 @@ public class JSTPConnectionTest {
         mConnection.close();
         mConnection = null;
     }
-
-//    @Test
-//    public void rawTlsConnection() throws Exception {
-//        Socket socket = null;
-//        InetAddress host = InetAddress.getByName("since.tv");
-////
-//        socket = SSLContext.getDefault().getSocketFactory().createSocket("since.tv", 4000);
-//        if (!socket.isConnected()) throw new RuntimeException("no connection");
-//
-//        final OutputStreamWriter out = new OutputStreamWriter(socket.getOutputStream());
-//        final String s = "{ handshake: [ 0, 'superIn' ] }\0";
-//        socket.getOutputStream().write(s.getBytes());
-//
-//        final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-//        System.out.println(in.read());
-//    }
 
     @Test
     public void tlsConnection() throws Exception {
@@ -71,6 +49,35 @@ public class JSTPConnectionTest {
         assertTrue(valid[0]);
     }
 
+    @Test
+    public void temporary() throws Exception {
+        final Object lock = new Object();
+        final JSTPConnection connection = new JSTPConnection("since.tv", 4000, true);
+        connection.handshake("superIn", new ManualHandler() {
+            @Override
+            public void invoke(JSValue packet) {
+                connection.call("auth", "authorize", new JSArray(new Object[]{"+380962415331", "hellokitty1337"}),
+                    new ManualHandler() {
+                        @Override
+                        public void invoke(JSValue packet) {
+                            connection.call("profile", "get", new JSArray(), new ManualHandler() {
+                                @Override
+                                public void invoke(JSValue packet) {
+                                    System.out.println(packet);
+                                    synchronized (lock) {
+                                        lock.notify();
+                                    }
+                                }
+                            });
+                        }
+                    });
+            }
+        });
+
+        synchronized (lock) {
+            lock.wait();
+        }
+    }
     @Test
     public void onMessageReceivedCall() throws Exception {
         String packet = "{call:[17,'auth'], newAccount:['Payload data']}" + JSTPConnection.TERMINATOR;
