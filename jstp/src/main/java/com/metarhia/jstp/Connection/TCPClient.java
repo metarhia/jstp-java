@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.channels.ClosedByInterruptException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -56,7 +57,7 @@ public class TCPClient extends AbstractSocket {
 
                         sendMessage(handshakeMessage);
                     } else {
-                        getSocketListener().onConnectionFailed();
+                        close();
                     }
                 } catch (IOException e) {
                     close();
@@ -154,15 +155,13 @@ public class TCPClient extends AbstractSocket {
         return false;
     }
 
-    private Socket createSSLSocket(String host, int port) {
+    private Socket createSSLSocket(String host, int port) throws IOException {
         try {
             SSLContext context = SSLContext.getInstance("TLSv1.2");
             context.init(null, null, null);
             return context.getSocketFactory().createSocket(host, port);
 //            return SSLContext.getDefault().getSocketFactory().createSocket(host, port);
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
             e.printStackTrace();
         } catch (KeyManagementException e) {
             e.printStackTrace();
