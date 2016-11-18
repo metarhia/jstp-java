@@ -59,7 +59,7 @@ public class TCPClient extends AbstractSocket {
                         getSocketListener().onConnectionFailed();
                     }
                 } catch (IOException e) {
-                    getSocketListener().onConnectionClosed(e);
+                    close();
                 }
             }
         }).start();
@@ -92,7 +92,7 @@ public class TCPClient extends AbstractSocket {
                     // all ok - manually closing
                     e.printStackTrace();
                 } catch (IOException e) {
-                    getSocketListener().onConnectionClosed(e);
+                    close();
                 }
             }
         });
@@ -131,7 +131,7 @@ public class TCPClient extends AbstractSocket {
                 } catch (InterruptedException | ClosedByInterruptException e) {
                     // all ok - manually closing
                 } catch (IOException e) {
-                    getSocketListener().onConnectionClosed(e);
+                    close();
                 }
             }
         });
