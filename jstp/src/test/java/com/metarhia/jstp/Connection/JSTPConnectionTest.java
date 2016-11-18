@@ -1,17 +1,11 @@
 package com.metarhia.jstp.Connection;
 
 import com.metarhia.jstp.core.Handlers.ManualHandler;
+import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import javax.net.ssl.SSLContext;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.InetAddress;
-import java.net.Socket;
 
 import static org.junit.Assert.assertTrue;
 

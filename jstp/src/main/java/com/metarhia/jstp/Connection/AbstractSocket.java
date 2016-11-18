@@ -5,7 +5,7 @@ package com.metarhia.jstp.Connection;
  */
 public abstract class AbstractSocket {
 
-    private AbstractSocketListener socketListener;
+    protected AbstractSocketListener socketListener;
 
     public AbstractSocket(AbstractSocketListener listener) {
         this.socketListener = listener;
@@ -39,10 +39,6 @@ public abstract class AbstractSocket {
 
     public void setSocketListener(AbstractSocketListener listener) {
         this.socketListener = listener;
-    }
-
-    protected AbstractSocketListener getSocketListener() {
-        return this.socketListener;
     }
 
     public abstract boolean isConnected();

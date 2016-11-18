@@ -1,11 +1,11 @@
 package com.metarhia.jstp.Connection;
 
 import javax.net.ssl.SSLContext;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.channels.ClosedByInterruptException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -105,25 +105,22 @@ public class TCPClient extends AbstractSocket {
             @Override
             public void run() {
                 try {
-                    StringBuilder sb = new StringBuilder();
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
                     int b = -1;
                     while (!closing) {
                         while (running) {
                             while ((b = in.read()) > 0) {
-                                sb.append((char) b);
+                                bos.write(b);
                             }
-                            if (sb.length() != 0 && getSocketListener() != null) {
-                                sb.append('\0');
-                                System.out.println("com.metarhia.jstp.Connection: " + sb.toString());
+                            if (bos.size() != 0 && socketListener != null) {
+                                bos.write('\0');
+                                String message = bos.toString();
+                                System.out.println("com.metarhia.jstp.Connection: " + message);
                                 // TODO add proper conditional logging
-                                getSocketListener().onMessageReceived(sb.toString());
-                                sb.delete(0, sb.length());
+                                socketListener.onMessageReceived(message);
+                                bos.reset();
                             }
-                            if (b == -1) {
-                                close();
-                            }
-                            // little delay to ease the work of a scheduler
-//                            Thread.sleep(10);
+                            if (b == -1) close();
                         }
                         synchronized (pauseLock) {
                             pauseLock.wait();
@@ -149,7 +146,7 @@ public class TCPClient extends AbstractSocket {
             running = true;
             out = socket.getOutputStream();
             in = socket.getInputStream();
-            getSocketListener().onConnect();
+            socketListener.onConnect();
             return true;
         }
         return false;
@@ -160,7 +157,6 @@ public class TCPClient extends AbstractSocket {
             SSLContext context = SSLContext.getInstance("TLSv1.2");
             context.init(null, null, null);
             return context.getSocketFactory().createSocket(host, port);
-//            return SSLContext.getDefault().getSocketFactory().createSocket(host, port);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (KeyManagementException e) {
@@ -217,9 +213,9 @@ public class TCPClient extends AbstractSocket {
             receiverThread = null;
             senderThread = null;
             socket = null;
-            getSocketListener().onConnectionClosed();
+            this.socketListener.onConnectionClosed();
         } catch (IOException e) {
-            getSocketListener().onConnectionClosed(e);
+            this.socketListener.onConnectionClosed(e);
         }
         closing = false;
     }
