@@ -74,7 +74,7 @@ public class TCPClient extends AbstractSocket {
                     while (!closing) {
                         while (running) {
                             synchronized (senderLock) {
-                                if (messageQueue.isEmpty()) {
+                                while (messageQueue.isEmpty()) {
                                     senderLock.wait();
                                 }
                             }
