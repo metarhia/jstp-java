@@ -80,7 +80,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     private List<JSTPConnectionListener> connectionListeners;
 
     public JSTPConnection(String host, int port) {
-        this(host, port, false);
+        this(host, port, true);
     }
 
     /**
@@ -91,14 +91,17 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
      * @param sslEnabled determines whether connection will use SSL or not (see {@link #setSSLEnabled})
      */
     public JSTPConnection(String host, int port, boolean sslEnabled) {
-        socket = new TCPClient(host, port, sslEnabled, this);
+        createNewConnection(host, port, sslEnabled);
         connectionListeners = new ArrayList<>();
-        socket.setSocketListener(this);
         handlers = new HashMap<>();
         eventHandlers = new HashMap<>();
         callHandlers = new HashMap<>();
         messageBuilder = new StringBuilder();
         clientMethodNames = new JSArray();
+    }
+
+    public void createNewConnection(String host, int port, boolean sslEnabled) {
+        socket = new TCPClient(host, port, sslEnabled, this);
     }
 
     /**
@@ -110,6 +113,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
      *                        server
      */
     public void handshake(String applicationName, ManualHandler... handler) {
+        packageCounter = 0;
         if (handler.length != 0) {
             handlers.put(packageCounter, handler[0]);
         }
@@ -321,7 +325,6 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     }
 
     public void closeConnection() {
-        packageCounter = 0;
         socket.close();
     }
 
