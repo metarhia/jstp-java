@@ -113,7 +113,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
      *                        server
      */
     public void handshake(String applicationName, ManualHandler... handler) {
-        packageCounter = 0;
+        int packageCounter = resetPackageCounter();
         if (handler.length != 0) {
             handlers.put(packageCounter, handler[0]);
         }
@@ -122,7 +122,6 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
         hm.addProtocolArg(applicationName);
 
         socket.openConnection(hm.getMessage() + TERMINATOR);
-        packageCounter++;
     }
 
     public void setClientMethodNames(String... names) {
@@ -132,20 +131,19 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     }
 
     public void inspect(String interfaceName, ManualHandler handler) {
+        int packageCounter = nextPackageCounter();
         JSTPMessage inspectMessage = new JSTPMessage(packageCounter, INSPECT);
         inspectMessage.addProtocolArg(interfaceName);
 
         handlers.put(packageCounter, handler);
-        packageCounter++;
 
         socket.sendMessage(inspectMessage.getMessage() + TERMINATOR);
     }
 
     public void event(String interfaceName, String methodName, JSArray args) {
+        int packageCounter = nextPackageCounter();
         JSTPMessage eventMessage = new JSTPMessage(packageCounter, EVENT, methodName, args);
         eventMessage.addProtocolArg(interfaceName);
-
-        packageCounter++;
 
         socket.sendMessage(eventMessage.getMessage() + TERMINATOR);
     }
@@ -154,7 +152,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
                      String methodName,
                      JSArray args,
                      ManualHandler... handler) {
-
+        int packageCounter = nextPackageCounter();
         JSTPMessage callMessage = new JSTPMessage(packageCounter, CALL, methodName, args);
         callMessage.addProtocolArg(interfaceName);
 
@@ -162,9 +160,16 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
             handlers.put(packageCounter, handler[0]);
         }
 
-        packageCounter++;
-
         socket.sendMessage(callMessage.getMessage() + TERMINATOR);
+    }
+
+    public synchronized int nextPackageCounter() {
+        return packageCounter++;
+    }
+
+    private synchronized int resetPackageCounter() {
+        packageCounter = 0;
+        return packageCounter++;
     }
 
     public void callback(JSCallback value, JSValue args) {
@@ -172,7 +177,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     }
 
     public void callback(JSCallback value, JSValue args, Integer customPackageIndex) {
-        int packageNumber = customPackageIndex == null ? packageCounter++ : customPackageIndex;
+        int packageNumber = customPackageIndex == null ? nextPackageCounter() : customPackageIndex;
 
         JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK, value.toString(), args);
 
@@ -216,7 +221,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
                         if (handler != null) {
                             handler.invoke(messageObject);
                         }
-                        packageCounter++;
+                        nextPackageCounter();
                         break;
                     case EVENT:
                         String interfaceName = getInterfaceName(messageObject);
@@ -230,14 +235,14 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
                                 }
                             }
                         }
-                        packageCounter++;
+                        nextPackageCounter();
                         break;
                     case STATE:
                         stateHandler.onState(messageObject);
                         break;
                     case INSPECT:
                         handleInspect();
-                        packageCounter++;
+                        nextPackageCounter();
                         break;
                     default:
                         break;
@@ -257,10 +262,10 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     }
 
     public int openStream(JSValue data) {
+        int packageCounter = nextPackageCounter();
         JSTPMessage streamMessage = new JSTPMessage(packageCounter, STREAM, STREAM_DATA, data);
         socket.sendMessage(streamMessage.getMessage() + TERMINATOR);
-
-        return packageCounter++;
+        return packageCounter;
     }
 
     public void writeStream(int packageNumber, JSValue data) {
