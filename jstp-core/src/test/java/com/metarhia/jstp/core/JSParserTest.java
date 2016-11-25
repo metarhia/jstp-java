@@ -173,6 +173,15 @@ public class JSParserTest {
     }
 
     @Test
+    public void testInvalidObject() throws Exception {
+        String input = "{he : llo : 123}";
+
+        JSObject actual = (JSObject) new JSParser(input).parse();
+
+        assertTrue("must throw exception", false);
+    }
+
+    @Test
     public void testConsoleConfig() throws Exception {
         String input = "  {\n" +
             "    login: {\n" +

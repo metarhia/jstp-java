@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by Lida on 27.06.16.
@@ -48,7 +49,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     /**
      * Call handlers table. Handlers are associated with names of methods they handle
      */
-    private HashMap<String, ManualHandler> callHandlers;
+    private Map<String, ManualHandler> callHandlers;
 
     /**
      * Event handlers table. Handlers are associated with names of interfaces they handle
@@ -59,7 +60,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
      * Callback, stream and handshake handlers. Handlers are associated with numbers of
      * packages incoming to server.
      */
-    private HashMap<Integer, ManualHandler> handlers;
+    private Map<Integer, ManualHandler> handlers;
 
     /**
      * State handler
@@ -93,9 +94,9 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     public JSTPConnection(String host, int port, boolean sslEnabled) {
         createNewConnection(host, port, sslEnabled);
         connectionListeners = new ArrayList<>();
-        handlers = new HashMap<>();
-        eventHandlers = new HashMap<>();
-        callHandlers = new HashMap<>();
+        handlers = new ConcurrentHashMap<>();
+        eventHandlers = new ConcurrentHashMap<>();
+        callHandlers = new ConcurrentHashMap<>();
         messageBuilder = new StringBuilder();
         clientMethodNames = new JSArray();
     }
