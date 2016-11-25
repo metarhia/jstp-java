@@ -176,9 +176,14 @@ public class JSParserTest {
     public void testInvalidObject() throws Exception {
         String input = "{he : llo : 123}";
 
-        JSObject actual = (JSObject) new JSParser(input).parse();
+        boolean result = false;
+        try {
+            new JSParser(input).parse();
+        } catch (JSParsingException e) {
+            result = true;
+        }
 
-        assertTrue("must throw exception", false);
+        assertTrue("must throw exception", result);
     }
 
     @Test
