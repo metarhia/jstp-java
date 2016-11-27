@@ -94,14 +94,23 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     public JSTPConnection(String host, int port, boolean sslEnabled) {
         createNewConnection(host, port, sslEnabled);
         connectionListeners = new ArrayList<>();
-        handlers = new ConcurrentHashMap<>();
         eventHandlers = new ConcurrentHashMap<>();
+        clientMethodNames = new JSArray();
+        handlers = new ConcurrentHashMap<>();
         callHandlers = new ConcurrentHashMap<>();
         messageBuilder = new StringBuilder();
-        clientMethodNames = new JSArray();
+        resetConnection();
+    }
+
+    private void resetConnection() {
+        resetPackageCounter();
+        handlers = new ConcurrentHashMap<>();
+        callHandlers = new ConcurrentHashMap<>();
+        messageBuilder = new StringBuilder();
     }
 
     public void createNewConnection(String host, int port, boolean sslEnabled) {
+        resetConnection();
         socket = new TCPClient(host, port, sslEnabled, this);
     }
 
@@ -425,6 +434,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
 
     @Override
     public void onConnectionClosed(Exception... e) {
+        resetConnection();
         for(JSTPConnectionListener listener : connectionListeners) listener.onConnectionClosed();
     }
 
