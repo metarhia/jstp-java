@@ -1,7 +1,6 @@
 package com.metarhia.jstp.core;
 
 import com.metarhia.jstp.core.JSTypes.*;
-
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -10,9 +9,6 @@ import java.util.Collections;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
 
-/**
- * Created by lundibundi on 7/6/16.
- */
 public class JSParserTest {
     @Test
     public void parseArray() throws Exception {
@@ -189,79 +185,79 @@ public class JSParserTest {
     @Test
     public void testConsoleConfig() throws Exception {
         String input = "  {\n" +
-            "    login: {\n" +
-            "      control: 'screen',\n" +
-            "      controls: {\n" +
-            "        login: {\n" +
-            "          control: 'edit',\n" +
-            "          filter: 'login',\n" +
-            "          top: 10, left: 10, right: 10,\n" +
-            "          height: 10,\n" +
-            "          label: 'login'\n" +
-            "        },\n" +
-            "        password: {\n" +
-            "          control: 'edit',\n" +
-            "          mode: 'password',\n" +
-            "          top: 25, left: 10, right: 10,\n" +
-            "          height: 10,\n" +
-            "          label: 'password'\n" +
-            "        },\n" +
-            "        cancel: {\n" +
-            "          control: 'button',\n" +
-            "          top: 40, right: 70,\n" +
-            "          width: 25, height: 10,\n" +
-            "          text: 'Cancel'\n" +
-            "        },\n" +
-            "        signin: {\n" +
-            "          control: 'button',\n" +
-            "          top: 40, right: 10,\n" +
-            "          width: 25, height: 10,\n" +
-            "          text: 'Sign in'\n" +
-            "        },\n" +
-            "        social: {\n" +
-            "          control: 'panel',\n" +
-            "          top: 55, bottom: 10, left: 10, right: 10,\n" +
-            "          controls: {\n" +
-            "            googlePlus: {\n" +
-            "              control: 'button',\n" +
-            "              top: 0, left: 0,\n" +
-            "              height: 10, width: 10,\n" +
-            "              image: 'googlePlus'\n" +
-            "            },\n" +
-            "            facebook: {\n" +
-            "              control: 'button',\n" +
-            "              top: 0, left: 10,\n" +
-            "              height: 10, width: 10,\n" +
-            "              image: 'facebook'\n" +
-            "            },\n" +
-            "            vk: {\n" +
-            "              control: 'button',\n" +
-            "              top: 0, left: 10,\n" +
-            "              height: 10, width: 10,\n" +
-            "              image: 'vk'\n" +
-            "            },\n" +
-            "            twitter: {\n" +
-            "              control: 'button',\n" +
-            "              top: 0, left: 20,\n" +
-            "              height: 10, width: 10,\n" +
-            "              image: 'twitter'\n" +
-            "            }\n" +
-            "          }\n" +
-            "        }\n" +
-            "      }\n" +
-            "    },\n" +
-            "    main: {\n" +
-            "      control: 'screen',\n" +
-            "      controls: {\n" +
-            "        message: {\n" +
-            "          control: 'label',\n" +
-            "          top: 10, left: 10, right: 10,\n" +
-            "          height: 10,\n" +
-            "          text: 'You are logged in'\n" +
-            "        }\n" +
-            "      }\n" +
-            "    }\n" +
-            "}";
+                "    login: {\n" +
+                "      control: 'screen',\n" +
+                "      controls: {\n" +
+                "        login: {\n" +
+                "          control: 'edit',\n" +
+                "          filter: 'login',\n" +
+                "          top: 10, left: 10, right: 10,\n" +
+                "          height: 10,\n" +
+                "          label: 'login'\n" +
+                "        },\n" +
+                "        password: {\n" +
+                "          control: 'edit',\n" +
+                "          mode: 'password',\n" +
+                "          top: 25, left: 10, right: 10,\n" +
+                "          height: 10,\n" +
+                "          label: 'password'\n" +
+                "        },\n" +
+                "        cancel: {\n" +
+                "          control: 'button',\n" +
+                "          top: 40, right: 70,\n" +
+                "          width: 25, height: 10,\n" +
+                "          text: 'Cancel'\n" +
+                "        },\n" +
+                "        signin: {\n" +
+                "          control: 'button',\n" +
+                "          top: 40, right: 10,\n" +
+                "          width: 25, height: 10,\n" +
+                "          text: 'Sign in'\n" +
+                "        },\n" +
+                "        social: {\n" +
+                "          control: 'panel',\n" +
+                "          top: 55, bottom: 10, left: 10, right: 10,\n" +
+                "          controls: {\n" +
+                "            googlePlus: {\n" +
+                "              control: 'button',\n" +
+                "              top: 0, left: 0,\n" +
+                "              height: 10, width: 10,\n" +
+                "              image: 'googlePlus'\n" +
+                "            },\n" +
+                "            facebook: {\n" +
+                "              control: 'button',\n" +
+                "              top: 0, left: 10,\n" +
+                "              height: 10, width: 10,\n" +
+                "              image: 'facebook'\n" +
+                "            },\n" +
+                "            vk: {\n" +
+                "              control: 'button',\n" +
+                "              top: 0, left: 10,\n" +
+                "              height: 10, width: 10,\n" +
+                "              image: 'vk'\n" +
+                "            },\n" +
+                "            twitter: {\n" +
+                "              control: 'button',\n" +
+                "              top: 0, left: 20,\n" +
+                "              height: 10, width: 10,\n" +
+                "              image: 'twitter'\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    },\n" +
+                "    main: {\n" +
+                "      control: 'screen',\n" +
+                "      controls: {\n" +
+                "        message: {\n" +
+                "          control: 'label',\n" +
+                "          top: 10, left: 10, right: 10,\n" +
+                "          height: 10,\n" +
+                "          text: 'You are logged in'\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "}";
 
         JSParser parser = new JSParser(input);
         JSObject actual = parser.parseObject();
@@ -285,7 +281,7 @@ public class JSParserTest {
     public void longParsing() throws Exception {
         String input = "{birth: -2051225940000}";
 
-        String actual = ((JSNumber) ((JSObject) new JSParser(input).parse()).get("birth")).toString();
+        String actual = ((JSObject) new JSParser(input).parse()).get("birth").toString();
         String expected = String.valueOf(-2051225940000L);
 
         assertEquals(expected, actual);

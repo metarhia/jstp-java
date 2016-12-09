@@ -10,12 +10,9 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
 
-/**
- * Created by lundibundi on 9/3/16.
- */
 public class JSTPConnectionTest {
 
-    JSTPConnection mConnection;
+    private JSTPConnection mConnection;
 
     @Before
     public void setUp() {
@@ -58,20 +55,20 @@ public class JSTPConnectionTest {
             @Override
             public void invoke(JSValue packet) {
                 connection.call("auth", "authorize", new JSArray(new Object[]{"+380962415331", "hellokitty1337"}),
-                    new ManualHandler() {
-                        @Override
-                        public void invoke(JSValue packet) {
-                            connection.call("profile", "get", new JSArray(), new ManualHandler() {
-                                @Override
-                                public void invoke(JSValue packet) {
-                                    test[0] = true;
-                                    synchronized (connection) {
-                                        connection.notify();
+                        new ManualHandler() {
+                            @Override
+                            public void invoke(JSValue packet) {
+                                connection.call("profile", "get", new JSArray(), new ManualHandler() {
+                                    @Override
+                                    public void invoke(JSValue packet) {
+                                        test[0] = true;
+                                        synchronized (connection) {
+                                            connection.notify();
+                                        }
                                     }
-                                }
-                            });
-                        }
-                    });
+                                });
+                            }
+                        });
             }
         });
 
@@ -143,8 +140,8 @@ public class JSTPConnectionTest {
     @Test
     public void onMessageReceivedMultiple() throws Exception {
         String packet = "{error:}" + JSTPConnection.TERMINATOR
-            + "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
-            + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
+                + "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
+                + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
 
         final Boolean[] success = {false, false};
         mConnection.addEventHandler("auth", "insert", new ManualHandler() {
@@ -174,23 +171,23 @@ public class JSTPConnectionTest {
             @Override
             public void invoke(JSValue packet) {
                 connection.call("auth", "authorize", new JSArray(new Object[]{"+380962415331", "hellokitty1337"}),
-                    new ManualHandler() {
-                        @Override
-                        public void invoke(JSValue packet) {
+                        new ManualHandler() {
+                            @Override
+                            public void invoke(JSValue packet) {
 
-                            JSObject userData = new JSObject();
-                            userData.put("nickname", "\n\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],");
-                            connection.call("profile", "update", new JSArray(new Object[]{userData}), new ManualHandler() {
-                                @Override
-                                public void invoke(JSValue packet) {
-                                    synchronized (connection) {
-                                        test[0] = true;
-                                        connection.notify();
+                                JSObject userData = new JSObject();
+                                userData.put("nickname", "\n\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],");
+                                connection.call("profile", "update", new JSArray(new Object[]{userData}), new ManualHandler() {
+                                    @Override
+                                    public void invoke(JSValue packet) {
+                                        synchronized (connection) {
+                                            test[0] = true;
+                                            connection.notify();
+                                        }
                                     }
-                                }
-                            });
-                        }
-                    });
+                                });
+                            }
+                        });
             }
         });
 

@@ -1,8 +1,5 @@
 package com.metarhia.jstp.Connection;
 
-/**
- * Created by lidaamber on 16.11.16.
- */
 public abstract class AbstractSocket {
 
     protected AbstractSocketListener socketListener;
@@ -25,17 +22,17 @@ public abstract class AbstractSocket {
 
     public abstract void close();
 
-    public abstract void setHost(String host);
-
-    public abstract void setPort(int port);
-
-    public abstract void setSSLEnabled(boolean enabled);
-
     public abstract String getHost();
+
+    public abstract void setHost(String host);
 
     public abstract int getPort();
 
+    public abstract void setPort(int port);
+
     public abstract boolean isSSLEnabled();
+
+    public abstract void setSSLEnabled(boolean enabled);
 
     public void setSocketListener(AbstractSocketListener listener) {
         this.socketListener = listener;
@@ -50,6 +47,6 @@ public abstract class AbstractSocket {
 
         void onMessageReceived(String message);
 
-        void onConnectionClosed(Exception ... e);
+        void onConnectionClosed(Exception... e);
     }
 }

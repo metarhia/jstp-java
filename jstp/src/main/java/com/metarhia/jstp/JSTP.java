@@ -11,7 +11,7 @@ import java.io.Serializable;
  * Common JSTP interface
  * Created by lidaamber on 18.06.16.
  */
-public class JSTP implements Serializable{
+public class JSTP implements Serializable {
 
     public static JSObject parse(String data) throws JSParsingException {
         JSParser parser = new JSParser(data);

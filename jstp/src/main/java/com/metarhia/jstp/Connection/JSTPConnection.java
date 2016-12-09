@@ -15,11 +15,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Created by Lida on 27.06.16.
- */
-public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
+public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
 
+    /**
+     * Package terminator
+     */
+    public static final String TERMINATOR = "\0";
+    public static final String STREAM_DATA = "data";
     // Package types
     private static final String HANDSHAKE = "handshake";
     private static final String CALL = "call";
@@ -28,14 +30,6 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
     private static final String STATE = "state";
     private static final String STREAM = "stream";
     private static final String INSPECT = "inspect";
-
-    /**
-     * Package terminator
-     */
-    public static final String TERMINATOR = "\0";
-
-    public static final String STREAM_DATA = "data";
-
     /**
      * Package counter
      */
@@ -320,9 +314,8 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
         }
     }
 
-    @Deprecated
     public void close() {
-        closeConnection();
+        socket.close();
     }
 
     public void pause() {
@@ -341,14 +334,15 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
         socket.resume(clear);
     }
 
+    @Deprecated
     public void closeConnection() {
-        socket.close();
+        close();
     }
 
     private String getInterfaceName(JSObject messageObject) {
         return (String) ((JSArray) messageObject.get(EVENT))
-            .get(1)
-            .getGeneralizedValue();
+                .get(1)
+                .getGeneralizedValue();
     }
 
     private String getEventName(JSObject messageObject) {
@@ -357,16 +351,20 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
 
     private int getPacketIndex(JSObject messageObject, String packageValue) {
         return (int) ((JSNumber) ((JSArray) messageObject.get(packageValue))
-            .get(0))
-            .getValue();
+                .get(0))
+                .getValue();
+    }
+
+    public boolean isSSLEnabled() {
+        return socket.isSSLEnabled();
     }
 
     /**
      * <p>Determines whether connection will use SSL or not</p>
-     *
+     * <p>
      * <p>Must be set before calling {@link #handshake(String, ManualHandler...)}
      * as it will open the connection</p>
-     *
+     * <p>
      * <p>To apply the changed value (after handshake has been done) tcp connection must be
      * restarted: call {@link #close()} and then {@link #handshake(String, ManualHandler...)}
      * again to create connection with new settings</p>
@@ -377,20 +375,16 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
         socket.setSSLEnabled(sslEnabled);
     }
 
-    public boolean isSSLEnabled() {
-        return socket.isSSLEnabled();
-    }
-
     public String getHost() {
         return socket.getHost();
     }
 
     /**
      * <p>Set address of the server</p>
-     *
+     * <p>
      * <p>Must be set before calling {@link #handshake(String, ManualHandler...)}
      * as it will open the connection</p>
-     *
+     * <p>
      * <p>To apply the changed value (after handshake has been done) tcp connection must be
      * restarted: call {@link #close()} and then {@link #handshake(String, ManualHandler...)}
      * again to create connection with new settings</p>
@@ -407,10 +401,10 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
 
     /**
      * <p>Set port number to connect to on the server</p>
-     *
+     * <p>
      * <p>Must be set before calling {@link #handshake(String, ManualHandler...)}
      * as it will open the connection</p>
-     *
+     * <p>
      * <p>To apply the changed value (after handshake has been done) tcp connection must be
      * restarted: call {@link #close()} and then {@link #handshake(String, ManualHandler...)}
      * again to create connection with new settings</p>
@@ -431,13 +425,13 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
 
     @Override
     public void onConnect() {
-        for(JSTPConnectionListener listener : connectionListeners) listener.onConnect();
+        for (JSTPConnectionListener listener : connectionListeners) listener.onConnect();
     }
 
     @Override
     public void onConnectionClosed(Exception... e) {
         resetConnection();
-        for(JSTPConnectionListener listener : connectionListeners) listener.onConnectionClosed();
+        for (JSTPConnectionListener listener : connectionListeners) listener.onConnectionClosed();
     }
 
     public interface JSTPConnectionListener {

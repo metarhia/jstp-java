@@ -6,18 +6,13 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 
 import java.util.LinkedList;
-import java.util.List;
 import java.util.regex.Pattern;
 
-/**
- * Created by lundibundi on 8/10/16.
- */
 public class PropertyGetterUtils {
-
-    private static final Pattern simpleDoublePattern = Pattern.compile("\\d+\\.?\\d*");
 
     public static final String OBJECT_GETTER = ").get($S)";
     public static final String ARRAY_GETTER = ").get($L)";
+    private static final Pattern simpleDoublePattern = Pattern.compile("\\d+\\.?\\d*");
 
     public static CodeBlock composeArrayGetter(String identifier, int... indices) {
         return composeArrayGetter(CodeBlock.of(identifier), indices);
