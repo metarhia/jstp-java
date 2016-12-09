@@ -20,6 +20,7 @@ public class Tokenizer {
     private String str;
     private String input;
     private int index;
+    private int prevIndex;
     private Token lastToken;
 
     public Tokenizer(String input) {
@@ -28,6 +29,7 @@ public class Tokenizer {
         this.input = input;
         length = input.length();
         index = 0;
+        prevIndex = 0;
         lastToken = null;
     }
 
@@ -61,6 +63,8 @@ public class Tokenizer {
     }
 
     public Token next() throws JSParsingException {
+        prevIndex = index;
+
         // reset variables
         str = null;
         number = null;
@@ -99,7 +103,7 @@ public class Tokenizer {
 //        if (ch == '"' || ch == '\'') {
 
             if (index >= length) {
-                throw new JSParsingException("Error: no closing quote '" + ch + "'");
+                throw new JSParsingException(index - 1, "No closing quote '" + ch + "'");
             }
 
             int lastIndex = input.indexOf(ch, index);
@@ -109,7 +113,7 @@ public class Tokenizer {
                 lastIndex = input.indexOf(ch, lastIndex + 1);
             }
             if (lastIndex == -1) {
-                throw new JSParsingException("Error: no closing quote '" + ch + "'");
+                throw new JSParsingException(index - 1, "No closing quote '" + ch + "'");
             }
 
             str = input.substring(index, lastIndex);
@@ -161,6 +165,10 @@ public class Tokenizer {
 
     public Token getLastToken() {
         return lastToken;
+    }
+
+    public int getPrevIndex() {
+        return prevIndex;
     }
 
     public interface MatchRange {

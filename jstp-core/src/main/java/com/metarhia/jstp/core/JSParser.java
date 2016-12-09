@@ -60,14 +60,14 @@ public class JSParser implements Serializable {
             }
             // skip comma
             if (tokenizer.next() != Token.COMMA && tokenizer.getLastToken() != Token.SQ_CLOSE) {
-                throw new JSParsingException("Error: expected ',' as separator of array elements");
+                throw new JSParsingException(tokenizer.getPrevIndex(), "Expected ',' as separator of array elements");
             }
         }
         return jsArray;
     }
 
     public JSObject parseObject() throws JSParsingException {
-        assureToken("Error: expected '{' at the beginning of JSObject", Token.CURLY_OPEN);
+        assureToken("Expected '{' at the beginning of JSObject", Token.CURLY_OPEN);
 
         JSObject jsObject = new JSObject();
         while (tokenizer.getLastToken() != Token.CURLY_CLOSE
@@ -75,19 +75,19 @@ public class JSParser implements Serializable {
             jsObject.put(parseKeyValuePair());
             // skip comma
             if (tokenizer.next() != Token.COMMA && tokenizer.getLastToken() != Token.CURLY_CLOSE) {
-                throw new JSParsingException("Error: expected ',' as key-value pairs separator");
+                throw new JSParsingException(tokenizer.getPrevIndex(), "Expected ',' as key-value pairs separator");
             }
         }
         return jsObject;
     }
 
     public JSObject.Entry parseKeyValuePair() throws JSParsingException {
-        assureToken("Error: expected valid key", Token.KEY, Token.NUMBER, Token.STRING);
+        assureToken("Expected valid key", Token.KEY, Token.NUMBER, Token.STRING);
 
         String key = tokenizer.getStr();
 
         if (tokenizer.next() != Token.COLON) {
-            throw new JSParsingException("Error: ':' as separator of Key and Value");
+            throw new JSParsingException(tokenizer.getPrevIndex(), "Expected ':' as separator of Key and Value");
         }
 
         JSValue value = parse(true);
@@ -102,7 +102,7 @@ public class JSParser implements Serializable {
         if (!assured) {
             assured = assure(tokenizer.next(), tokens);
             if (!assured) {
-                throw new JSParsingException(errorMsg);
+                throw new JSParsingException(tokenizer.getPrevIndex(), errorMsg);
             }
         }
     }
