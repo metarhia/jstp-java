@@ -2,6 +2,7 @@ package com.metarhia.jstp.Connection;
 
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSTypes.JSArray;
+import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import org.junit.After;
 import org.junit.Before;
