@@ -10,12 +10,9 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
 
-/**
- * Created by lundibundi on 9/3/16.
- */
 public class JSTPConnectionTest {
 
-    JSTPConnection mConnection;
+    private JSTPConnection mConnection;
 
     @Before
     public void setUp() {
@@ -89,8 +86,8 @@ public class JSTPConnectionTest {
     @Test
     public void onMessageReceivedMultiple() throws Exception {
         String packet = "{error:}" + JSTPConnection.TERMINATOR
-            + "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
-            + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
+                + "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
+                + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
 
         final Boolean[] success = {false, false};
         mConnection.addEventHandler("auth", "insert", new ManualHandler() {

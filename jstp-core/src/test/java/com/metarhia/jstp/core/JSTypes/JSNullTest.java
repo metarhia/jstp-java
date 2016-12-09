@@ -2,11 +2,8 @@ package com.metarhia.jstp.core.JSTypes;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertSame;
 
-/**
- * Created by lundibundi on 8/24/16.
- */
 public class JSNullTest {
     @Test
     public void equals() throws Exception {

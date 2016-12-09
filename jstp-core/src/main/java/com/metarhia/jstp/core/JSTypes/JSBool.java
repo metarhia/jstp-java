@@ -1,8 +1,5 @@
 package com.metarhia.jstp.core.JSTypes;
 
-/**
- * Created by lida on 21.04.16.
- */
 public class JSBool implements JSValue {
 
     private boolean value;
@@ -15,13 +12,13 @@ public class JSBool implements JSValue {
         return value;
     }
 
+    public void setValue(boolean value) {
+        this.value = value;
+    }
+
     @Override
     public Object getGeneralizedValue() {
         return value;
-    }
-
-    public void setValue(boolean value) {
-        this.value = value;
     }
 
     @Override

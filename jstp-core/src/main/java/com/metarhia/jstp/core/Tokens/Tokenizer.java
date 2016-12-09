@@ -6,9 +6,6 @@ import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import org.apache.commons.lang3.StringEscapeUtils;
 
-/**
- * Created by lundibundi on 7/4/16.
- */
 public class Tokenizer {
     private static final String BOOL_TRUE_STR = new JSBool(true).toString();
     private static final String BOOL_FALSE_STR = new JSBool(false).toString();
@@ -18,14 +15,11 @@ public class Tokenizer {
     private static final CharRange numberRange = new CharRange(0x30, 0x39);
     private static final CharRange letterUpperRange = new CharRange(0x41, 0x5a);
     private static final CharRange letterLowerRange = new CharRange(0x61, 0x7a);
-
+    private final int length;
     private Double number;
     private String str;
-
     private String input;
     private int index;
-    private final int length;
-
     private Token lastToken;
 
     public Tokenizer(String input) {
@@ -35,6 +29,35 @@ public class Tokenizer {
         length = input.length();
         index = 0;
         lastToken = null;
+    }
+
+    private static int getPastLastIndex(String input, int index) {
+        return getPastLastIndex(input, index, new MatchRange() {
+            @Override
+            public boolean matches(char ch) {
+                return ch == 0x5f || isLetter(ch) || isNumber(ch);
+            }
+        });
+    }
+
+    private static int getPastLastIndex(String input, int index, MatchRange matcher) {
+        while (index < input.length()
+                && matcher.matches(input.charAt(index))) {
+            ++index;
+        }
+        return index;
+    }
+
+    public static boolean isLetter(char ch) {
+        return letterLowerRange.contains(ch) || letterUpperRange.contains(ch);
+    }
+
+    public static boolean isNumber(char ch) {
+        return numberRange.contains(ch);
+    }
+
+    public static boolean isFloatingNumber(char ch) {
+        return isNumber(ch) || ch == '.' || ch == '+' || ch == '-';
     }
 
     public Token next() throws JSParsingException {
@@ -49,7 +72,7 @@ public class Tokenizer {
         do {
             ch = input.charAt(index);
         } while (++index < length
-            && (ch == 0x20 || ch == 0x0a || ch == 0x09)); // space and \n and \t
+                && (ch == 0x20 || ch == 0x0a || ch == 0x09)); // space and \n and \t
 
         if (ch == '/' && input.charAt(index) == '/') {
             index = input.indexOf('\n', index) + 1;
@@ -81,8 +104,8 @@ public class Tokenizer {
 
             int lastIndex = input.indexOf(ch, index);
             while (lastIndex < length
-                && lastIndex != -1
-                && input.charAt(lastIndex - 1) == '\\') {
+                    && lastIndex != -1
+                    && input.charAt(lastIndex - 1) == '\\') {
                 lastIndex = input.indexOf(ch, lastIndex + 1);
             }
             if (lastIndex == -1) {
@@ -142,34 +165,5 @@ public class Tokenizer {
 
     public interface MatchRange {
         boolean matches(char ch);
-    }
-
-    private static int getPastLastIndex(String input, int index) {
-        return getPastLastIndex(input, index, new MatchRange() {
-            @Override
-            public boolean matches(char ch) {
-                return ch == 0x5f || isLetter(ch) || isNumber(ch);
-            }
-        });
-    }
-
-    private static int getPastLastIndex(String input, int index, MatchRange matcher) {
-        while (index < input.length()
-            && matcher.matches(input.charAt(index))) {
-            ++index;
-        }
-        return index;
-    }
-
-    public static boolean isLetter(char ch) {
-        return letterLowerRange.contains(ch) || letterUpperRange.contains(ch);
-    }
-
-    public static boolean isNumber(char ch) {
-        return numberRange.contains(ch);
-    }
-
-    public static boolean isFloatingNumber(char ch) {
-        return isNumber(ch) || ch == '.' || ch == '+' || ch == '-';
     }
 }

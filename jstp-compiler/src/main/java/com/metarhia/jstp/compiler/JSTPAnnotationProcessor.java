@@ -3,19 +3,18 @@ package com.metarhia.jstp.compiler;
 import com.google.auto.service.AutoService;
 import com.metarhia.jstp.compiler.annotations.JSTPReceiver;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
-import static javax.annotation.processing.Completions.*;
+import static javax.annotation.processing.Completions.of;
 
 @AutoService(Processor.class)
 public class JSTPAnnotationProcessor extends AbstractProcessor {

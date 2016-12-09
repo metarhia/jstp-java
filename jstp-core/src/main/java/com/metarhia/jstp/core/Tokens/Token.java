@@ -1,8 +1,5 @@
 package com.metarhia.jstp.core.Tokens;
 
-/**
- * Created by Lida on 28.04.16.
- */
 public enum Token {
     TRUE,
     FALSE,
@@ -11,7 +8,7 @@ public enum Token {
     NUMBER,
     KEY,
     STRING,
-//    SPACE,
+    //    SPACE,
     NONE,
     QUOTES_OPEN,
     QUOTES_CLOSE,
@@ -32,15 +29,11 @@ public enum Token {
         ch = '0';
     }
 
-    public Character getCh() {
-        return ch;
-    }
-
     /**
      * Deduces token from given char
-     *
+     * <p>
      * Warning: tokens that do not have their own character are the same
-     *          so don't try to use this function for them
+     * so don't try to use this function for them
      *
      * @param ch character to match
      * @return Token that corresponds to {@param ch} or null if no Token matches
@@ -50,5 +43,9 @@ public enum Token {
             if (token.ch == ch) return token;
         }
         return null;
+    }
+
+    public Character getCh() {
+        return ch;
     }
 }

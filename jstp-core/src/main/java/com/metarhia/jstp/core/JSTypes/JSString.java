@@ -2,9 +2,6 @@ package com.metarhia.jstp.core.JSTypes;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 
-/**
- * Created by lida on 21.04.16.
- */
 public class JSString implements JSValue {
 
     private String value;
@@ -17,13 +14,13 @@ public class JSString implements JSValue {
         return value;
     }
 
+    public void setValue(String value) {
+        this.value = value;
+    }
+
     @Override
     public Object getGeneralizedValue() {
         return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
     }
 
     @Override

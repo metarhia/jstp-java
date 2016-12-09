@@ -1,8 +1,5 @@
 package com.metarhia.jstp.core.JSTypes;
 
-/**
- * Created by lida on 21.04.16.
- */
 public class JSNumber implements JSValue {
 
     private double value;
@@ -15,13 +12,13 @@ public class JSNumber implements JSValue {
         return value;
     }
 
+    public void setValue(double value) {
+        this.value = value;
+    }
+
     @Override
     public Object getGeneralizedValue() {
         return value;
-    }
-
-    public void setValue(double value) {
-        this.value = value;
     }
 
     @Override
@@ -42,7 +39,7 @@ public class JSNumber implements JSValue {
 
     @Override
     public String toString() {
-        if(value == Math.floor(value)) {
+        if (value == Math.floor(value)) {
             return String.valueOf((long) value);
         } else {
             return String.valueOf(value);

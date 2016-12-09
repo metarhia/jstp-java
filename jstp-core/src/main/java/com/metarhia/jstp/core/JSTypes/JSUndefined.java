@@ -1,18 +1,22 @@
 package com.metarhia.jstp.core.JSTypes;
 
-/**
- * Created by lida on 19.04.16.
- */
 public class JSUndefined implements JSValue {
 
     private static JSUndefined instance;
-    private JSUndefined() {}
+
+    private JSUndefined() {
+    }
 
     public static JSUndefined get() {
-        if(instance == null) {
+        if (instance == null) {
             instance = new JSUndefined();
         }
         return instance;
+    }
+
+    public static boolean isUndefined(Object obj) {
+        return obj == instance
+                || obj instanceof JSUndefined;
     }
 
     @Override
@@ -23,12 +27,7 @@ public class JSUndefined implements JSValue {
     @Override
     public boolean equals(Object obj) {
         return obj == this
-            || isUndefined(obj);
-    }
-
-    public static boolean isUndefined(Object obj) {
-        return obj == instance
-                || obj instanceof JSUndefined;
+                || isUndefined(obj);
     }
 
     @Override

@@ -1,30 +1,28 @@
 package com.metarhia.jstp.Connection;
 
 import javax.net.ssl.SSLContext;
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.channels.ClosedByInterruptException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-/**
- * Created by Lida on 08.07.16.
- */
 public class TCPClient extends AbstractSocket {
 
+    private final Object senderLock = new Object();
+    private final Object pauseLock = new Object();
     private String host;
     private int port;
     private boolean sslEnabled;
-
     private boolean running;
     private boolean closing;
     private Thread receiverThread;
     private Thread senderThread;
     private ConcurrentLinkedQueue<String> messageQueue;
-    private final Object senderLock = new Object();
-    private final Object pauseLock = new Object();
-
     private Socket socket;
 
     private OutputStream out;

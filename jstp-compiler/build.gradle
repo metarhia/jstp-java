@@ -37,7 +37,7 @@ bintray {
         version {
             name = compilerVersion
             desc = 'JSTP compiler to generate package handlers for you'
-            released  = new Date()
+            released = new Date()
         }
     }
 }

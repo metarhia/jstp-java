@@ -6,9 +6,6 @@ import com.metarhia.jstp.core.Tokens.Tokenizer;
 
 import java.io.Serializable;
 
-/**
- * Created by lundibundi on 7/4/16.
- */
 public class JSParser implements Serializable {
     public final static boolean VERBOSE_CHECKING = true;
 
@@ -58,8 +55,7 @@ public class JSParser implements Serializable {
             if (tokenizer.getLastToken() == Token.COMMA) {
                 jsArray.add(JSUndefined.get());
                 continue;
-            }
-            else {
+            } else {
                 jsArray.add(parse(false));
             }
             // skip comma
@@ -105,15 +101,15 @@ public class JSParser implements Serializable {
         boolean assured = assure(tokenizer.getLastToken(), tokens);
         if (!assured) {
             assured = assure(tokenizer.next(), tokens);
-            if(!assured) {
+            if (!assured) {
                 throw new JSParsingException(errorMsg);
             }
         }
     }
 
     private boolean assure(Token tokenToAssure, Token[] array) {
-        for(Token token : array) {
-            if(token == tokenToAssure) {
+        for (Token token : array) {
+            if (token == tokenToAssure) {
                 return true;
             }
         }

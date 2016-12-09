@@ -2,9 +2,6 @@ package com.metarhia.jstp.core.JSTypes;
 
 import java.util.*;
 
-/**
- * Created by lida on 19.04.16.
- */
 public class JSObject implements JSValue {
 
     private LinkedHashMap<String, JSValue> values;
@@ -101,7 +98,7 @@ public class JSObject implements JSValue {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder("{ ");
-        if(values.size() != 0) {
+        if (values.size() != 0) {
             for (Map.Entry<String, JSValue> entry : values.entrySet()) {
                 builder.append(entry.getKey())
                         .append(": ")

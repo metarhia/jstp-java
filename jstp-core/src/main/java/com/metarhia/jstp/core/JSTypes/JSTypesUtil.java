@@ -5,19 +5,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by lundibundi on 8/24/16.
- */
 public class JSTypesUtil {
 
     /**
      * Supported types: {@link Integer} {@link Double} {@link String} {@link Boolean}
      * {@link List}
-     *
+     * <p>
      * Wraps java value to be used in JS hierarchy
      *
      * @param value object of java type to be wrapped in JS hierarchy
-     *
      * @return appropriate JSValue or JSUndefined
      */
     public static JSValue javaToJS(Object value) {
@@ -43,7 +39,7 @@ public class JSTypesUtil {
         if (jsValue instanceof JSNumber) {
             final double value = ((JSNumber) jsValue).getValue();
             if (forceInt) {
-                return (int) value ;
+                return (int) value;
             } else {
                 return value;
             }
