@@ -27,6 +27,13 @@ public class JSTPConnectionTest {
         mConnection = null;
     }
 
+    @Test
+    public void emptyObject() throws Exception {
+        mConnection.onMessageReceived("{}" + JSTPConnection.TERMINATOR);
+        assertTrue(true);
+    }
+
+    @Test
     public void onMessageReceivedCall() throws Exception {
         String packet = "{call:[17,'auth'], newAccount:['Payload data']}" + JSTPConnection.TERMINATOR;
 

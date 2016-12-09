@@ -215,6 +215,8 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener{
                 JSObject messageObject = (JSObject) parsed;
 
                 List<String> keys = messageObject.getOrderedKeys();
+                if (keys.size() == 0) continue;
+
                 switch (keys.get(0)) {
                     case CALLBACK:
                     case HANDSHAKE:
