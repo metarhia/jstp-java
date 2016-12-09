@@ -4,6 +4,7 @@ import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.core.JSTypes.JSBool;
 import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
+import org.apache.commons.lang3.StringEscapeUtils;
 
 /**
  * Created by lundibundi on 7/4/16.
@@ -73,11 +74,23 @@ public class Tokenizer {
 
         if (ch == 0x22 || ch == 0x27) { // double and single quotes
 //        if (ch == '"' || ch == '\'') {
+
             if (index >= length) {
                 throw new JSParsingException("Error: no closing quote '" + ch + "'");
             }
+
             int lastIndex = input.indexOf(ch, index);
+            while (lastIndex < length
+                && lastIndex != -1
+                && input.charAt(lastIndex - 1) == '\\') {
+                lastIndex = input.indexOf(ch, lastIndex + 1);
+            }
+            if (lastIndex == -1) {
+                throw new JSParsingException("Error: no closing quote '" + ch + "'");
+            }
+
             str = input.substring(index, lastIndex);
+            str = StringEscapeUtils.unescapeEcmaScript(str);
             index = lastIndex + 1; // skip quote
             return lastToken = Token.STRING;
         }

@@ -2,6 +2,7 @@ package com.metarhia.jstp.Connection;
 
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSTypes.JSArray;
+import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import org.junit.After;
 import org.junit.Before;
@@ -51,7 +52,7 @@ public class JSTPConnectionTest {
 
     @Test
     public void temporary() throws Exception {
-        final Object lock = new Object();
+        final boolean[] test = {false};
         final JSTPConnection connection = new JSTPConnection("since.tv", 4000, true);
         connection.handshake("superIn", new ManualHandler() {
             @Override
@@ -63,9 +64,9 @@ public class JSTPConnectionTest {
                             connection.call("profile", "get", new JSArray(), new ManualHandler() {
                                 @Override
                                 public void invoke(JSValue packet) {
-                                    System.out.println(packet);
-                                    synchronized (lock) {
-                                        lock.notify();
+                                    test[0] = true;
+                                    synchronized (connection) {
+                                        connection.notify();
                                     }
                                 }
                             });
@@ -74,9 +75,11 @@ public class JSTPConnectionTest {
             }
         });
 
-        synchronized (lock) {
-            lock.wait();
+        synchronized (connection) {
+            connection.wait(10000);
         }
+
+        assertTrue(test[0]);
     }
 
     @Test
@@ -163,4 +166,38 @@ public class JSTPConnectionTest {
         assertTrue(success[0] && success[1]);
     }
 
+    @Test
+    public void sendEscapedCharacters() throws Exception {
+        final boolean[] test = {false};
+        final JSTPConnection connection = new JSTPConnection("since.tv", 4000, true);
+        connection.handshake("superIn", new ManualHandler() {
+            @Override
+            public void invoke(JSValue packet) {
+                connection.call("auth", "authorize", new JSArray(new Object[]{"+380962415331", "hellokitty1337"}),
+                    new ManualHandler() {
+                        @Override
+                        public void invoke(JSValue packet) {
+
+                            JSObject userData = new JSObject();
+                            userData.put("nickname", "\n\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],");
+                            connection.call("profile", "update", new JSArray(new Object[]{userData}), new ManualHandler() {
+                                @Override
+                                public void invoke(JSValue packet) {
+                                    synchronized (connection) {
+                                        test[0] = true;
+                                        connection.notify();
+                                    }
+                                }
+                            });
+                        }
+                    });
+            }
+        });
+
+        synchronized (connection) {
+            connection.wait(10000);
+        }
+
+        assertTrue(test[0]);
+    }
 }

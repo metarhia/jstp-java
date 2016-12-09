@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="jstp:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/jstp</output-path>
+    <root id="archive" name="jstp.jar">
+      <element id="module-output" name="jstp" />
+      <element id="module-output" name="jstp-core" />
+    </root>
+  </artifact>
+</component>

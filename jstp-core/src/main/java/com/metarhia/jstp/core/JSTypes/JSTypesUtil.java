@@ -29,6 +29,8 @@ public class JSTypesUtil {
             return new JSBool((Boolean) value);
         } else if (value instanceof List<?>) {
             return new JSArray((List<Object>) value);
+        } else if (value instanceof JSValue) {
+            return (JSValue) value;
         }
         return JSUndefined.get();
     }
