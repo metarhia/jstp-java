@@ -23,15 +23,16 @@ import java.util.*;
  */
 public class JSTPReceiverAnnotatedInterface {
 
-    public static final String PACKET_PARAMETER_NAME = "packet";
-    public static final String INVOKE_PREFIX = "invoke";
-    public static final String VARIABLE_DECLARATION = "$1T $2L";
-    public static final String VARIABLE_DECLARATION_NULL = VARIABLE_DECLARATION + " = null";
-    public static final String VARIABLE_DEFINITION = VARIABLE_DECLARATION + " = ($1T) $3B";
-    public static final String VARIABLE_DEFINITION_JAVA_TYPE = VARIABLE_DECLARATION + " = ($1T) ($3B).getGeneralizedValue()";
-    public static final String VARIABLE_ASSIGNMENT = "$2L = ($1T) $3B";
-    public static final String VARIABLE_ASSIGNMENT_JAVA_TYPE = "$2L = ($1T) ($3B).getGeneralizedValue()";
+    private static final String PACKET_PARAMETER_NAME = "packet";
+    private static final String INVOKE_PREFIX = "invoke";
+    private static final String VARIABLE_DECLARATION = "$1T $2L";
+    private static final String VARIABLE_DECLARATION_NULL = VARIABLE_DECLARATION + " = null";
+    private static final String VARIABLE_DEFINITION = VARIABLE_DECLARATION + " = ($1T) $3L";
+    private static final String VARIABLE_DEFINITION_JAVA_TYPE = VARIABLE_DECLARATION + " = ($1T) ($3L).getGeneralizedValue()";
+    private static final String VARIABLE_ASSIGNMENT = "$2L = ($1T) $3L";
+    private static final String VARIABLE_ASSIGNMENT_JAVA_TYPE = "$2L = ($1T) ($3L).getGeneralizedValue()";
     private static final String PREFIX = "JSTP";
+
     private static final TypeName jstpValueType = TypeName.get(JSValue.class);
     private static Class handlerSuperClass = Handler.class;
     private TypeElement annotatedInterface;

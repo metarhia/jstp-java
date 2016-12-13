@@ -3,11 +3,11 @@
     <output-path>$PROJECT_DIR$/out/artifacts/jstp_compiler</output-path>
     <root id="archive" name="jstp-compiler.jar">
       <element id="module-output" name="jstp-compiler" />
-      <element id="directory" name="com">
-        <element id="extracted-dir" path="$PROJECT_DIR$/jstp-compiler/libs/javapoet-1.8.0-SNAPSHOT.jar" path-in-jar="/com/" />
-      </element>
       <element id="directory" name="META-INF">
         <element id="dir-copy" path="$PROJECT_DIR$/jstp-compiler/src/main/resources/META-INF" />
+      </element>
+      <element id="directory" name="com">
+        <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/squareup/javapoet/1.8.0/javapoet-1.8.0.jar" path-in-jar="/com/" />
       </element>
     </root>
   </artifact>

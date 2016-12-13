@@ -1,6 +1,5 @@
 package com.metarhia.jstp.compiler;
 
-import com.google.auto.service.AutoService;
 import com.metarhia.jstp.compiler.annotations.JSTPReceiver;
 
 import javax.annotation.processing.*;
@@ -16,7 +15,6 @@ import java.util.Set;
 
 import static javax.annotation.processing.Completions.of;
 
-@AutoService(Processor.class)
 public class JSTPAnnotationProcessor extends AbstractProcessor {
 
     private Types typeUtils;
