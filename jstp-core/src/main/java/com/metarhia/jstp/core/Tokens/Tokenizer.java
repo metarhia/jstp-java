@@ -4,7 +4,7 @@ import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.core.JSTypes.JSBool;
 import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
-import org.apache.commons.lang3.StringEscapeUtils;
+import com.metarhia.jstp.core.Utils;
 
 public class Tokenizer {
     private static final String BOOL_TRUE_STR = new JSBool(true).toString();
@@ -117,7 +117,7 @@ public class Tokenizer {
             }
 
             str = input.substring(index, lastIndex);
-            str = StringEscapeUtils.unescapeEcmaScript(str);
+            str = Utils.unescapeEcmaScript(str);
             index = lastIndex + 1; // skip quote
             return lastToken = Token.STRING;
         }

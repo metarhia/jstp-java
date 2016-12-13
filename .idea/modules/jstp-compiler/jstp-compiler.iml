@@ -15,9 +15,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="jstp-core" />
-    <orderEntry type="library" name="Gradle: com.google.auto.service:auto-service:1.0-rc2" level="project" />
-    <orderEntry type="library" name="Gradle: com.google.auto:auto-common:0.3" level="project" />
-    <orderEntry type="library" name="Gradle: com.google.guava:guava:18.0" level="project" />
     <orderEntry type="module-library">
       <library name="Gradle: javapoet-1.8.0-SNAPSHOT">
         <CLASSES>
