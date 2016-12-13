@@ -1,6 +1,45 @@
 package com.metarhia.jstp.core;
 
+import org.apache.commons.lang3.text.translate.*;
+
 public class Utils {
+
+    /**
+     * Modified version of {@link org.apache.commons.lang3.StringEscapeUtils#ESCAPE_ECMASCRIPT}
+     */
+    public static final CharSequenceTranslator ESCAPE_ECMASCRIPT =
+            new AggregateTranslator(
+                    new LookupTranslator(
+                            new String[][] {
+                                    {"'", "\\'"},
+                                    {"\"", "\\\""},
+                                    {"\\", "\\\\"},
+                            }),
+                    new LookupTranslator(EntityArrays.JAVA_CTRL_CHARS_ESCAPE()),
+                    JavaUnicodeEscaper.outsideOf(32, 0x7f)
+            );
+
+    /**
+     * {@see org.apache.commons.lang3.StringEscapeUtils#UNESCAPE_JAVA}
+     */
+    public static final CharSequenceTranslator UNESCAPE_JAVA =
+            new AggregateTranslator(
+                    new OctalUnescaper(),     // .between('\1', '\377'),
+                    new UnicodeUnescaper(),
+                    new LookupTranslator(EntityArrays.JAVA_CTRL_CHARS_UNESCAPE()),
+                    new LookupTranslator(
+                            new String[][] {
+                                    {"\\\\", "\\"},
+                                    {"\\\"", "\""},
+                                    {"\\'", "'"},
+                                    {"\\", ""}
+                            })
+            );
+
+     /**
+     * {@see org.apache.commons.lang3.StringEscapeUtils#UNESCAPE_ECMASCRIPT}
+     */
+    public static final CharSequenceTranslator UNESCAPE_ECMASCRIPT = UNESCAPE_JAVA;
 
     private static final String[] CONTROL_CHARS = {
             "\\u0000", "\\u0001", "\\u0002",
@@ -47,5 +86,13 @@ public class Utils {
                 if (c < 0x20) return CONTROL_CHARS[c];
                 else return null;
         }
+    }
+
+    public static String unescapeEcmaScript(final String input) {
+        return UNESCAPE_ECMASCRIPT.translate(input);
+    }
+
+    public static String escapeEcmaScript(final String input) {
+        return ESCAPE_ECMASCRIPT.translate(input);
     }
 }

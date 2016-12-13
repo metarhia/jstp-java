@@ -1,6 +1,6 @@
 package com.metarhia.jstp.core.JSTypes;
 
-import org.apache.commons.lang3.StringEscapeUtils;
+import com.metarhia.jstp.core.Utils;
 
 public class JSString implements JSValue {
 
@@ -35,6 +35,6 @@ public class JSString implements JSValue {
 
     @Override
     public String toString() {
-        return "'" + StringEscapeUtils.escapeEcmaScript(value) + "'";
+        return "'" + Utils.escapeEcmaScript(value) + "'";
     }
 }
