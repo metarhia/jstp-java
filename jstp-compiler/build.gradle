@@ -9,7 +9,7 @@ sourceCompatibility = '1.7'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
-def compilerVersion = '0.1.6'
+def compilerVersion = '0.1.7'
 def packetName = 'jstp-compiler'
 
 publishing {
@@ -27,7 +27,7 @@ publishing {
                         dependency {
                             groupId "com.squareup"
                             artifactId "javapoet"
-                            version 1.8
+                            version "1.8.0"
                         }
                     }
                 }
