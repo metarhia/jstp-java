@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="jstp-compiler-sources">
+    <output-path>$PROJECT_DIR$/out/artifacts/jstp_compiler_sources</output-path>
+    <root id="archive" name="jstp-compiler-sources.jar">
+      <element id="dir-copy" path="$PROJECT_DIR$/jstp-compiler/src/main/java/com" />
+    </root>
+  </artifact>
+</component>

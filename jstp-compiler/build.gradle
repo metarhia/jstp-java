@@ -9,17 +9,29 @@ sourceCompatibility = '1.7'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
-def compilerVersion = '0.1.5'
+def compilerVersion = '0.1.6'
 def packetName = 'jstp-compiler'
 
 publishing {
     publications {
         DefaultPublication(MavenPublication) {
-            artifact file("../out/artifacts/jstp_compiler_jar/jstp-compiler.jar")
-            artifact source: file("../out/artifacts/jstp_compiler_sources_jar/jstp-compiler-sources.jar"), classifier: 'sources'
+            artifact file("../out/artifacts/jstp_compiler/jstp-compiler.jar")
+            artifact source: file("../out/artifacts/jstp_compiler_sources/jstp-compiler-sources.jar"), classifier: 'sources'
             groupId 'com.metarhia.jstp'
             artifactId packetName
             version compilerVersion
+            pom.withXml {
+                asNode().children().last() + {
+                    resolveStrategy = Closure.DELEGATE_FIRST
+                    dependencies {
+                        dependency {
+                            groupId "com.squareup"
+                            artifactId "javapoet"
+                            version 1.8
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -44,10 +56,6 @@ bintray {
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
-
-    compile 'com.google.auto.service:auto-service:1.0-rc2'
-
     compile project(':jstp-core')
-
     testCompile group: 'junit', name: 'junit', version: '4.11'
 }
