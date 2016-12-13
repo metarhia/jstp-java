@@ -117,7 +117,7 @@ public class Tokenizer {
             }
 
             str = input.substring(index, lastIndex);
-            str = StringEscapeUtils.unescapeJava(str);
+            str = StringEscapeUtils.unescapeEcmaScript(str);
             index = lastIndex + 1; // skip quote
             return lastToken = Token.STRING;
         }

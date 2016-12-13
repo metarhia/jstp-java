@@ -302,8 +302,19 @@ public class JSParserTest {
     }
 
     @Test
-    public void parseWithEscaping() throws Exception {
-        String input = "{nickname:'\\n\\tnyaaaaaa\\'aaa\\'[((:’ –( :-)) :-| :~ =:O)],'}";
+    public void parseWithEscapingDouble() throws Exception {
+        String input = "{nickname:\"\\n\\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],\"}";
+        JSObject actual = new JSParser(input).parseObject();
+
+        JSObject expected = new JSObject();
+        expected.put("nickname", "\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],");
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    public void parseWithEscapingSingle() throws Exception {
+        String input = "{nickname: '\\n\\tnyaaaaaa\\'aaa\\'[((:’ –( :-)) :-| :~ =:O)],'}";
         JSObject actual = new JSParser(input).parseObject();
 
         JSObject expected = new JSObject();
