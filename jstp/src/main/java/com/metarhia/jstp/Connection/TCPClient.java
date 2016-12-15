@@ -75,7 +75,7 @@ public class TCPClient extends AbstractSocket {
                             }
                             // TODO add proper conditional logging
                             String message = messageQueue.poll();
-                            System.out.println("com.metarhia.jstp.Connection: " + message);
+//                            System.out.println("com.metarhia.jstp.Connection: " + message);
                             out.write(message.getBytes());
                             out.write(0);
                             out.flush();
@@ -110,7 +110,7 @@ public class TCPClient extends AbstractSocket {
                             if (bos.size() != 0 && socketListener != null) {
                                 bos.write('\0');
                                 String message = bos.toString();
-                                System.out.println("com.metarhia.jstp.Connection: " + message);
+//                                System.out.println("com.metarhia.jstp.Connection: " + message);
                                 // TODO add proper conditional logging
                                 socketListener.onMessageReceived(message);
                                 bos.reset();
