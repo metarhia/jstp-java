@@ -97,15 +97,15 @@ public class JSObject implements JSValue {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("{ ");
+        StringBuilder builder = new StringBuilder("{");
         if (values.size() != 0) {
             for (Map.Entry<String, JSValue> entry : values.entrySet()) {
                 builder.append(entry.getKey())
-                        .append(": ")
+                        .append(":")
                         .append(entry.getValue())
-                        .append(", ");
+                        .append(",");
             }
-            builder.replace(builder.length() - 2, builder.length(), " }");
+            builder.replace(builder.length() - 1, builder.length(), "}");
         } else {
             builder.append("}");
         }

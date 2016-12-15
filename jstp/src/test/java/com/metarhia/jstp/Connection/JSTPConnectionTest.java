@@ -9,20 +9,21 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
 
 public class JSTPConnectionTest {
 
-    private JSTPConnection mConnection;
+    private JSTPConnection connection;
 
     @Before
     public void setUp() {
-        mConnection = new JSTPConnection("nothing", 4343);
+        connection = new JSTPConnection("nothing", 4343);
     }
 
     @After
     public void tearDown() {
-        mConnection.close();
-        mConnection = null;
+        connection.close();
+        connection = null;
     }
 
     @Test
@@ -81,7 +82,7 @@ public class JSTPConnectionTest {
 
     @Test
     public void emptyObject() throws Exception {
-        mConnection.onMessageReceived("{}" + JSTPConnection.TERMINATOR);
+        connection.onMessageReceived("{}" + JSTPConnection.TERMINATOR);
         assertTrue(true);
     }
 
@@ -90,14 +91,14 @@ public class JSTPConnectionTest {
         String packet = "{call:[17,'auth'], newAccount:['Payload data']}" + JSTPConnection.TERMINATOR;
 
         final Boolean[] success = {false};
-        mConnection.addCallHandler("newAccount", new ManualHandler() {
+        connection.addCallHandler("newAccount", new ManualHandler() {
             @Override
             public void invoke(JSValue packet) {
                 success[0] = true;
             }
         });
 
-        mConnection.onMessageReceived(packet);
+        connection.onMessageReceived(packet);
 
         assertTrue(success[0]);
     }
@@ -107,14 +108,14 @@ public class JSTPConnectionTest {
         String packet = "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
 
         final Boolean[] success = {false};
-        mConnection.addEventHandler("auth", "insert", new ManualHandler() {
+        connection.addEventHandler("auth", "insert", new ManualHandler() {
             @Override
             public void invoke(JSValue packet) {
                 success[0] = true;
             }
         });
 
-        mConnection.onMessageReceived(packet);
+        connection.onMessageReceived(packet);
 
         assertTrue(success[0]);
     }
@@ -125,14 +126,14 @@ public class JSTPConnectionTest {
 
 
         final Boolean[] success = {false};
-        mConnection.addHandler(17, new ManualHandler() {
+        connection.addHandler(17, new ManualHandler() {
             @Override
             public void invoke(JSValue packet) {
                 success[0] = true;
             }
         });
 
-        mConnection.onMessageReceived(packet);
+        connection.onMessageReceived(packet);
 
         assertTrue(success[0]);
     }
@@ -144,21 +145,21 @@ public class JSTPConnectionTest {
                 + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
 
         final Boolean[] success = {false, false};
-        mConnection.addEventHandler("auth", "insert", new ManualHandler() {
+        connection.addEventHandler("auth", "insert", new ManualHandler() {
             @Override
             public void invoke(JSValue packet) {
                 success[0] = true;
             }
         });
 
-        mConnection.addHandler(17, new ManualHandler() {
+        connection.addHandler(17, new ManualHandler() {
             @Override
             public void invoke(JSValue packet) {
                 success[1] = true;
             }
         });
 
-        mConnection.onMessageReceived(packet);
+        connection.onMessageReceived(packet);
 
         assertTrue(success[0] && success[1]);
     }
@@ -196,5 +197,19 @@ public class JSTPConnectionTest {
         }
 
         assertTrue(test[0]);
+    }
+
+    @Test
+    public void checkPingPong() throws Exception {
+        String input = "{ping:[42]}" + JSTPConnection.TERMINATOR;
+        String response = "{pong:[42]}" + JSTPConnection.TERMINATOR;
+        AbstractSocket socket = mock(AbstractSocket.class);
+
+        JSTPConnection connection = new JSTPConnection("", 0);
+        connection.createNewConnection(socket);
+
+        connection.onMessageReceived(input);
+
+        verify(socket, times(1)).sendMessage(response);
     }
 }

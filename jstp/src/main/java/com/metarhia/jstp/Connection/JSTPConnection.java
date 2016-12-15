@@ -30,6 +30,9 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
     private static final String STATE = "state";
     private static final String STREAM = "stream";
     private static final String INSPECT = "inspect";
+    private static final String PING = "ping";
+    private static final String PONG = "pong";
+
     /**
      * Package counter
      */
@@ -103,9 +106,13 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
         messageBuilder = new StringBuilder();
     }
 
+    public void createNewConnection(AbstractSocket socket) {
+       resetConnection();
+       this.socket = socket;
+    }
+
     public void createNewConnection(String host, int port, boolean sslEnabled) {
-        resetConnection();
-        socket = new TCPClient(host, port, sslEnabled, this);
+        createNewConnection(new TCPClient(host, port, sslEnabled, this));
     }
 
     /**
@@ -250,6 +257,10 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
                         handleInspect();
                         nextPackageCounter();
                         break;
+                    case PING:
+                        int pingNumber = getPacketIndex(messageObject, keys.get(0));
+                        handlePing(pingNumber);
+                        break;
                     default:
                         break;
                 }
@@ -261,6 +272,11 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
             }
         }
         if (startMessageIndex != 0) messageBuilder.delete(0, startMessageIndex);
+    }
+
+    private void handlePing(int pingNumber) {
+        JSTPMessage streamMessage = new JSTPMessage(pingNumber, PONG);
+        socket.sendMessage(streamMessage.getMessage() + TERMINATOR);
     }
 
     private void handleInspect() {

@@ -131,13 +131,13 @@ public class JSArray implements JSValue {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("[ ");
+        StringBuilder builder = new StringBuilder("[");
         if (values.size() != 0) {
             for (JSValue value : values) {
                 builder.append(value)
-                        .append(", ");
+                        .append(",");
             }
-            builder.replace(builder.length() - 2, builder.length(), " ]");
+            builder.replace(builder.length() - 1, builder.length(), "]");
         } else {
             builder.append("]");
         }
