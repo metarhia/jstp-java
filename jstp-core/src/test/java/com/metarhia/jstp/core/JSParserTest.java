@@ -322,4 +322,20 @@ public class JSParserTest {
 
         assertEquals(expected, actual);
     }
+
+    @Test
+    public void stringifyRussian() throws Exception {
+        String input = "имя, оно самоеё~:)";
+        JSString jsString = new JSString(input);
+
+        assertEquals('\'' + input + '\'', jsString.toString());
+    }
+
+    @Test
+    public void stringifyEscapedUnicode() throws Exception {
+        String input = "fff\u0011\u1111ggg\u007f";
+        JSString jsString = new JSString(input);
+
+        assertEquals("'fff\\u0011\u1111ggg\\u007F'", jsString.toString());
+    }
 }
