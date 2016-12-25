@@ -16,7 +16,7 @@ public class Utils {
                                     {"\\", "\\\\"},
                             }),
                     new LookupTranslator(EntityArrays.JAVA_CTRL_CHARS_ESCAPE()),
-                    JavaUnicodeEscaper.below(0x20),
+                    JavaUnicodeEscaper.between(0x00, 0x1f),
                     JavaUnicodeEscaper.between(0x7f, 0x7f)
             );
 
