@@ -333,9 +333,9 @@ public class JSParserTest {
 
     @Test
     public void stringifyEscapedUnicode() throws Exception {
-        String input = "fff\u0011\u1111ggg\u007f";
+        String input = "fff\u0000\u1111g\u0020gg\u007f";
         JSString jsString = new JSString(input);
 
-        assertEquals("'fff\\u0011\u1111ggg\\u007F'", jsString.toString());
+        assertEquals("'fff\\u0000\u1111g\u0020gg\\u007F'", jsString.toString());
     }
 }
