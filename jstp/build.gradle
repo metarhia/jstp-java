@@ -9,7 +9,7 @@ sourceCompatibility = '1.7'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
-def jstpVersion = '0.9.9'
+def jstpVersion = '0.9.9.1'
 def packetName = 'jstp'
 
 publishing {
@@ -20,18 +20,6 @@ publishing {
             groupId 'com.metarhia.jstp'
             artifactId packetName
             version jstpVersion
-            pom.withXml {
-                asNode().children().last() + {
-                    resolveStrategy = Closure.DELEGATE_FIRST
-                    dependencies {
-                        dependency {
-                            groupId "org.apache.commons"
-                            artifactId "commons-lang3"
-                            version 3.5
-                        }
-                    }
-                }
-            }
         }
     }
 }

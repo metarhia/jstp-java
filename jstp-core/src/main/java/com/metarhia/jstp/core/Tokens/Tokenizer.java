@@ -6,6 +6,8 @@ import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import com.metarhia.jstp.core.Utils;
 
+import java.text.ParseException;
+
 public class Tokenizer {
     private static final String BOOL_TRUE_STR = new JSBool(true).toString();
     private static final String BOOL_FALSE_STR = new JSBool(false).toString();
@@ -117,7 +119,11 @@ public class Tokenizer {
             }
 
             str = input.substring(index, lastIndex);
-            str = Utils.unescapeEcmaScript(str);
+            try {
+                str = Utils.unescapeString(str);
+            } catch (ParseException e) {
+                throw new JSParsingException(e);
+            }
             index = lastIndex + 1; // skip quote
             return lastToken = Token.STRING;
         }
