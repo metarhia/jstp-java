@@ -35,6 +35,6 @@ public class JSString implements JSValue {
 
     @Override
     public String toString() {
-        return "'" + Utils.escapeEcmaScript(value) + "'";
+        return "'" + Utils.escapeString(value) + "'";
     }
 }

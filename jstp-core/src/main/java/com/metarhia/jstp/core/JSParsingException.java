@@ -9,4 +9,8 @@ public class JSParsingException extends Exception {
     public JSParsingException(int index, String errorMsg) {
         super(String.format("Index: %d, Message: %s", index, errorMsg));
     }
+
+    public JSParsingException(Throwable cause) {
+        super(cause);
+    }
 }

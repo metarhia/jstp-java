@@ -1,46 +1,8 @@
 package com.metarhia.jstp.core;
 
-import org.apache.commons.lang3.text.translate.*;
+import java.text.ParseException;
 
 public class Utils {
-
-    /**
-     * Modified version of {@link org.apache.commons.lang3.StringEscapeUtils#ESCAPE_ECMASCRIPT}
-     */
-    public static final CharSequenceTranslator ESCAPE_ECMASCRIPT =
-            new AggregateTranslator(
-                    new LookupTranslator(
-                            new String[][] {
-                                    {"'", "\\'"},
-                                    {"\"", "\\\""},
-                                    {"\\", "\\\\"},
-                            }),
-                    new LookupTranslator(EntityArrays.JAVA_CTRL_CHARS_ESCAPE()),
-                    JavaUnicodeEscaper.between(0x00, 0x1f),
-                    JavaUnicodeEscaper.between(0x7f, 0x7f)
-            );
-
-    /**
-     * {@see org.apache.commons.lang3.StringEscapeUtils#UNESCAPE_JAVA}
-     */
-    public static final CharSequenceTranslator UNESCAPE_JAVA =
-            new AggregateTranslator(
-                    new OctalUnescaper(),     // .between('\1', '\377'),
-                    new UnicodeUnescaper(),
-                    new LookupTranslator(EntityArrays.JAVA_CTRL_CHARS_UNESCAPE()),
-                    new LookupTranslator(
-                            new String[][] {
-                                    {"\\\\", "\\"},
-                                    {"\\\"", "\""},
-                                    {"\\'", "'"},
-                                    {"\\", ""}
-                            })
-            );
-
-     /**
-     * {@see org.apache.commons.lang3.StringEscapeUtils#UNESCAPE_ECMASCRIPT}
-     */
-    public static final CharSequenceTranslator UNESCAPE_ECMASCRIPT = UNESCAPE_JAVA;
 
     private static final String[] CONTROL_CHARS = {
             "\\u0000", "\\u0001", "\\u0002",
@@ -85,15 +47,90 @@ public class Utils {
                 return "\\'";
             default:
                 if (c < 0x20) return CONTROL_CHARS[c];
+                else if (c == 0x7f) return "\\u007F";
                 else return null;
         }
     }
 
-    public static String unescapeEcmaScript(final String input) {
-        return UNESCAPE_ECMASCRIPT.translate(input);
+    public static String unescapeString(String input) throws ParseException {
+        StringBuilder result = new StringBuilder(input.length());
+        int[] index = new int[]{0};
+        int backslash = 0;
+        index[0] = input.indexOf('\\');
+        while (index[0] >= 0) {
+            index[0]++;
+            result.append(input.substring(backslash, index[0] - 1))
+                    .append(getControlChar(input, index));
+            backslash = index[0];
+            index[0] = input.indexOf('\\', backslash);
+        }
+        if (backslash < input.length()) {
+            result.append(input.substring(backslash, input.length()));
+        }
+        return result.toString();
     }
 
-    public static String escapeEcmaScript(final String input) {
-        return ESCAPE_ECMASCRIPT.translate(input);
+    public static char[] getControlChar(String input, int[] index) throws ParseException {
+        int start = index[0];
+        int codePoint;
+        switch (input.charAt(start)) {
+            case '"':
+                index[0]++;
+                return new char[]{'"'};
+            case '\'':
+                index[0]++;
+                return new char[]{'\''};
+            case 'b':
+                index[0]++;
+                return new char[]{'\b'};
+            case 'f':
+                index[0]++;
+                return new char[]{'\f'};
+            case 'n':
+                index[0]++;
+                return new char[]{'\n'};
+            case 'r':
+                index[0]++;
+                return new char[]{'\r'};
+            case 't':
+                index[0]++;
+                return new char[]{'\t'};
+            case '0':
+                index[0]++;
+                return new char[]{'\0'};
+            case 'x': {
+                start++;
+                index[0] = start + 3;
+                break;
+            }
+            case 'u': {
+                start++;
+                final char character = input.charAt(start);
+                if (isHex(character)) {
+                    index[0] = start + 4;
+                } else if (character == '{') {
+                    int i = ++start;
+                    while (isHex(input.charAt(i))) i++;
+                    codePoint = Integer.parseInt(input.substring(start, i), 16);
+                    index[0] = i + 1;
+                    return Character.toChars(codePoint);
+                } else {
+                    throw new ParseException("Invalid Unicode escape sequence", start + 1);
+                }
+                break;
+            }
+            default: {
+                return new char[]{input.charAt(start)};
+            }
+        }
+        codePoint = Integer.parseInt(input.substring(start, index[0]), 16);
+        return Character.toChars(codePoint);
+    }
+
+    private static boolean isHex(char character) {
+        return (character >= '0' && character <= '9')
+                || (character >= 'A' && character <= 'F')
+                || (character >= 'a' && character <= 'f');
     }
 }
+
