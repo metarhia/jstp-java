@@ -26,6 +26,7 @@ public class JSParserTest {
     private static final TestUtils.TestData[] stringifyTestData = new TestUtils.TestData[]{
             new TestUtils.TestData("{}", "{}"),
             new TestUtils.TestData("'abv\\\"gggg\\\"dd'", "'abv\"gggg\"dd'"),
+            new TestUtils.TestData("'abv\"gggg\"dd'", "'abv\"gggg\"dd'"),
             new TestUtils.TestData("['outer', ['inner']]", "[\'outer\',[\'inner\']]"),
             new TestUtils.TestData("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'")
     };
