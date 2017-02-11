@@ -219,21 +219,21 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
                 if (keys.size() == 0) continue;
 
                 switch (keys.get(0)) {
-                    case CALLBACK:
                     case HANDSHAKE:
+                    case CALLBACK:
+                        receiverIndex = getPacketIndex(messageObject, keys.get(0));
+                        ManualHandler callbackHandler = handlers.remove(receiverIndex);
+                        if (callbackHandler != null) callbackHandler.invoke(messageObject);
+                        break;
                     case STREAM:
                         receiverIndex = getPacketIndex(messageObject, keys.get(0));
                         ManualHandler responseHandler = handlers.get(receiverIndex);
-                        if (responseHandler != null) {
-                            responseHandler.invoke(messageObject);
-                        }
+                        if (responseHandler != null) responseHandler.invoke(messageObject);
                         break;
                     case CALL:
                         String methodName = keys.get(1);
                         ManualHandler handler = callHandlers.get(methodName);
-                        if (handler != null) {
-                            handler.invoke(messageObject);
-                        }
+                        if (handler != null) handler.invoke(messageObject);
                         nextPackageCounter();
                         break;
                     case EVENT:

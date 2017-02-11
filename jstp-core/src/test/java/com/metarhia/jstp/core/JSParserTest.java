@@ -28,7 +28,8 @@ public class JSParserTest {
             new TestUtils.TestData("'abv\\\"gggg\\\"dd'", "'abv\"gggg\"dd'"),
             new TestUtils.TestData("'abv\"gggg\"dd'", "'abv\"gggg\"dd'"),
             new TestUtils.TestData("['outer', ['inner']]", "[\'outer\',[\'inner\']]"),
-            new TestUtils.TestData("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'")
+            new TestUtils.TestData("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
+            new TestUtils.TestData("'\\x20'", "' '")
     };
 
     @Test

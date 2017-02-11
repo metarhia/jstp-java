@@ -90,8 +90,8 @@ public class Utils {
             case '0':
                 return new ControlChar(new char[]{'\0'}, 1);
             case 'x':
-                codePoint = Integer.parseInt(input.substring(start + 1, start + 4), 16);
-                return new ControlChar(Character.toChars(codePoint), 4);
+                codePoint = Integer.parseInt(input.substring(start + 1, start + 3), 16);
+                return new ControlChar(Character.toChars(codePoint), 3);
             case 'u':
                 start++;
                 final char character = input.charAt(start);
