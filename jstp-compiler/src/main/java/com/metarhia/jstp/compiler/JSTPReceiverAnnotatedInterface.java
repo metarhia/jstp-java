@@ -58,24 +58,6 @@ public class JSTPReceiverAnnotatedInterface {
                 .addParameter(jstpValueType, PACKET_PARAMETER_NAME);
     }
 
-    private static CodeBlock composeGetterFromAnnotations(String name, Element element) throws PropertyFormatException {
-        return composeGetterFromAnnotations(CodeBlock.of(name), element);
-    }
-
-    private static CodeBlock composeGetterFromAnnotations(CodeBlock name, Element element) throws PropertyFormatException {
-        if (element.getAnnotation(CustomNamed.class) != null) {
-            CustomNamed annotation = element.getAnnotation(CustomNamed.class);
-            return PropertyGetterUtils.composeCustomGetter(name, annotation.value());
-        } else if (element.getAnnotation(Named.class) != null) {
-            Named annotation = element.getAnnotation(Named.class);
-            return PropertyGetterUtils.composeObjectGetter(name, annotation.value());
-        } else if (element.getAnnotation(Indexed.class) != null) {
-            Indexed annotation = element.getAnnotation(Indexed.class);
-            return PropertyGetterUtils.composeArrayGetter(name, annotation.value());
-        }
-        return null;
-    }
-
     public void generateCode(Filer filer) throws
             ExceptionHandlerInvokeException,
             ClassCastException,
@@ -165,6 +147,14 @@ public class JSTPReceiverAnnotatedInterface {
 
         composeArgumentGetters(method, methodBuilder, payloadType, payloadName);
 
+        Class notNullAnnotation = method.getAnnotation(NotNull.class) != null ? null : NotNull.class;
+        final String controlFlow = composeCondition(" || ", " == null", parameters, notNullAnnotation);
+        if (controlFlow != null) {
+            methodBuilder.beginControlFlow(controlFlow)
+                    .addStatement("return")
+                    .endControlFlow();
+        }
+
         TypeName interfaceType = ClassName.get(annotatedInterface.asType());
         String methodCall = composeMethodCall(method.getSimpleName().toString(), parameters);
         methodBuilder.beginControlFlow("for ($T h : handlers)", interfaceType)
@@ -172,6 +162,24 @@ public class JSTPReceiverAnnotatedInterface {
                 .endControlFlow();
 
         return methodBuilder.build();
+    }
+
+    private static CodeBlock composeGetterFromAnnotations(String name, Element element) throws PropertyFormatException {
+        return composeGetterFromAnnotations(CodeBlock.of(name), element);
+    }
+
+    private static CodeBlock composeGetterFromAnnotations(CodeBlock name, Element element) throws PropertyFormatException {
+        if (element.getAnnotation(CustomNamed.class) != null) {
+            CustomNamed annotation = element.getAnnotation(CustomNamed.class);
+            return PropertyGetterUtils.composeCustomGetter(name, annotation.value());
+        } else if (element.getAnnotation(Named.class) != null) {
+            Named annotation = element.getAnnotation(Named.class);
+            return PropertyGetterUtils.composeObjectGetter(name, annotation.value());
+        } else if (element.getAnnotation(Indexed.class) != null) {
+            Indexed annotation = element.getAnnotation(Indexed.class);
+            return PropertyGetterUtils.composeArrayGetter(name, annotation.value());
+        }
+        return null;
     }
 
     private TypeMirror getTypeMirror(Class clazz) {
@@ -255,6 +263,24 @@ public class JSTPReceiverAnnotatedInterface {
             payloadType = elementUtils.getTypeElement(JSValue.class.getCanonicalName()).asType();
         }
         return typeUtils.erasure(payloadType);
+    }
+
+    private String composeCondition(String logic, String condition, List<? extends VariableElement> parameters,
+                                    Class annotationClass) {
+        StringBuilder builder = new StringBuilder("if (");
+        int i = 0;
+        int j = 0;
+        for (VariableElement parameter : parameters) {
+            ++i;
+            if (annotationClass == null || parameter.getAnnotation(annotationClass) != null) {
+                ++j;
+                builder.append(parameter.getSimpleName())
+                        .append(condition);
+                if (i < parameters.size()) builder.append(logic);
+            }
+        }
+        builder.append(")");
+        return j > 0 ? builder.toString() : null;
     }
 
     private String composeMethodCall(String methodName, List<? extends VariableElement> parameters) {
