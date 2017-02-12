@@ -6,9 +6,6 @@
       <element id="directory" name="META-INF">
         <element id="dir-copy" path="$PROJECT_DIR$/jstp-compiler/src/main/resources/META-INF" />
       </element>
-      <element id="directory" name="com">
-        <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/squareup/javapoet/1.8.0/javapoet-1.8.0.jar" path-in-jar="/com/" />
-      </element>
     </root>
   </artifact>
 </component>
