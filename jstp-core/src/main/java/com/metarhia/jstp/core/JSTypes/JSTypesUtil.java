@@ -59,7 +59,10 @@ public class JSTypesUtil {
                 value.put(me.getKey(), JSToJava(me.getValue(), forceInt));
             }
             return value;
+        } else if (jsValue instanceof JSNull) {
+            return null;
+        } else {
+            return JSUndefined.get();
         }
-        return JSUndefined.get();
     }
 }

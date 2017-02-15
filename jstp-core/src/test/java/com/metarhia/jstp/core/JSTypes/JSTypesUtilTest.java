@@ -13,6 +13,7 @@ import static org.junit.Assert.assertEquals;
  * Created by lundibundi on 8/24/16.
  */
 public class JSTypesUtilTest {
+
     @Test
     public void JSToJavaNumber() throws Exception {
         double value = 4.66;
@@ -27,6 +28,13 @@ public class JSTypesUtilTest {
         double actual = (double) JSTypesUtil.JSToJava(new JSNumber(value));
 
         assertEquals(value, actual, 0.00001);
+    }
+
+    @Test
+    public void JSToJavaNull() throws Exception {
+        Object actual = JSTypesUtil.JSToJava(JSNull.get());
+
+        assertEquals(null, actual);
     }
 
     @Test
