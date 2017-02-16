@@ -31,18 +31,15 @@ public class JSTypesUtil {
         return JSUndefined.get();
     }
 
-    public static Object JSToJava(JSValue jsValue) {
-        return JSToJava(jsValue, false);
+    public static Object jsToJava(JSValue jsValue) {
+        return jsToJava(jsValue, false);
     }
 
-    public static Object JSToJava(JSValue jsValue, boolean forceInt) {
+    public static Object jsToJava(JSValue jsValue, boolean forceInt) {
         if (jsValue instanceof JSNumber) {
             final double value = ((JSNumber) jsValue).getValue();
-            if (forceInt) {
-                return (int) value;
-            } else {
-                return value;
-            }
+            if (forceInt) return (int) value;
+            else return value;
         } else if (jsValue instanceof JSString) {
             return ((JSString) jsValue).getValue();
         } else if (jsValue instanceof JSBool) {
@@ -50,13 +47,13 @@ public class JSTypesUtil {
         } else if (jsValue instanceof JSArray) {
             List<Object> value = new ArrayList<>();
             for (JSValue val : ((JSArray) jsValue).getValue()) {
-                value.add(JSToJava(val, forceInt));
+                value.add(jsToJava(val, forceInt));
             }
             return value;
         } else if (jsValue instanceof JSObject) {
             Map<String, Object> value = new HashMap<>();
             for (Map.Entry<String, JSValue> me : ((JSObject) jsValue).getValue().entrySet()) {
-                value.put(me.getKey(), JSToJava(me.getValue(), forceInt));
+                value.put(me.getKey(), jsToJava(me.getValue(), forceInt));
             }
             return value;
         } else if (jsValue instanceof JSNull) {
