@@ -9,6 +9,8 @@ import com.metarhia.jstp.core.JSTypes.JSNumber;
 import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +23,9 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
      * Package terminator
      */
     public static final String TERMINATOR = "\0";
+
     public static final String STREAM_DATA = "data";
+
     // Package types
     private static final String HANDSHAKE = "handshake";
     private static final String CALL = "call";
@@ -33,15 +37,42 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
     private static final String PING = "ping";
     private static final String PONG = "pong";
 
+    private static final Map<String, Method> METHOD_HANDLERS = new HashMap<>(10);
+
+    static {
+        try {
+            METHOD_HANDLERS.put(HANDSHAKE,
+                    JSTPConnection.class.getDeclaredMethod("handshakePacketHandler", JSObject.class));
+            METHOD_HANDLERS.put(CALL,
+                    JSTPConnection.class.getDeclaredMethod("callPacketHandler", JSObject.class));
+            METHOD_HANDLERS.put(CALLBACK,
+                    JSTPConnection.class.getDeclaredMethod("callbackPacketHandler", JSObject.class));
+            METHOD_HANDLERS.put(EVENT,
+                    JSTPConnection.class.getDeclaredMethod("eventPacketHandler", JSObject.class));
+            METHOD_HANDLERS.put(INSPECT,
+                    JSTPConnection.class.getDeclaredMethod("inspectPacketHandler", JSObject.class));
+            METHOD_HANDLERS.put(STATE,
+                    JSTPConnection.class.getDeclaredMethod("statePacketHandler", JSObject.class));
+            METHOD_HANDLERS.put(STREAM,
+                    JSTPConnection.class.getDeclaredMethod("streamPacketHandler", JSObject.class));
+            METHOD_HANDLERS.put(PING,
+                    JSTPConnection.class.getDeclaredMethod("pingPacketHandler", JSObject.class));
+            METHOD_HANDLERS.put(PONG,
+                    JSTPConnection.class.getDeclaredMethod("pongPacketHandler", JSObject.class));
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Package counter
      */
     private int packageCounter = 0;
 
     /**
-     * TCP client
+     * Transport to send/receive packets
      */
-    private AbstractSocket socket;
+    private AbstractSocket transport;
 
     /**
      * Call handlers table. Handlers are associated with names of methods they handle
@@ -65,12 +96,6 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
     private StateHandler stateHandler;
 
     /**
-     * Container used to store packet data until it can be parsed with {@link JSParser}
-     * (until {@link #TERMINATOR} is not present)
-     */
-    private StringBuilder messageBuilder;
-
-    /**
      * Client method names for incoming inspect packages
      */
     private JSArray clientMethodNames;
@@ -89,34 +114,38 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
      * @param sslEnabled determines whether connection will use SSL or not (see {@link #setSSLEnabled})
      */
     public JSTPConnection(String host, int port, boolean sslEnabled) {
+        resetConnection();
         createNewConnection(host, port, sslEnabled);
         connectionListeners = new ArrayList<>();
         eventHandlers = new ConcurrentHashMap<>();
         clientMethodNames = new JSArray();
         handlers = new ConcurrentHashMap<>();
         callHandlers = new ConcurrentHashMap<>();
-        messageBuilder = new StringBuilder();
-        resetConnection();
     }
 
     private void resetConnection() {
         resetPackageCounter();
         handlers = new ConcurrentHashMap<>();
         callHandlers = new ConcurrentHashMap<>();
-        messageBuilder = new StringBuilder();
+        if (transport != null) {
+            transport.setSocketListener(null);
+            transport = null;
+        }
     }
 
-    public void createNewConnection(AbstractSocket socket) {
-       resetConnection();
-       this.socket = socket;
+    public void createNewConnection(AbstractSocket transport) {
+        if (this.transport != null) this.transport.close();
+        resetConnection();
+        this.transport = transport;
+        this.transport.setSocketListener(this);
     }
 
     public void createNewConnection(String host, int port, boolean sslEnabled) {
-        createNewConnection(new TCPClient(host, port, sslEnabled, this));
+        createNewConnection(new TCPTransport(host, port, sslEnabled, this));
     }
 
     /**
-     * Opens connection to the specified in constructor (host, port) (see {@link TCPClient})
+     * Opens connection to the specified in constructor (host, port) (see {@link TCPTransport})
      * And sends handshake message through it
      *
      * @param applicationName name used during handshake
@@ -132,7 +161,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
         JSTPMessage hm = new JSTPMessage(packageCounter, HANDSHAKE);
         hm.addProtocolArg(applicationName);
 
-        socket.openConnection(hm.getMessage() + TERMINATOR);
+        transport.openConnection(hm.getMessage() + TERMINATOR);
     }
 
     public void setClientMethodNames(String... names) {
@@ -148,7 +177,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
 
         handlers.put(packageCounter, handler);
 
-        socket.sendMessage(inspectMessage.getMessage() + TERMINATOR);
+        transport.sendMessage(inspectMessage.getMessage() + TERMINATOR);
     }
 
     public void event(String interfaceName, String methodName, JSArray args) {
@@ -156,7 +185,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
         JSTPMessage eventMessage = new JSTPMessage(packageCounter, EVENT, methodName, args);
         eventMessage.addProtocolArg(interfaceName);
 
-        socket.sendMessage(eventMessage.getMessage() + TERMINATOR);
+        transport.sendMessage(eventMessage.getMessage() + TERMINATOR);
     }
 
     public void call(String interfaceName,
@@ -171,14 +200,14 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
             handlers.put(packageCounter, handler[0]);
         }
 
-        socket.sendMessage(callMessage.getMessage() + TERMINATOR);
+        transport.sendMessage(callMessage.getMessage() + TERMINATOR);
     }
 
-    public synchronized int nextPackageCounter() {
+    public int nextPackageCounter() {
         return packageCounter++;
     }
 
-    private synchronized int resetPackageCounter() {
+    private int resetPackageCounter() {
         packageCounter = 0;
         return packageCounter++;
     }
@@ -192,7 +221,7 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
 
         JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK, value.toString(), args);
 
-        socket.sendMessage(callbackMessage.getMessage() + TERMINATOR);
+        transport.sendMessage(callbackMessage.getMessage() + TERMINATOR);
     }
 
     public void addSocketListener(JSTPConnectionListener listener) {
@@ -200,99 +229,99 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
     }
 
     @Override
-    public void onMessageReceived(String received) {
-        messageBuilder.append(received);
+    public void onMessageReceived(String packetData) {
+        try {
+            JSValue parsed = new JSParser(packetData).parse();
+            if (!(parsed instanceof JSObject)) return;
+            JSObject packet = (JSObject) parsed;
 
-        // todo now we receive only one message at a time so remove code for splitting
-        int startMessageIndex = 0;
-        int endMessageIndex = messageBuilder.indexOf(TERMINATOR);
-        while (endMessageIndex != -1) {
-            String msg = messageBuilder.substring(startMessageIndex, endMessageIndex);
-            int receiverIndex;
-
-            try {
-                JSValue parsed = new JSParser(msg).parse();
-                if (!(parsed instanceof JSObject)) continue;
-                JSObject messageObject = (JSObject) parsed;
-
-                List<String> keys = messageObject.getOrderedKeys();
-                if (keys.size() == 0) continue;
-
-                switch (keys.get(0)) {
-                    case HANDSHAKE:
-                    case CALLBACK:
-                        receiverIndex = getPacketIndex(messageObject, keys.get(0));
-                        ManualHandler callbackHandler = handlers.remove(receiverIndex);
-                        if (callbackHandler != null) callbackHandler.invoke(messageObject);
-                        break;
-                    case STREAM:
-                        receiverIndex = getPacketIndex(messageObject, keys.get(0));
-                        ManualHandler responseHandler = handlers.get(receiverIndex);
-                        if (responseHandler != null) responseHandler.invoke(messageObject);
-                        break;
-                    case CALL:
-                        String methodName = keys.get(1);
-                        ManualHandler handler = callHandlers.get(methodName);
-                        if (handler != null) handler.invoke(messageObject);
-                        nextPackageCounter();
-                        break;
-                    case EVENT:
-                        String interfaceName = getInterfaceName(messageObject);
-                        Map<String, List<ManualHandler>> interfaceHandlers = eventHandlers.get(interfaceName);
-                        if (interfaceHandlers != null) {
-                            String eventName = getEventName(messageObject);
-                            List<ManualHandler> eventHandlers = interfaceHandlers.get(eventName);
-                            if (eventHandlers != null) {
-                                for (ManualHandler eh : eventHandlers) {
-                                    eh.invoke(messageObject);
-                                }
-                            }
-                        }
-                        nextPackageCounter();
-                        break;
-                    case STATE:
-                        stateHandler.onState(messageObject);
-                        break;
-                    case INSPECT:
-                        handleInspect();
-                        nextPackageCounter();
-                        break;
-                    case PING:
-                        int pingNumber = getPacketIndex(messageObject, keys.get(0));
-                        handlePing(pingNumber);
-                        break;
-                    default:
-                        break;
-                }
-            } catch (JSParsingException e) {
-            } finally {
-                startMessageIndex = endMessageIndex + TERMINATOR.length();
-                if (startMessageIndex == messageBuilder.length()) endMessageIndex = -1;
-                else endMessageIndex = messageBuilder.indexOf(TERMINATOR, startMessageIndex);
+            List<String> keys = packet.getOrderedKeys();
+            if (keys.size() == 0) {
+                rejectPacket(packet);
+                return;
             }
+
+            final Method handler = METHOD_HANDLERS.get(keys.get(0));
+            if (handler != null) {
+                int receiverIndex = getPacketNumber(packet);
+                packageCounter = packageCounter <= receiverIndex ? receiverIndex + 1 : packageCounter;
+
+                handler.invoke(this, packet);
+            } else {
+                rejectPacket(packet);
+            }
+        } catch (JSParsingException e) {
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
         }
-        if (startMessageIndex != 0) messageBuilder.delete(0, startMessageIndex);
     }
 
-    private void handlePing(int pingNumber) {
-        JSTPMessage streamMessage = new JSTPMessage(pingNumber, PONG);
-        socket.sendMessage(streamMessage.getMessage() + TERMINATOR);
+    private void handshakePacketHandler(JSObject packet) {
+        callbackPacketHandler(packet);
     }
 
-    private void handleInspect() {
+    private void callPacketHandler(JSObject packet) {
+        String methodName = packet.getOrderedKeys().get(1);
+        ManualHandler handler = callHandlers.get(methodName);
+        if (handler != null) handler.invoke(packet);
+    }
+
+    private void callbackPacketHandler(JSObject packet) {
+        int receiverIndex = getPacketNumber(packet);
+        ManualHandler callbackHandler = handlers.remove(receiverIndex);
+        if (callbackHandler != null) callbackHandler.invoke(packet);
+    }
+
+    private void eventPacketHandler(JSObject packet) {
+        String interfaceName = getInterfaceName(packet);
+        Map<String, List<ManualHandler>> interfaceHandlers = eventHandlers.get(interfaceName);
+        if (interfaceHandlers == null) return;
+
+        String eventName = getEventName(packet);
+        List<ManualHandler> eventHandlers = interfaceHandlers.get(eventName);
+        if (eventHandlers == null) return;
+
+        for (ManualHandler eh : eventHandlers) {
+            eh.invoke(packet);
+        }
+    }
+
+    private void inspectPacketHandler(JSObject packet) {
         callback(JSCallback.OK, clientMethodNames);
+    }
+
+    private void statePacketHandler(JSObject packet) {
+        stateHandler.onState(packet);
+    }
+
+    private void pingPacketHandler(JSObject packet) {
+        int pingNumber = getPacketNumber(packet);
+        JSTPMessage streamMessage = new JSTPMessage(pingNumber, PONG);
+        transport.sendMessage(streamMessage.getMessage() + TERMINATOR);
+    }
+
+    private void pongPacketHandler(JSObject packet) {
+        callbackPacketHandler(packet);
+    }
+
+    private void streamPacketHandler(JSObject packet) {
+        int receiverIndex = getPacketNumber(packet);
+        ManualHandler responseHandler = handlers.get(receiverIndex);
+        if (responseHandler != null) responseHandler.invoke(packet);
     }
 
     public int openStream(JSValue data) {
         int packageCounter = nextPackageCounter();
         JSTPMessage streamMessage = new JSTPMessage(packageCounter, STREAM, STREAM_DATA, data);
-        socket.sendMessage(streamMessage.getMessage() + TERMINATOR);
+        transport.sendMessage(streamMessage.getMessage() + TERMINATOR);
         return packageCounter;
     }
 
     public void writeStream(int packageNumber, JSValue data) {
         JSTPMessage streamMessage = new JSTPMessage(packageNumber, STREAM, STREAM_DATA, data);
-        socket.sendMessage(streamMessage.getMessage() + TERMINATOR);
+        transport.sendMessage(streamMessage.getMessage() + TERMINATOR);
     }
 
     public void addCallHandler(String methodName, ManualHandler callHandler) {
@@ -318,10 +347,6 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
         eventHandlers.add(handler);
     }
 
-    public void addHandler(int packetIndex, ManualHandler manualHandler) {
-        handlers.put(packetIndex, manualHandler);
-    }
-
     public void removeEventHandler(String interfaceName, String eventName, ManualHandler handler) {
         Map<String, List<ManualHandler>> ehs = eventHandlers.get(interfaceName);
         if (ehs != null) {
@@ -330,24 +355,28 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
         }
     }
 
+    public void addHandler(int packetIndex, ManualHandler manualHandler) {
+        handlers.put(packetIndex, manualHandler);
+    }
+
     public void close() {
-        socket.close();
+        transport.close();
     }
 
     public void pause() {
-        socket.pause();
+        transport.pause();
     }
 
     public void pause(boolean clear) {
-        socket.pause(clear);
+        transport.pause(clear);
     }
 
     public void resume() {
-        socket.resume();
+        transport.resume();
     }
 
     public void resume(boolean clear) {
-        socket.resume(clear);
+        transport.resume(clear);
     }
 
     @Deprecated
@@ -365,14 +394,14 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
         return messageObject.getOrderedKeys().get(1);
     }
 
-    private int getPacketIndex(JSObject messageObject, String packageValue) {
-        return (int) ((JSNumber) ((JSArray) messageObject.get(packageValue))
+    private int getPacketNumber(JSObject messageObject) {
+        return (int) ((JSNumber) ((JSArray) messageObject.get(0))
                 .get(0))
                 .getValue();
     }
 
     public boolean isSSLEnabled() {
-        return socket.isSSLEnabled();
+        return transport.isSSLEnabled();
     }
 
     /**
@@ -388,11 +417,11 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
      * @param sslEnabled If true then connection will be opened with ssl enabled else ssl will not be used
      */
     public void setSSLEnabled(boolean sslEnabled) {
-        socket.setSSLEnabled(sslEnabled);
+        transport.setSSLEnabled(sslEnabled);
     }
 
     public String getHost() {
-        return socket.getHost();
+        return transport.getHost();
     }
 
     /**
@@ -408,11 +437,11 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
      * @param host address of the server (see {@link java.net.InetAddress#getByName(String)})
      */
     public void setHost(String host) {
-        socket.setHost(host);
+        transport.setHost(host);
     }
 
     public int getPort() {
-        return socket.getPort();
+        return transport.getPort();
     }
 
     /**
@@ -428,15 +457,15 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
      * @param port the port number
      */
     public void setPort(int port) {
-        socket.setPort(port);
+        transport.setPort(port);
     }
 
     public boolean isConnected() {
-        return socket.isConnected();
+        return transport.isConnected();
     }
 
     public boolean isClosed() {
-        return socket.isClosed();
+        return transport.isClosed();
     }
 
     @Override
@@ -450,8 +479,14 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
         for (JSTPConnectionListener listener : connectionListeners) listener.onConnectionClosed();
     }
 
+    private void rejectPacket(JSObject packet) {
+        for (JSTPConnectionListener listener : connectionListeners) listener.onPacketRejected(packet);
+    }
+
     public interface JSTPConnectionListener {
         void onConnect();
+
+        void onPacketRejected(JSObject packet);
 
         void onConnectionClosed();
     }

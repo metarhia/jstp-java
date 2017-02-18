@@ -139,32 +139,6 @@ public class JSTPConnectionTest {
     }
 
     @Test
-    public void onMessageReceivedMultiple() throws Exception {
-        String packet = "{error:}" + JSTPConnection.TERMINATOR
-                + "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
-                + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
-
-        final Boolean[] success = {false, false};
-        connection.addEventHandler("auth", "insert", new ManualHandler() {
-            @Override
-            public void invoke(JSValue packet) {
-                success[0] = true;
-            }
-        });
-
-        connection.addHandler(17, new ManualHandler() {
-            @Override
-            public void invoke(JSValue packet) {
-                success[1] = true;
-            }
-        });
-
-        connection.onMessageReceived(packet);
-
-        assertTrue(success[0] && success[1]);
-    }
-
-    @Test
     public void sendEscapedCharacters() throws Exception {
         final boolean[] test = {false};
         final JSTPConnection connection = new JSTPConnection("since.tv", 4000, true);

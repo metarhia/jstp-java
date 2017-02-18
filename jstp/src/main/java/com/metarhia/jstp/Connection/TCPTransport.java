@@ -1,17 +1,14 @@
 package com.metarhia.jstp.Connection;
 
 import javax.net.ssl.SSLContext;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.nio.channels.ClosedByInterruptException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class TCPClient extends AbstractSocket {
+public class TCPTransport extends AbstractSocket {
 
     private final Object senderLock = new Object();
     private final Object pauseLock = new Object();
@@ -28,16 +25,27 @@ public class TCPClient extends AbstractSocket {
     private OutputStream out;
     private BufferedInputStream in;
 
-    public TCPClient(String host, int port, AbstractSocket.AbstractSocketListener listener) {
+    private ByteArrayOutputStream packetBuilder;
+
+    public TCPTransport(String host, int port) {
+        this(host, port, null);
+    }
+
+    public TCPTransport(String host, int port, AbstractSocket.AbstractSocketListener listener) {
         this(host, port, false, listener);
     }
 
-    public TCPClient(String host, int port, boolean sslEnabled, AbstractSocket.AbstractSocketListener listener) {
+    public TCPTransport(String host, int port, boolean sslEnabled) {
+        this(host, port, sslEnabled, null);
+    }
+
+    public TCPTransport(String host, int port, boolean sslEnabled, AbstractSocket.AbstractSocketListener listener) {
         super(listener);
 
         this.host = host;
         this.port = port;
         this.sslEnabled = sslEnabled;
+        packetBuilder = new ByteArrayOutputStream(100);
         messageQueue = new ConcurrentLinkedQueue<>();
     }
 
@@ -73,12 +81,7 @@ public class TCPClient extends AbstractSocket {
                                     senderLock.wait();
                                 }
                             }
-                            // TODO add proper conditional logging
-                            String message = messageQueue.poll();
-//                            System.out.println("com.metarhia.jstp.Connection: " + message);
-                            out.write(message.getBytes());
-                            out.write(0);
-                            out.flush();
+                            sendMessageInternal(messageQueue.poll());
                         }
                         synchronized (pauseLock) {
                             pauseLock.wait();
@@ -95,28 +98,21 @@ public class TCPClient extends AbstractSocket {
         senderThread.start();
     }
 
+    private void sendMessageInternal(String message) throws IOException {
+        // TODO add proper conditional logging
+//        System.out.println("com.metarhia.jstp.Connection: " + message);
+        out.write(message.getBytes());
+        out.write(0);
+        out.flush();
+    }
+
     private void startReceiverThread() {
         receiverThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                    int b = -1;
                     while (!closing) {
-                        while (running) {
-                            while ((b = in.read()) > 0) {
-                                bos.write(b);
-                            }
-                            if (bos.size() != 0 && socketListener != null) {
-                                bos.write('\0');
-                                String message = bos.toString();
-//                                System.out.println("com.metarhia.jstp.Connection: " + message);
-                                // TODO add proper conditional logging
-                                socketListener.onMessageReceived(message);
-                                bos.reset();
-                            }
-                            if (b == -1) close();
-                        }
+                        while (running) processMessage();
                         synchronized (pauseLock) {
                             pauseLock.wait();
                         }
@@ -131,6 +127,21 @@ public class TCPClient extends AbstractSocket {
         receiverThread.start();
     }
 
+    private void processMessage() throws IOException {
+        int b;
+        while ((b = in.read()) > 0) packetBuilder.write(b);
+
+        if (packetBuilder.size() != 0 && socketListener != null) {
+            packetBuilder.write('\0');
+            String message = packetBuilder.toString();
+//            System.out.println("com.metarhia.jstp.Connection: " + message);
+            // TODO add proper conditional logging
+            socketListener.onMessageReceived(message);
+        }
+        packetBuilder.reset();
+        if (b == -1) close();
+    }
+
     private boolean initConnection(boolean useSSL) throws IOException {
         if (socket == null || !socket.isConnected() || socket.isClosed()) {
             if (sslEnabled) socket = createSSLSocket(host, port);
@@ -141,7 +152,7 @@ public class TCPClient extends AbstractSocket {
             running = true;
             out = socket.getOutputStream();
             in = new BufferedInputStream(socket.getInputStream());
-            socketListener.onConnect();
+            if (socketListener != null) socketListener.onConnect();
             return true;
         }
         return false;
@@ -208,9 +219,9 @@ public class TCPClient extends AbstractSocket {
             receiverThread = null;
             senderThread = null;
             socket = null;
-            this.socketListener.onConnectionClosed();
+            if (socketListener != null) socketListener.onConnectionClosed();
         } catch (IOException e) {
-            this.socketListener.onConnectionClosed(e);
+            if (socketListener != null) socketListener.onConnectionClosed(e);
         }
         closing = false;
     }
