@@ -31,7 +31,7 @@ public class TCPTransportTest {
 
     @Test
     public void onMessageReceivedMultiple() throws Exception {
-        String packet = "{error:}" + JSTPConnection.TERMINATOR
+        String packet = "{error:12}" + JSTPConnection.TERMINATOR
                 + "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
                 + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
 

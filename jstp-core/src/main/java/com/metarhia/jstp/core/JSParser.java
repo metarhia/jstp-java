@@ -7,7 +7,12 @@ import com.metarhia.jstp.core.Tokens.Tokenizer;
 import java.io.Serializable;
 
 public class JSParser implements Serializable {
+
     public final static boolean VERBOSE_CHECKING = true;
+
+    public static JSValue parse(String input) throws JSParsingException {
+        return new JSParser(input).parse();
+    }
 
     private Tokenizer tokenizer;
 

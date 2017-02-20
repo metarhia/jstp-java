@@ -1,7 +1,14 @@
 package com.metarhia.jstp.Connection;
 
+import com.metarhia.jstp.core.JSParser;
+import com.metarhia.jstp.core.JSParsingException;
+import com.metarhia.jstp.core.JSTypes.JSObject;
+
 import javax.net.ssl.SSLContext;
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.channels.ClosedByInterruptException;
 import java.security.KeyManagementException;
@@ -25,6 +32,7 @@ public class TCPTransport extends AbstractSocket {
     private OutputStream out;
     private BufferedInputStream in;
 
+    private JSParser jsParser;
     private ByteArrayOutputStream packetBuilder;
 
     public TCPTransport(String host, int port) {
@@ -47,6 +55,7 @@ public class TCPTransport extends AbstractSocket {
         this.sslEnabled = sslEnabled;
         packetBuilder = new ByteArrayOutputStream(100);
         messageQueue = new ConcurrentLinkedQueue<>();
+        jsParser = new JSParser();
     }
 
     public void openConnection(final String handshakeMessage) {
@@ -127,6 +136,24 @@ public class TCPTransport extends AbstractSocket {
         receiverThread.start();
     }
 
+//    private void processMessage() throws IOException {
+//        for (int i = 0; i < 1024; ++i) packetData[i] = -1;
+//        length[0] = in.read(packetData, length[0], packetData.length - length[0]) + length[0];
+//        if (in.available() >= 0) {
+//            packetData[length[0]] = (byte) in.read();
+//            length[0] += 1;
+//        }
+//        if (length[0] == -1) close();
+//        else if (socketListener != null) {
+//            try {
+//                List<JSObject> packets = JSNetworkParser.parse(packetData, length);
+//                for (JSObject packet : packets) socketListener.onMessageReceived(packet);
+//            } catch (JSParsingException e) {
+//                socketListener.onMessageRejected(null);
+//            }
+//        }
+//    }
+
     private void processMessage() throws IOException {
         int b;
         while ((b = in.read()) > 0) packetBuilder.write(b);
@@ -135,8 +162,14 @@ public class TCPTransport extends AbstractSocket {
             packetBuilder.write('\0');
             String message = packetBuilder.toString();
 //            System.out.println("com.metarhia.jstp.Connection: " + message);
-            // TODO add proper conditional logging
-            socketListener.onMessageReceived(message);
+//            TODO add proper conditional logging
+            jsParser.setInput(message);
+            try {
+                JSObject packet = jsParser.parseObject();
+                socketListener.onMessageReceived(packet);
+            } catch (JSParsingException e) {
+                socketListener.onMessageRejected(message);
+            }
         }
         packetBuilder.reset();
         if (b == -1) close();
