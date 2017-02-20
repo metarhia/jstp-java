@@ -1,6 +1,7 @@
 package com.metarhia.jstp.Connection;
 
 import com.metarhia.jstp.core.Handlers.ManualHandler;
+import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSValue;
@@ -82,7 +83,8 @@ public class JSTPConnectionTest {
 
     @Test
     public void emptyObject() throws Exception {
-        connection.onMessageReceived("{}" + JSTPConnection.TERMINATOR);
+        final String s = "{}" + JSTPConnection.TERMINATOR;
+        connection.onMessageReceived((JSObject) JSParser.parse(s));
         assertTrue(true);
     }
 
@@ -98,7 +100,7 @@ public class JSTPConnectionTest {
             }
         });
 
-        connection.onMessageReceived(packet);
+        connection.onMessageReceived((JSObject) JSParser.parse(packet));
 
         assertTrue(success[0]);
     }
@@ -115,7 +117,7 @@ public class JSTPConnectionTest {
             }
         });
 
-        connection.onMessageReceived(packet);
+        connection.onMessageReceived((JSObject) JSParser.parse(packet));
 
         assertTrue(success[0]);
     }
@@ -133,7 +135,7 @@ public class JSTPConnectionTest {
             }
         });
 
-        connection.onMessageReceived(packet);
+        connection.onMessageReceived((JSObject) JSParser.parse(packet));
 
         assertTrue(success[0]);
     }
@@ -182,7 +184,7 @@ public class JSTPConnectionTest {
         JSTPConnection connection = new JSTPConnection("", 0);
         connection.createNewConnection(socket);
 
-        connection.onMessageReceived(input);
+        connection.onMessageReceived((JSObject) JSParser.parse(input));
 
         verify(socket, times(1)).sendMessage(response);
     }

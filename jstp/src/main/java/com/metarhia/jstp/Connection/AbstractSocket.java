@@ -1,5 +1,7 @@
 package com.metarhia.jstp.Connection;
 
+import com.metarhia.jstp.core.JSTypes.JSObject;
+
 public abstract class AbstractSocket {
 
     protected AbstractSocketListener socketListener;
@@ -45,8 +47,10 @@ public abstract class AbstractSocket {
     public interface AbstractSocketListener {
         void onConnect();
 
-        void onMessageReceived(String message);
+        void onMessageReceived(JSObject packet);
 
         void onConnectionClosed(Exception... e);
+
+        void onMessageRejected(String message);
     }
 }

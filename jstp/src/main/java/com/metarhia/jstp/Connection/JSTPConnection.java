@@ -2,8 +2,6 @@ package com.metarhia.jstp.Connection;
 
 import com.metarhia.jstp.Handlers.StateHandler;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
-import com.metarhia.jstp.core.JSParser;
-import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSNumber;
 import com.metarhia.jstp.core.JSTypes.JSObject;
@@ -229,12 +227,8 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
     }
 
     @Override
-    public void onMessageReceived(String packetData) {
+    public void onMessageReceived(JSObject packet) {
         try {
-            JSValue parsed = new JSParser(packetData).parse();
-            if (!(parsed instanceof JSObject)) return;
-            JSObject packet = (JSObject) parsed;
-
             List<String> keys = packet.getOrderedKeys();
             if (keys.size() == 0) {
                 rejectPacket(packet);
@@ -250,7 +244,6 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
             } else {
                 rejectPacket(packet);
             }
-        } catch (JSParsingException e) {
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
@@ -471,6 +464,11 @@ public class JSTPConnection implements AbstractSocket.AbstractSocketListener {
     @Override
     public void onConnect() {
         for (JSTPConnectionListener listener : connectionListeners) listener.onConnect();
+    }
+
+    @Override
+    public void onMessageRejected(String message) {
+        // ignore for now (log later)
     }
 
     @Override
