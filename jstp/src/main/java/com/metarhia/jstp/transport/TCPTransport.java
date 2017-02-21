@@ -1,5 +1,6 @@
-package com.metarhia.jstp.Connection;
+package com.metarhia.jstp.transport;
 
+import com.metarhia.jstp.connection.AbstractSocket;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.core.JSTypes.JSObject;
@@ -13,9 +14,13 @@ import java.net.Socket;
 import java.nio.channels.ClosedByInterruptException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class TCPTransport extends AbstractSocket {
+
+    public static final long DEFAULT_CLOSING_TICK = 1000;
+    public static final long DEFAULT_CLOSING_TIMEOUT = 5000;
 
     private final Object senderLock = new Object();
     private final Object pauseLock = new Object();
@@ -26,7 +31,7 @@ public class TCPTransport extends AbstractSocket {
     private boolean closing;
     private Thread receiverThread;
     private Thread senderThread;
-    private ConcurrentLinkedQueue<String> messageQueue;
+    private Queue<String> messageQueue;
     private Socket socket;
 
     private OutputStream out;
@@ -34,6 +39,9 @@ public class TCPTransport extends AbstractSocket {
 
     private JSParser jsParser;
     private ByteArrayOutputStream packetBuilder;
+
+    private long closingTick;
+    private long closingTimeout;
 
     public TCPTransport(String host, int port) {
         this(host, port, null);
@@ -50,6 +58,9 @@ public class TCPTransport extends AbstractSocket {
     public TCPTransport(String host, int port, boolean sslEnabled, AbstractSocket.AbstractSocketListener listener) {
         super(listener);
 
+        closingTick = DEFAULT_CLOSING_TICK;
+        closingTimeout = DEFAULT_CLOSING_TIMEOUT;
+
         this.host = host;
         this.port = port;
         this.sslEnabled = sslEnabled;
@@ -58,21 +69,20 @@ public class TCPTransport extends AbstractSocket {
         jsParser = new JSParser();
     }
 
-    public void openConnection(final String handshakeMessage) {
+    public void openConnection() {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (initConnection(sslEnabled)) {
+                    if (closing) closeInternal(false);
+                    if (initConnection()) {
                         startReceiverThread();
                         startSenderThread();
-
-                        sendMessage(handshakeMessage);
                     } else {
-                        close();
+                        closeInternal();
                     }
                 } catch (IOException e) {
-                    close();
+                    closeInternal();
                 }
             }
         }).start();
@@ -83,14 +93,15 @@ public class TCPTransport extends AbstractSocket {
             @Override
             public void run() {
                 try {
+                    String message;
                     while (!closing) {
                         while (running) {
                             synchronized (senderLock) {
-                                while (messageQueue.isEmpty()) {
-                                    senderLock.wait();
-                                }
+                                while (messageQueue.isEmpty()) senderLock.wait();
                             }
-                            sendMessageInternal(messageQueue.poll());
+                            message = messageQueue.peek();
+                            sendMessageInternal(message);
+                            messageQueue.poll();
                         }
                         synchronized (pauseLock) {
                             pauseLock.wait();
@@ -100,7 +111,7 @@ public class TCPTransport extends AbstractSocket {
                     // all ok - manually closing
                     e.printStackTrace();
                 } catch (IOException e) {
-                    close();
+                    closeInternal();
                 }
             }
         });
@@ -129,7 +140,7 @@ public class TCPTransport extends AbstractSocket {
                 } catch (InterruptedException | ClosedByInterruptException e) {
                     // all ok - manually closing
                 } catch (IOException e) {
-                    close();
+                    closeInternal();
                 }
             }
         });
@@ -172,10 +183,10 @@ public class TCPTransport extends AbstractSocket {
             }
         }
         packetBuilder.reset();
-        if (b == -1) close();
+        if (b == -1) closeInternal();
     }
 
-    private boolean initConnection(boolean useSSL) throws IOException {
+    private boolean initConnection() throws IOException {
         if (socket == null || !socket.isConnected() || socket.isClosed()) {
             if (sslEnabled) socket = createSSLSocket(host, port);
             else socket = new Socket(host, port);
@@ -185,7 +196,7 @@ public class TCPTransport extends AbstractSocket {
             running = true;
             out = socket.getOutputStream();
             in = new BufferedInputStream(socket.getInputStream());
-            if (socketListener != null) socketListener.onConnect();
+            if (socketListener != null) socketListener.onConnected();
             return true;
         }
         return false;
@@ -205,6 +216,10 @@ public class TCPTransport extends AbstractSocket {
     }
 
     public void sendMessage(String message) {
+        if (closing) {
+            if (socketListener != null) socketListener.onMessageRejected(message);
+            return;
+        }
         messageQueue.add(message);
         if (running) {
             synchronized (senderLock) {
@@ -213,25 +228,20 @@ public class TCPTransport extends AbstractSocket {
         }
     }
 
-    public void pause() {
-        pause(false);
+    public void clearQueue() {
+        messageQueue.clear();
     }
 
-    public void pause(boolean clear) {
+    public void pause() {
         this.running = false;
-        if (clear) messageQueue.clear();
     }
 
     public void resume() {
-        resume(false);
-    }
-
-    public void resume(boolean clear) {
         running = true;
         synchronized (pauseLock) {
             pauseLock.notifyAll();
         }
-        if (!clear && !messageQueue.isEmpty()) {
+        if (!messageQueue.isEmpty()) {
             synchronized (senderLock) {
                 senderLock.notify();
             }
@@ -240,10 +250,39 @@ public class TCPTransport extends AbstractSocket {
         }
     }
 
-    public void close() {
+    public void close(final boolean forced) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    closing = true;
+                    if (!forced) {
+                        synchronized (this) {
+                            long delay = 0;
+                            while (delay <= DEFAULT_CLOSING_TIMEOUT && !messageQueue.isEmpty()) {
+                                wait(DEFAULT_CLOSING_TICK);
+                                delay += DEFAULT_CLOSING_TICK;
+                            }
+                        }
+                    }
+                    closeInternal();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                closing = false;
+            }
+        }).start();
+    }
+
+    private void closeInternal() {
+        closeInternal(true);
+    }
+
+    private void closeInternal(boolean notify) {
         try {
-            pause(true);
             closing = true;
+            clearQueue();
+            running = false;
             if (receiverThread != null) receiverThread.interrupt();
             if (senderThread != null) senderThread.interrupt();
             if (in != null) in.close();
@@ -252,21 +291,20 @@ public class TCPTransport extends AbstractSocket {
             receiverThread = null;
             senderThread = null;
             socket = null;
-            if (socketListener != null) socketListener.onConnectionClosed();
+            if (notify && socketListener != null) socketListener.onConnectionClosed();
         } catch (IOException e) {
-            if (socketListener != null) socketListener.onConnectionClosed(e);
+            if (notify && socketListener != null) socketListener.onConnectionClosed(e);
         }
-        closing = false;
     }
 
     @Override
     public boolean isConnected() {
-        return socket != null && socket.isConnected();
+        return !closing && socket != null && socket.isConnected();
     }
 
     @Override
     public boolean isClosed() {
-        return socket == null || socket.isClosed();
+        return closing || socket == null || socket.isClosed();
     }
 
     public String getHost() {
@@ -291,5 +329,21 @@ public class TCPTransport extends AbstractSocket {
 
     public void setSSLEnabled(boolean sslEnabled) {
         this.sslEnabled = sslEnabled;
+    }
+
+    public long getClosingTick() {
+        return closingTick;
+    }
+
+    public void setClosingTick(long closingTick) {
+        this.closingTick = closingTick;
+    }
+
+    public long getClosingTimeout() {
+        return closingTimeout;
+    }
+
+    public void setClosingTimeout(long closingTimeout) {
+        this.closingTimeout = closingTimeout;
     }
 }
