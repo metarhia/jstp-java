@@ -1,4 +1,4 @@
-package com.metarhia.jstp.Connection;
+package com.metarhia.jstp.connection;
 
 import com.metarhia.jstp.core.JSTypes.JSObject;
 
@@ -10,31 +10,17 @@ public abstract class AbstractSocket {
         this.socketListener = listener;
     }
 
-    public abstract void openConnection(String handshakeMessage);
+    public abstract void openConnection();
 
     public abstract void sendMessage(String message);
 
     public abstract void pause();
 
-    public abstract void pause(boolean clear);
-
     public abstract void resume();
 
-    public abstract void resume(boolean clear);
+    public abstract void close(boolean forced);
 
-    public abstract void close();
-
-    public abstract String getHost();
-
-    public abstract void setHost(String host);
-
-    public abstract int getPort();
-
-    public abstract void setPort(int port);
-
-    public abstract boolean isSSLEnabled();
-
-    public abstract void setSSLEnabled(boolean enabled);
+    public abstract void clearQueue();
 
     public void setSocketListener(AbstractSocketListener listener) {
         this.socketListener = listener;
@@ -45,7 +31,7 @@ public abstract class AbstractSocket {
     public abstract boolean isClosed();
 
     public interface AbstractSocketListener {
-        void onConnect();
+        void onConnected();
 
         void onMessageReceived(JSObject packet);
 
