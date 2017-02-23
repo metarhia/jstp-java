@@ -65,7 +65,7 @@ public class JSTPConnectionTest {
     connection.connect("superIn");
 
     synchronized (this) {
-      wait();
+      wait(3000);
     }
 
     assertTrue(valid[0]);
@@ -100,7 +100,7 @@ public class JSTPConnectionTest {
     connection.connect("superIn");
 
     synchronized (connection) {
-      connection.wait();
+      connection.wait(4000);
     }
 
     assertTrue(test[0]);
