@@ -19,7 +19,7 @@ public enum Token {
   COLON(':'),
   COMMA(',');
 
-  private Character ch;
+  private char ch;
 
   Token(char c) {
     ch = c;
@@ -38,7 +38,7 @@ public enum Token {
    * @param ch character to match
    * @return Token that corresponds to {@param ch} or null if no Token matches
    */
-  public static Token fromString(Character ch) {
+  public static Token fromString(char ch) {
     for (Token token : Token.values()) {
       if (token.ch == ch) {
         return token;

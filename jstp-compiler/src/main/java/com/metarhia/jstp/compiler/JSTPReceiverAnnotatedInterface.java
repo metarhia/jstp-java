@@ -356,6 +356,7 @@ public class JSTPReceiverAnnotatedInterface {
         // intended ...
         exceptions = e.getTypeMirrors();
       }
+      if (exceptions == null) return;
       for (TypeMirror e : exceptions) {
         List<ExecutableElement> functions = exceptionHandlers.get(e);
         if (functions == null) {

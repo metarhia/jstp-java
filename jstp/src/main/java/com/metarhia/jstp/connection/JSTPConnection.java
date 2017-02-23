@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class JSTPConnection implements
     AbstractSocket.AbstractSocketListener {
@@ -41,7 +42,8 @@ public class JSTPConnection implements
   private static final String PONG = "pong";
 
   private static final Map<String, Method> METHOD_HANDLERS = new HashMap<>(10);
-  private static long nextConnectionID = 0;
+
+  private static AtomicLong nextConnectionID = new AtomicLong(0);
 
   static {
     try {
@@ -148,7 +150,7 @@ public class JSTPConnection implements
   }
 
   public JSTPConnection(AbstractSocket transport, RestorationPolicy restorationPolicy) {
-    this.id = nextConnectionID++;
+    this.id = nextConnectionID.getAndIncrement();
     this.sendBufferCapacity = DEFAULT_SEND_BUFFER_CAPACITY;
     this.sendQueue = new ConcurrentLinkedQueue<>();
 
