@@ -4,6 +4,7 @@ import com.metarhia.jstp.connection.AbstractSocket;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.core.JSTypes.JSObject;
+import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 
 import javax.net.ssl.SSLContext;
 import java.io.BufferedInputStream;
@@ -69,7 +70,11 @@ public class TCPTransport extends AbstractSocket {
         jsParser = new JSParser();
     }
 
-    public void openConnection() {
+    public boolean connect() {
+        if (isConnected()) {
+            if (socketListener != null) socketListener.onError(new AlreadyConnectedException());
+            return false;
+        }
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -86,6 +91,7 @@ public class TCPTransport extends AbstractSocket {
                 }
             }
         }).start();
+        return true;
     }
 
     private void startSenderThread() {
@@ -109,7 +115,6 @@ public class TCPTransport extends AbstractSocket {
                     }
                 } catch (InterruptedException | ClosedByInterruptException e) {
                     // all ok - manually closing
-                    e.printStackTrace();
                 } catch (IOException e) {
                     closeInternal();
                 }
@@ -158,14 +163,14 @@ public class TCPTransport extends AbstractSocket {
 //        else if (socketListener != null) {
 //            try {
 //                List<JSObject> packets = JSNetworkParser.parse(packetData, length);
-//                for (JSObject packet : packets) socketListener.onMessageReceived(packet);
+//                for (JSObject packet : packets) socketListener.onPacketReceived(packet);
 //            } catch (JSParsingException e) {
 //                socketListener.onMessageRejected(null);
 //            }
 //        }
 //    }
 
-    private void processMessage() throws IOException {
+    void processMessage() throws IOException {
         int b;
         while ((b = in.read()) > 0) packetBuilder.write(b);
 
@@ -177,7 +182,7 @@ public class TCPTransport extends AbstractSocket {
             jsParser.setInput(message);
             try {
                 JSObject packet = jsParser.parseObject();
-                socketListener.onMessageReceived(packet);
+                socketListener.onPacketReceived(packet);
             } catch (JSParsingException e) {
                 socketListener.onMessageRejected(message);
             }
@@ -215,7 +220,7 @@ public class TCPTransport extends AbstractSocket {
         return null;
     }
 
-    public void sendMessage(String message) {
+    public void send(String message) {
         if (closing) {
             if (socketListener != null) socketListener.onMessageRejected(message);
             return;
@@ -232,6 +237,11 @@ public class TCPTransport extends AbstractSocket {
         messageQueue.clear();
     }
 
+    @Override
+    public int getQueueSize() {
+        return messageQueue.size();
+    }
+
     public void pause() {
         this.running = false;
     }
@@ -245,8 +255,6 @@ public class TCPTransport extends AbstractSocket {
             synchronized (senderLock) {
                 senderLock.notify();
             }
-        } else {
-            messageQueue.clear();
         }
     }
 
@@ -265,9 +273,11 @@ public class TCPTransport extends AbstractSocket {
                             }
                         }
                     }
-                    closeInternal();
+                    synchronized (TCPTransport.this) {
+                        if (closing) closeInternal();
+                    }
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    // all ok - manually closing
                 }
                 closing = false;
             }
@@ -279,21 +289,25 @@ public class TCPTransport extends AbstractSocket {
     }
 
     private void closeInternal(boolean notify) {
+        int remainingMessages;
         try {
-            closing = true;
-            clearQueue();
-            running = false;
-            if (receiverThread != null) receiverThread.interrupt();
-            if (senderThread != null) senderThread.interrupt();
-            if (in != null) in.close();
-            if (socket != null) socket.close();
-            in = null;
-            receiverThread = null;
-            senderThread = null;
-            socket = null;
-            if (notify && socketListener != null) socketListener.onConnectionClosed();
+            synchronized (TCPTransport.this) {
+                remainingMessages = messageQueue.size();
+                closing = true;
+                clearQueue();
+                running = false;
+                if (receiverThread != null) receiverThread.interrupt();
+                if (senderThread != null) senderThread.interrupt();
+                if (in != null) in.close();
+                if (socket != null) socket.close();
+                in = null;
+                receiverThread = null;
+                senderThread = null;
+                socket = null;
+                closing = false;
+            }
+            if (notify && socketListener != null) socketListener.onConnectionClosed(remainingMessages);
         } catch (IOException e) {
-            if (notify && socketListener != null) socketListener.onConnectionClosed(e);
         }
     }
 
@@ -305,6 +319,11 @@ public class TCPTransport extends AbstractSocket {
     @Override
     public boolean isClosed() {
         return closing || socket == null || socket.isClosed();
+    }
+
+    @Override
+    public boolean isRunning() {
+        return isConnected() && running;
     }
 
     public String getHost() {

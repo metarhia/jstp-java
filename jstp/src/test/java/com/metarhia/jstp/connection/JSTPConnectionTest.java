@@ -1,24 +1,34 @@
-package com.metarhia.jstp.Connection;
+package com.metarhia.jstp.connection;
 
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSValue;
+import com.metarhia.jstp.transport.TCPTransport;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.Spy;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class JSTPConnectionTest {
 
-    private JSTPConnection connection;
+    @Spy private JSTPConnection connection;
+
+    private AbstractSocket transport;
 
     @Before
     public void setUp() {
-        connection = new JSTPConnection("nothing", 4343);
+        transport = mock(AbstractSocket.class);
+        connection = spy(new JSTPConnection(transport));
+        doAnswer(new HandshakeAnswer(connection)).when(connection).handshake(anyString(), isA(ManualHandler.class));
+        doAnswer(new HandshakeAnswer(connection)).when(connection).handshake(anyString(), Mockito.<ManualHandler>isNull());
+        when(transport.isConnected()).thenReturn(true);
+        connection.handshake(Constants.MOCK_APP_NAME, null);
     }
 
     @After
@@ -30,8 +40,16 @@ public class JSTPConnectionTest {
     @Test
     public void emptyObject() throws Exception {
         final String s = "{}" + JSTPConnection.TERMINATOR;
-        connection.onMessageReceived((JSObject) JSParser.parse(s));
-        assertTrue(true);
+        final boolean[] success = {false};
+        connection.addSocketListener(new SimpleJSTPConnectionListener() {
+            @Override
+            public void onPacketRejected(JSObject packet) {
+                success[0] = true;
+            }
+        });
+
+        connection.onPacketReceived((JSObject) JSParser.parse(s));
+        assertTrue(success[0]);
     }
 
     @Test
@@ -46,7 +64,7 @@ public class JSTPConnectionTest {
             }
         });
 
-        connection.onMessageReceived((JSObject) JSParser.parse(packet));
+        connection.onPacketReceived((JSObject) JSParser.parse(packet));
 
         assertTrue(success[0]);
     }
@@ -63,7 +81,7 @@ public class JSTPConnectionTest {
             }
         });
 
-        connection.onMessageReceived((JSObject) JSParser.parse(packet));
+        connection.onPacketReceived((JSObject) JSParser.parse(packet));
 
         assertTrue(success[0]);
     }
@@ -71,7 +89,6 @@ public class JSTPConnectionTest {
     @Test
     public void onMessageReceivedCallback() throws Exception {
         String packet = "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR;
-
 
         final Boolean[] success = {false};
         connection.addHandler(17, new ManualHandler() {
@@ -81,48 +98,18 @@ public class JSTPConnectionTest {
             }
         });
 
-        connection.onMessageReceived((JSObject) JSParser.parse(packet));
+        connection.onPacketReceived((JSObject) JSParser.parse(packet));
 
         assertTrue(success[0]);
-    }
-
-    @Test
-    public void onMessageReceivedMultiple() throws Exception {
-        String packet = "{error:}" + JSTPConnection.TERMINATOR
-                + "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
-                + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
-
-        final Boolean[] success = {false, false};
-        connection.addEventHandler("auth", "insert", new ManualHandler() {
-            @Override
-            public void invoke(JSValue packet) {
-                success[0] = true;
-            }
-        });
-
-        connection.addHandler(17, new ManualHandler() {
-            @Override
-            public void invoke(JSValue packet) {
-                success[1] = true;
-            }
-        });
-
-        connection.onMessageReceived(packet);
-
-        assertTrue(success[0] && success[1]);
     }
 
     @Test
     public void checkPingPong() throws Exception {
         String input = "{ping:[42]}" + JSTPConnection.TERMINATOR;
         String response = "{pong:[42]}" + JSTPConnection.TERMINATOR;
-        AbstractSocket socket = mock(AbstractSocket.class);
 
-        JSTPConnection connection = new JSTPConnection("", 0);
-        connection.createNewConnection(socket);
+        connection.onPacketReceived((JSObject) JSParser.parse(input));
 
-        connection.onMessageReceived((JSObject) JSParser.parse(input));
-
-        verify(socket, times(1)).sendMessage(response);
+        verify(transport, times(1)).send(response);
     }
 }

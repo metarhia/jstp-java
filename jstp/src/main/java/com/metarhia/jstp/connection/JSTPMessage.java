@@ -1,4 +1,4 @@
-package com.metarhia.jstp.Connection;
+package com.metarhia.jstp.connection;
 
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSObject;
@@ -26,6 +26,12 @@ public class JSTPMessage {
      * Number of package corresponding to this message
      */
     private int packageNumber;
+
+    /**
+     * Implementation will by no means invalidate this value, it is the responsibility of the user to
+     * keep this Optional field consistent
+     */
+    private String stringRepresantation;
 
     private JSTPMessage() {
         this.message = new JSObject();
@@ -105,6 +111,14 @@ public class JSTPMessage {
 
     public int getPackageNumber() {
         return packageNumber;
+    }
+
+    public String getStringRepresantation() {
+        return stringRepresantation;
+    }
+
+    public void setStringRepresantation(String stringRepresantation) {
+        this.stringRepresantation = stringRepresantation;
     }
 
     public void setPackageNumber(int packageNumber) {
