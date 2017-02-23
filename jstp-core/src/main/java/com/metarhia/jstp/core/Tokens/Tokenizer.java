@@ -5,9 +5,10 @@ import com.metarhia.jstp.core.JSTypes.JSBool;
 import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import com.metarhia.jstp.core.Utils;
+import java.io.Serializable;
 import java.text.ParseException;
 
-public class Tokenizer {
+public class Tokenizer implements Serializable {
 
   private static final String BOOL_TRUE_STR = new JSBool(true).toString();
   private static final String BOOL_FALSE_STR = new JSBool(false).toString();
