@@ -1,7 +1,6 @@
 package com.metarhia.jstp.compiler.annotations;
 
 import com.metarhia.jstp.core.JSTypes.JSValue;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 
@@ -10,5 +9,6 @@ import java.lang.annotation.Target;
  */
 @Target({ElementType.METHOD})
 public @interface Typed {
-    Class value() default JSValue.class;
+
+  Class value() default JSValue.class;
 }

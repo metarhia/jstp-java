@@ -8,26 +8,27 @@ import java.util.List;
  * Created by lundibundi on 8/8/16.
  */
 public abstract class Handler<T> implements ManualHandler {
-    protected List<T> handlers;
 
-    public Handler() {
-        this.handlers = new LinkedList<>();
-    }
+  protected List<T> handlers;
 
-    public Handler(T handler) {
-        this();
-        this.handlers.add(handler);
-    }
+  public Handler() {
+    this.handlers = new LinkedList<>();
+  }
 
-    public Handler(Collection<T> handlers) {
-        this.handlers = new LinkedList<>(handlers);
-    }
+  public Handler(T handler) {
+    this();
+    this.handlers.add(handler);
+  }
 
-    public void addHandler(T handler) {
-        this.handlers.add(handler);
-    }
+  public Handler(Collection<T> handlers) {
+    this.handlers = new LinkedList<>(handlers);
+  }
 
-    public void removeHandler(T handler) {
-        this.handlers.remove(handler);
-    }
+  public void addHandler(T handler) {
+    this.handlers.add(handler);
+  }
+
+  public void removeHandler(T handler) {
+    this.handlers.remove(handler);
+  }
 }
