@@ -10,9 +10,13 @@ public abstract class AbstractSocket {
         this.socketListener = listener;
     }
 
-    public abstract void openConnection();
+    /**
+     * @return true if connect task was committed (it doesn't mean that connection was established)
+     * else returns false if error occurred
+     */
+    public abstract boolean connect();
 
-    public abstract void sendMessage(String message);
+    public abstract void send(String message);
 
     public abstract void pause();
 
@@ -22,6 +26,8 @@ public abstract class AbstractSocket {
 
     public abstract void clearQueue();
 
+    public abstract int getQueueSize();
+
     public void setSocketListener(AbstractSocketListener listener) {
         this.socketListener = listener;
     }
@@ -30,13 +36,17 @@ public abstract class AbstractSocket {
 
     public abstract boolean isClosed();
 
+    public abstract boolean isRunning();
+
     public interface AbstractSocketListener {
         void onConnected();
 
-        void onMessageReceived(JSObject packet);
+        void onPacketReceived(JSObject packet);
 
-        void onConnectionClosed(Exception... e);
+        void onConnectionClosed(int remainingMessages);
 
         void onMessageRejected(String message);
+
+        void onError(Exception e);
     }
 }

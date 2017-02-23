@@ -1,4 +1,4 @@
-package com.metarhia.jstp.Handlers;
+package com.metarhia.jstp.handlers;
 
 import com.metarhia.jstp.core.JSTypes.JSValue;
 

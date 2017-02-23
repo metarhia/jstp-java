@@ -1,4 +1,4 @@
-package com.metarhia.jstp.Connection;
+package com.metarhia.jstp.connection;
 
 /**
  * Created by Lida on 14.07.16.
