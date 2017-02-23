@@ -1,5 +1,6 @@
 package com.metarhia.jstp.transport;
 
+import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.connection.AbstractSocket;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSParsingException;
@@ -25,6 +26,7 @@ public class TCPTransport extends AbstractSocket {
 
   private final Object senderLock = new Object();
   private final Object pauseLock = new Object();
+
   private final Object socketLock = new Object();
   private final Object threadLock = new Object();
 
@@ -141,7 +143,7 @@ public class TCPTransport extends AbstractSocket {
   private void sendMessageInternal(String message) throws IOException {
     // TODO add proper conditional logging
 //        System.out.println("com.metarhia.jstp.Connection: " + message);
-    out.write(message.getBytes());
+    out.write(message.getBytes(Constants.UTF_8_CHARSET));
     out.write(0);
     out.flush();
   }
@@ -202,7 +204,7 @@ public class TCPTransport extends AbstractSocket {
 
     if (packetBuilder.size() != 0 && socketListener != null) {
       packetBuilder.write('\0');
-      String message = packetBuilder.toString();
+      String message = packetBuilder.toString(Constants.UTF_8_CHARSET_NAME);
 //            System.out.println("com.metarhia.jstp.Connection: " + message);
 //            TODO add proper conditional logging
       jsParser.setInput(message);

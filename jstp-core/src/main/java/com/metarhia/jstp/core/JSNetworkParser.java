@@ -1,6 +1,7 @@
 package com.metarhia.jstp.core;
 
 import com.metarhia.jstp.core.JSTypes.JSObject;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,6 +12,8 @@ public final class JSNetworkParser {
 
   private static final byte TERMINATOR = '\0';
 
+  private static final Charset UTF_8_CHARSET = Charset.forName("UTF-8");
+
   private JSNetworkParser() {
   }
 
@@ -20,7 +23,7 @@ public final class JSNetworkParser {
     int chunkStart = 0;
     int chunkLength = bytesUntil(msg, chunkStart, length[0], TERMINATOR);
     while (chunkLength != -1 && chunkStart < length[0]) {
-      String packetData = new String(msg, chunkStart, chunkLength);
+      String packetData = new String(msg, chunkStart, chunkLength, UTF_8_CHARSET);
       parser.setInput(packetData);
       packets.add(parser.parseObject());
       chunkStart += chunkLength;

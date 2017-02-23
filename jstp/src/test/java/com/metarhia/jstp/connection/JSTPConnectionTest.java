@@ -10,6 +10,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSTypes.JSArray;
@@ -38,7 +39,7 @@ public class JSTPConnectionTest {
     doAnswer(new HandshakeAnswer(connection)).when(connection)
         .handshake(anyString(), Mockito.<ManualHandler>isNull());
     when(transport.isConnected()).thenReturn(true);
-    connection.handshake(Constants.MOCK_APP_NAME, null);
+    connection.handshake(TestConstants.MOCK_APP_NAME, null);
   }
 
   @After
@@ -51,7 +52,7 @@ public class JSTPConnectionTest {
   public void tlsConnection() throws Exception {
     final boolean[] valid = {false};
 
-    TCPTransport transport = new TCPTransport(Constants.REMOTE_HOST, Constants.REMOTE_PORT, true);
+    TCPTransport transport = new TCPTransport(TestConstants.REMOTE_HOST, TestConstants.REMOTE_PORT, true);
     JSTPConnection connection = new JSTPConnection(transport);
     connection.addSocketListener(new SimpleJSTPConnectionListener() {
       @Override
@@ -176,7 +177,7 @@ public class JSTPConnectionTest {
   @Test
   public void sendEscapedCharacters() throws Exception {
     final boolean[] test = {false};
-    TCPTransport transport = new TCPTransport(Constants.REMOTE_HOST, Constants.REMOTE_PORT, true);
+    TCPTransport transport = new TCPTransport(TestConstants.REMOTE_HOST, TestConstants.REMOTE_PORT, true);
     final JSTPConnection connection = new JSTPConnection(transport);
     connection.addSocketListener(new SimpleJSTPConnectionListener() {
       @Override

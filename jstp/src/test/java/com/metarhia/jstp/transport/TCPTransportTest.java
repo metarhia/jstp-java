@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
+import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.connection.HandshakeAnswer;
 import com.metarhia.jstp.connection.JSTPConnection;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
@@ -91,7 +92,9 @@ public class TCPTransportTest {
 
     Field inputField = TCPTransport.class.getDeclaredField("in");
     inputField.setAccessible(true);
-    BufferedInputStream in = new BufferedInputStream(new ByteArrayInputStream(packet.getBytes()));
+    final byte[] packetBytes = packet.getBytes(TestConstants.UTF_8_CHARSET);
+    final ByteArrayInputStream mockStream = new ByteArrayInputStream(packetBytes);
+    BufferedInputStream in = new BufferedInputStream(mockStream);
     inputField.set(tcpTransport, in);
 
     readThread.start();
