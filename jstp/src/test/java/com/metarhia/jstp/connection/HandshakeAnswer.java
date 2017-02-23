@@ -1,5 +1,6 @@
 package com.metarhia.jstp.connection;
 
+import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSTypes.JSObject;
@@ -19,7 +20,7 @@ public class HandshakeAnswer implements Answer<Void> {
 
   @Override
   public Void answer(InvocationOnMock invocation) throws Throwable {
-    final JSObject handshakePacket = new JSParser(Constants.MOCK_HANDSHAKE_RESPONSE).parseObject();
+    final JSObject handshakePacket = new JSParser(TestConstants.MOCK_HANDSHAKE_RESPONSE).parseObject();
     connection.onPacketReceived(handshakePacket);
     final ManualHandler handler = invocation.getArgument(1);
     if (handler != null) {

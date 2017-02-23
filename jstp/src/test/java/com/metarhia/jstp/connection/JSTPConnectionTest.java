@@ -10,6 +10,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSTypes.JSArray;
@@ -38,7 +39,7 @@ public class JSTPConnectionTest {
     doAnswer(new HandshakeAnswer(connection)).when(connection)
         .handshake(anyString(), Mockito.<ManualHandler>isNull());
     when(transport.isConnected()).thenReturn(true);
-    connection.handshake(Constants.MOCK_APP_NAME, null);
+    connection.handshake(TestConstants.MOCK_APP_NAME, null);
   }
 
   @After
