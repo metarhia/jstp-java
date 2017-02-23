@@ -6,11 +6,12 @@ import com.metarhia.jstp.core.JSTypes.JSObject;
  * Created by lundibundi on 2/22/17.
  */
 public interface JSTPConnectionListener {
-    void onConnected(boolean restored);
 
-    void onPacketRejected(JSObject packet);
+  void onConnected(boolean restored);
 
-    void onConnectionError(int errorCode);
+  void onPacketRejected(JSObject packet);
 
-    void onConnectionClosed();
+  void onConnectionError(int errorCode);
+
+  void onConnectionClosed();
 }

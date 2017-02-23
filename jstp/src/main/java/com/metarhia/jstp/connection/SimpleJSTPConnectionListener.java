@@ -7,23 +7,23 @@ import com.metarhia.jstp.core.JSTypes.JSObject;
  */
 public class SimpleJSTPConnectionListener implements JSTPConnectionListener {
 
-    @Override
-    public void onConnected(boolean restored) {
+  @Override
+  public void onConnected(boolean restored) {
 
-    }
+  }
 
-    @Override
-    public void onPacketRejected(JSObject packet) {
+  @Override
+  public void onPacketRejected(JSObject packet) {
 
-    }
+  }
 
-    @Override
-    public void onConnectionError(int errorCode) {
+  @Override
+  public void onConnectionError(int errorCode) {
 
-    }
+  }
 
-    @Override
-    public void onConnectionClosed() {
+  @Override
+  public void onConnectionClosed() {
 
-    }
+  }
 }

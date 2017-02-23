@@ -7,21 +7,26 @@ import java.util.Queue;
  */
 public class SessionRestorationPolicy implements RestorationPolicy {
 
-    private JSTPConnection connection;
+  private JSTPConnection connection;
 
-    public SessionRestorationPolicy(JSTPConnection connection) {
-        this.connection = connection;
-    }
+  public SessionRestorationPolicy(JSTPConnection connection) {
+    this.connection = connection;
+  }
 
-    @Override
-    public boolean restore(Queue<JSTPMessage> sendQueue) {
-        for (JSTPMessage message : sendQueue) connection.send(message.getStringRepresantation());
-        return true;
+  @Override
+  public boolean restore(Queue<JSTPMessage> sendQueue) {
+    for (JSTPMessage message : sendQueue) {
+      connection.send(message.getStringRepresantation());
     }
+    return true;
+  }
 
-    @Override
-    public void onTransportAvailable(String appName, String sessionID) {
-        if (sessionID != null) connection.handshake(appName, sessionID, null);
-        else connection.handshake(appName, null);
+  @Override
+  public void onTransportAvailable(String appName, String sessionID) {
+    if (sessionID != null) {
+      connection.handshake(appName, sessionID, null);
+    } else {
+      connection.handshake(appName, null);
     }
+  }
 }
