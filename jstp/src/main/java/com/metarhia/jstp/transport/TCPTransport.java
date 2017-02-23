@@ -25,6 +25,9 @@ public class TCPTransport extends AbstractSocket {
 
   private final Object senderLock = new Object();
   private final Object pauseLock = new Object();
+  private final Object socketLock = new Object();
+  private final Object threadLock = new Object();
+
   private String host;
   private int port;
   private boolean sslEnabled;
@@ -100,7 +103,7 @@ public class TCPTransport extends AbstractSocket {
   }
 
   private void startSenderThread() {
-    senderThread = new Thread(new Runnable() {
+    Thread senderThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -117,7 +120,9 @@ public class TCPTransport extends AbstractSocket {
               messageQueue.poll();
             }
             synchronized (pauseLock) {
-              pauseLock.wait();
+              if (!running) {
+                pauseLock.wait();
+              }
             }
           }
         } catch (InterruptedException | ClosedByInterruptException e) {
@@ -127,7 +132,10 @@ public class TCPTransport extends AbstractSocket {
         }
       }
     });
-    senderThread.start();
+    synchronized (threadLock) {
+      this.senderThread = senderThread;
+      this.senderThread.start();
+    }
   }
 
   private void sendMessageInternal(String message) throws IOException {
@@ -139,7 +147,7 @@ public class TCPTransport extends AbstractSocket {
   }
 
   private void startReceiverThread() {
-    receiverThread = new Thread(new Runnable() {
+    Thread receiverThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -148,7 +156,9 @@ public class TCPTransport extends AbstractSocket {
               processMessage();
             }
             synchronized (pauseLock) {
-              pauseLock.wait();
+              if (!running) {
+                pauseLock.wait();
+              }
             }
           }
         } catch (InterruptedException | ClosedByInterruptException e) {
@@ -158,7 +168,10 @@ public class TCPTransport extends AbstractSocket {
         }
       }
     });
-    receiverThread.start();
+    synchronized (threadLock) {
+      this.receiverThread = receiverThread;
+      this.receiverThread.start();
+    }
   }
 
 //    private void processMessage() throws IOException {
@@ -181,8 +194,10 @@ public class TCPTransport extends AbstractSocket {
 
   void processMessage() throws IOException {
     int b;
-    while ((b = in.read()) > 0) {
-      packetBuilder.write(b);
+    synchronized (socketLock) {
+      while ((b = in.read()) > 0) {
+        packetBuilder.write(b);
+      }
     }
 
     if (packetBuilder.size() != 0 && socketListener != null) {
@@ -205,18 +220,24 @@ public class TCPTransport extends AbstractSocket {
   }
 
   private boolean initConnection() throws IOException {
-    if (socket == null || !socket.isConnected() || socket.isClosed()) {
-      if (sslEnabled) {
-        socket = createSSLSocket(host, port);
-      } else {
-        socket = new Socket(host, port);
+    final boolean connected;
+    synchronized (socketLock) {
+      if (socket == null || !socket.isConnected() || socket.isClosed()) {
+        if (sslEnabled) {
+          socket = createSSLSocket(host, port);
+        } else {
+          socket = new Socket(host, port);
+        }
+      }
+
+      connected = socket != null && socket.isConnected();
+      if (connected) {
+        running = true;
+        out = socket.getOutputStream();
+        in = new BufferedInputStream(socket.getInputStream());
       }
     }
-
-    if (socket != null && socket.isConnected()) {
-      running = true;
-      out = socket.getOutputStream();
-      in = new BufferedInputStream(socket.getInputStream());
+    if (connected) {
       if (socketListener != null) {
         socketListener.onConnected();
       }
@@ -318,22 +339,26 @@ public class TCPTransport extends AbstractSocket {
         closing = true;
         clearQueue();
         running = false;
-        if (receiverThread != null) {
-          receiverThread.interrupt();
+        synchronized (threadLock) {
+          if (receiverThread != null) {
+            receiverThread.interrupt();
+          }
+          if (senderThread != null) {
+            senderThread.interrupt();
+          }
+          receiverThread = null;
+          senderThread = null;
         }
-        if (senderThread != null) {
-          senderThread.interrupt();
+        synchronized (socketLock) {
+          if (in != null) {
+            in.close();
+          }
+          if (socket != null) {
+            socket.close();
+          }
+          in = null;
+          socket = null;
         }
-        if (in != null) {
-          in.close();
-        }
-        if (socket != null) {
-          socket.close();
-        }
-        in = null;
-        receiverThread = null;
-        senderThread = null;
-        socket = null;
         closing = false;
       }
       if (notify && socketListener != null) {
@@ -345,12 +370,16 @@ public class TCPTransport extends AbstractSocket {
 
   @Override
   public boolean isConnected() {
-    return !closing && socket != null && socket.isConnected();
+    synchronized (socketLock) {
+      return !closing && socket != null && socket.isConnected();
+    }
   }
 
   @Override
   public boolean isClosed() {
-    return closing || socket == null || socket.isClosed();
+    synchronized (socketLock) {
+      return closing || socket == null || socket.isClosed();
+    }
   }
 
   @Override
