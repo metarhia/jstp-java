@@ -20,18 +20,7 @@ publishing {
             groupId 'com.metarhia.jstp'
             artifactId packetName
             version compilerVersion
-            pom.withXml {
-                asNode().children().last() + {
-                    resolveStrategy = Closure.DELEGATE_FIRST
-                    dependencies {
-                        dependency {
-                            groupId "com.squareup"
-                            artifactId "javapoet"
-                            version "1.8.0"
-                        }
-                    }
-                }
-            }
+            mavenDependency(pom, "com.squareup", "javapoet", "1.8.0")
         }
     }
 }

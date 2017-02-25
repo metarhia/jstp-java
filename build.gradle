@@ -20,3 +20,19 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+def mavenDependency(pom, groupIdName, artifactIdName, ver) {
+    return pom.withXml {
+        asNode().children().last() + {
+            resolveStrategy = Closure.DELEGATE_FIRST
+            dependencies {
+                dependency {
+                    groupId groupIdName
+                    artifactId artifactIdName
+                    version ver
+                }
+            }
+        }
+    }
+}
+
