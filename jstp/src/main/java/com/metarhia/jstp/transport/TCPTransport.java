@@ -17,12 +17,16 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.net.ssl.SSLContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TCPTransport extends AbstractSocket {
 
   public static final long DEFAULT_CLOSING_TICK = 1000;
   public static final long DEFAULT_CLOSING_TIMEOUT = 5000;
   public static final int DEFAULT_PACKET_SIZE = 100;
+
+  private static final Logger log = LoggerFactory.getLogger(TCPTransport.class);
 
   private final Object senderLock = new Object();
   private final Object pauseLock = new Object();
@@ -83,6 +87,7 @@ public class TCPTransport extends AbstractSocket {
       }
       return false;
     }
+
     new Thread(new Runnable() {
       @Override
       public void run() {
@@ -97,6 +102,7 @@ public class TCPTransport extends AbstractSocket {
             closeInternal();
           }
         } catch (IOException e) {
+          log.info("Cannot create socket", e);
           closeInternal();
         }
       }
@@ -130,6 +136,7 @@ public class TCPTransport extends AbstractSocket {
         } catch (InterruptedException | ClosedByInterruptException e) {
           // all ok - manually closing
         } catch (IOException e) {
+          log.info("Sender thread failed", e);
           closeInternal();
         }
       }
@@ -141,8 +148,8 @@ public class TCPTransport extends AbstractSocket {
   }
 
   private void sendMessageInternal(String message) throws IOException {
-    // TODO add proper conditional logging
-//        System.out.println("com.metarhia.jstp.Connection: " + message);
+    log.trace("Sending message: {}", message);
+
     out.write(message.getBytes(Constants.UTF_8_CHARSET));
     out.write(0);
     out.flush();
@@ -166,6 +173,7 @@ public class TCPTransport extends AbstractSocket {
         } catch (InterruptedException | ClosedByInterruptException e) {
           // all ok - manually closing
         } catch (IOException e) {
+          log.info("Receiver thread failed", e);
           closeInternal();
         }
       }
@@ -201,17 +209,18 @@ public class TCPTransport extends AbstractSocket {
         packetBuilder.write(b);
       }
     }
-
     if (packetBuilder.size() != 0 && socketListener != null) {
       packetBuilder.write('\0');
       String message = packetBuilder.toString(Constants.UTF_8_CHARSET_NAME);
-//            System.out.println("com.metarhia.jstp.Connection: " + message);
-//            TODO add proper conditional logging
+
+      log.trace("Received message: {}", message);
+
       jsParser.setInput(message);
       try {
         JSObject packet = jsParser.parseObject();
         socketListener.onPacketReceived(packet);
       } catch (JSParsingException e) {
+        log.info("Message parsing failed", e);
         socketListener.onMessageRejected(message);
       }
     }
@@ -268,6 +277,7 @@ public class TCPTransport extends AbstractSocket {
       }
       return;
     }
+
     messageQueue.add(message);
     if (running) {
       synchronized (senderLock) {
@@ -367,6 +377,7 @@ public class TCPTransport extends AbstractSocket {
         socketListener.onConnectionClosed(remainingMessages);
       }
     } catch (IOException e) {
+      log.info("Socket close fail", e);
     }
   }
 
