@@ -19,6 +19,8 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JSTPConnection implements
     AbstractSocket.AbstractSocketListener {
@@ -42,6 +44,8 @@ public class JSTPConnection implements
   private static final String PONG = "pong";
 
   private static final Map<String, Method> METHOD_HANDLERS = new HashMap<>(10);
+
+  private static final Logger logger = LoggerFactory.getLogger(JSTPConnection.class);
 
   private static AtomicLong nextConnectionID = new AtomicLong(0);
 
@@ -637,13 +641,8 @@ public class JSTPConnection implements
   }
 
   @Override
-  public void onMessageRejected(String message) {
-    // todo report/log rejected messages
-  }
-
-  @Override
   public void onError(Exception e) {
-    // todo report/log errors
+    logger.info("Transport error", e);
   }
 
   private void reportConnected(boolean restored) {

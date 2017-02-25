@@ -46,8 +46,6 @@ public abstract class AbstractSocket {
 
     void onConnectionClosed(int remainingMessages);
 
-    void onMessageRejected(String message);
-
     void onError(Exception e);
   }
 }
