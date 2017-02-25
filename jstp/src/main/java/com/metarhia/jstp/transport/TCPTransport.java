@@ -26,7 +26,7 @@ public class TCPTransport extends AbstractSocket {
   public static final long DEFAULT_CLOSING_TIMEOUT = 5000;
   public static final int DEFAULT_PACKET_SIZE = 100;
 
-  private static final Logger log = LoggerFactory.getLogger(TCPTransport.class);
+  private static final Logger logger = LoggerFactory.getLogger(TCPTransport.class);
 
   private final Object senderLock = new Object();
   private final Object pauseLock = new Object();
@@ -102,7 +102,7 @@ public class TCPTransport extends AbstractSocket {
             closeInternal();
           }
         } catch (IOException e) {
-          log.info("Cannot create socket", e);
+          logger.info("Cannot create socket", e);
           closeInternal();
         }
       }
@@ -136,7 +136,7 @@ public class TCPTransport extends AbstractSocket {
         } catch (InterruptedException | ClosedByInterruptException e) {
           // all ok - manually closing
         } catch (IOException e) {
-          log.info("Sender thread failed", e);
+          logger.info("Sender thread failed", e);
           closeInternal();
         }
       }
@@ -148,7 +148,7 @@ public class TCPTransport extends AbstractSocket {
   }
 
   private void sendMessageInternal(String message) throws IOException {
-    log.trace("Sending message: {}", message);
+    logger.trace("Sending message: {}", message);
 
     out.write(message.getBytes(Constants.UTF_8_CHARSET));
     out.write(0);
@@ -173,7 +173,7 @@ public class TCPTransport extends AbstractSocket {
         } catch (InterruptedException | ClosedByInterruptException e) {
           // all ok - manually closing
         } catch (IOException e) {
-          log.info("Receiver thread failed", e);
+          logger.info("Receiver thread failed", e);
           closeInternal();
         }
       }
@@ -213,15 +213,14 @@ public class TCPTransport extends AbstractSocket {
       packetBuilder.write('\0');
       String message = packetBuilder.toString(Constants.UTF_8_CHARSET_NAME);
 
-      log.trace("Received message: {}", message);
+      logger.trace("Received message: {}", message);
 
       jsParser.setInput(message);
       try {
         JSObject packet = jsParser.parseObject();
         socketListener.onPacketReceived(packet);
       } catch (JSParsingException e) {
-        log.info("Message parsing failed", e);
-        socketListener.onMessageRejected(message);
+        logger.info("Message parsing failed", e);
       }
     }
     packetBuilder.reset();
@@ -272,9 +271,6 @@ public class TCPTransport extends AbstractSocket {
 
   public void send(String message) {
     if (closing) {
-      if (socketListener != null) {
-        socketListener.onMessageRejected(message);
-      }
       return;
     }
 
@@ -377,7 +373,7 @@ public class TCPTransport extends AbstractSocket {
         socketListener.onConnectionClosed(remainingMessages);
       }
     } catch (IOException e) {
-      log.info("Socket close fail", e);
+      logger.info("Socket close fail", e);
     }
   }
 
