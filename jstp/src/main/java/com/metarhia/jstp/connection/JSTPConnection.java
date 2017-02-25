@@ -184,7 +184,7 @@ public class JSTPConnection implements
     useTransport(new TCPTransport(host, port, sslEnabled, this));
   }
 
-  private boolean restoreSession(long numServerSendPackets, long numServerReceivedPackets) {
+  private boolean restoreSession(long numServerReceivedPackets) {
     long redundantPackets = sendQueue.size() - numSentPackets - numServerReceivedPackets;
     numSentPackets = numServerReceivedPackets;
     while (redundantPackets-- > 0) {
@@ -244,7 +244,7 @@ public class JSTPConnection implements
     }
 
     JSTPMessage hm;
-    JSArray args = new JSArray(new Object[]{sessionID, numSentPackets, numReceivedPackets});
+    JSArray args = new JSArray(new Object[]{sessionID, numReceivedPackets});
     hm = new JSTPMessage(packageCounter, HANDSHAKE, "session", args);
     hm.addProtocolArg(appName);
 
@@ -414,9 +414,8 @@ public class JSTPConnection implements
 
   private boolean processHandshakeRestoreResponse(JSObject packet) {
     JSArray session = (JSArray) packet.get(1);
-    long numServerSendPackets = (long) JSTypesUtil.jsToJava(session.get(0));
-    long numServerReceivedPackets = (long) JSTypesUtil.jsToJava(session.get(1));
-    return restoreSession(numServerSendPackets, numServerReceivedPackets);
+    long numServerReceivedPackets = (long) JSTypesUtil.jsToJava(session.get(0));
+    return restoreSession(numServerReceivedPackets);
   }
 
   private void processHandshakeResponse(JSObject packet) {
