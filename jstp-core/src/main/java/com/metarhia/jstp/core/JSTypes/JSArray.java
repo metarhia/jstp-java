@@ -10,10 +10,16 @@ import java.util.List;
  */
 public class JSArray implements JSValue {
 
+  private static final int DEFAULT_CAPACITY = 10;
+
   private List<JSValue> values;
 
   public JSArray() {
-    values = new ArrayList<>();
+    this(DEFAULT_CAPACITY);
+  }
+
+  public JSArray(int initialCapacity) {
+    values = new ArrayList<>(initialCapacity);
   }
 
   /**
@@ -61,14 +67,25 @@ public class JSArray implements JSValue {
     values.add(value);
   }
 
+  /**
+   * Parses {@param value} with {@link JSTypesUtil#javaToJS(Object)},
+   * see supported types in the link
+   */
+  public void add(Object value) {
+    values.add(JSTypesUtil.javaToJS(value));
+  }
+
+  @Deprecated
   public void add(String value) {
     values.add(new JSString(value));
   }
 
+  @Deprecated
   public void add(double value) {
     values.add(new JSNumber(value));
   }
 
+  @Deprecated
   public void add(boolean value) {
     values.add(new JSBool(value));
   }
@@ -81,16 +98,23 @@ public class JSArray implements JSValue {
     return values.set(i, value);
   }
 
+  public JSValue set(int i, Object value) {
+    return values.set(i, JSTypesUtil.javaToJS(value));
+  }
+
+  @Deprecated
   public JSValue set(int i, String value) {
-    return values.set(i, new JSString(value));
+    return set(i, new JSString(value));
   }
 
+  @Deprecated
   public JSValue set(int i, double value) {
-    return values.set(i, new JSNumber(value));
+    return set(i, new JSNumber(value));
   }
 
+  @Deprecated
   public JSValue set(int i, boolean value) {
-    return values.set(i, new JSBool(value));
+    return set(i, new JSBool(value));
   }
 
   @Override
