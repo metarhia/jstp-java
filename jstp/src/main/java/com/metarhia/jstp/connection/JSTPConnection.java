@@ -417,8 +417,7 @@ public class JSTPConnection implements
   }
 
   private boolean processHandshakeRestoreResponse(JSObject packet) {
-    JSArray session = (JSArray) packet.get(1);
-    long numServerReceivedPackets = (long) JSTypesUtil.jsToJava(session.get(0));
+    long numServerReceivedPackets = (long) JSTypesUtil.jsToJava(packet.get(1));
     return restoreSession(numServerReceivedPackets);
   }
 
