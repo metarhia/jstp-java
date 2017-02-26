@@ -292,4 +292,19 @@ public class JSParserTest {
       assertEquals(td.expected, actual.toString());
     }
   }
+
+  @Test(expected = JSParsingException.class)
+  public void throwOnUnmatchedQuote1() throws Exception {
+    new JSParser("'ssssss").parse();
+  }
+
+  @Test(expected = JSParsingException.class)
+  public void throwOnUnmatchedQuote2() throws Exception {
+    new JSParser("{'ssssss : }").parse();
+  }
+
+  @Test
+  public void noneTest() throws Exception {
+    assertEquals(JSUndefined.get(), new JSParser().parse());
+  }
 }
