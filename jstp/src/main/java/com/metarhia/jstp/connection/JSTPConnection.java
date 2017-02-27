@@ -398,7 +398,7 @@ public class JSTPConnection implements
     }
     if (packet.getOrderedKeys().get(1).equals("error")) {
       sessionID = null;
-      int errorCode = (int) JSTypesUtil.jsToJava(((JSArray) packet.get(1)).get(0));
+      int errorCode = (int) JSTypesUtil.jsToJava(((JSArray) packet.get(1)).get(0), true);
       reportError(errorCode);
       close(true);
     } else {

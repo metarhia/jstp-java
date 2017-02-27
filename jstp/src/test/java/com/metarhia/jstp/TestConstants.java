@@ -13,6 +13,9 @@ public class TestConstants {
 
   public static final String MOCK_APP_NAME = "nothing";
   public static final String MOCK_HANDSHAKE_RESPONSE = "{handshake:[0], ok: 'sessionID'}";
+  public static final int MOCK_HANDSHAKE_RESPONSE_ERR_CODE = 16;
+  public static final String MOCK_HANDSHAKE_RESPONSE_ERR = "{handshake:[0], error: ["
+      + MOCK_HANDSHAKE_RESPONSE_ERR_CODE + "]}";
   public static final String MOCK_HANDSHAKE_REQUEST = "{handshake:[0]}";
 
   public static final Charset UTF_8_CHARSET = Constants.UTF_8_CHARSET;

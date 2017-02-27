@@ -1,5 +1,6 @@
 package com.metarhia.jstp.connection;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -22,6 +23,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.Spy;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class JSTPConnectionTest {
 
@@ -44,67 +47,10 @@ public class JSTPConnectionTest {
 
   @After
   public void tearDown() {
-    connection.close();
-    connection = null;
-  }
-
-  @Test
-  public void tlsConnection() throws Exception {
-    final boolean[] valid = {false};
-
-    TCPTransport transport = new TCPTransport(TestConstants.REMOTE_HOST, TestConstants.REMOTE_PORT, true);
-    JSTPConnection connection = new JSTPConnection(transport);
-    connection.addSocketListener(new SimpleJSTPConnectionListener() {
-      @Override
-      public void onConnected(boolean restored) {
-        valid[0] = true;
-        synchronized (JSTPConnectionTest.this) {
-          JSTPConnectionTest.this.notify();
-        }
-      }
-    });
-    connection.connect("superIn");
-
-    synchronized (this) {
-      wait(3000);
+    if (connection != null) {
+      connection.close();
+      connection = null;
     }
-
-    assertTrue(valid[0]);
-  }
-
-  @Test
-  public void temporary() throws Exception {
-    final boolean[] test = {false};
-    TCPTransport transport = new TCPTransport("since.tv", 4000, true);
-    final JSTPConnection connection = new JSTPConnection(transport);
-    connection.addSocketListener(new SimpleJSTPConnectionListener() {
-      @Override
-      public void onConnected(boolean restored) {
-        connection
-            .call("auth", "authorize", new JSArray(new Object[]{"+380962415331", "hellokitty1337"}),
-                new ManualHandler() {
-                  @Override
-                  public void invoke(JSValue packet) {
-                    connection.call("profile", "get", new JSArray(), new ManualHandler() {
-                      @Override
-                      public void invoke(JSValue packet) {
-                        test[0] = true;
-                        synchronized (connection) {
-                          connection.notify();
-                        }
-                      }
-                    });
-                  }
-                });
-      }
-    });
-    connection.connect("superIn");
-
-    synchronized (connection) {
-      connection.wait(4000);
-    }
-
-    assertTrue(test[0]);
   }
 
   @Test
@@ -175,9 +121,45 @@ public class JSTPConnectionTest {
   }
 
   @Test
+  public void checkPingPong() throws Exception {
+    String input = "{ping:[42]}" + JSTPConnection.TERMINATOR;
+    String response = "{pong:[42]}" + JSTPConnection.TERMINATOR;
+
+    connection.onPacketReceived((JSObject) JSParser.parse(input));
+
+    verify(transport, times(1)).send(response);
+  }
+
+  @Test
+  public void tlsConnection() throws Exception {
+    final boolean[] valid = {false};
+
+    TCPTransport transport = new TCPTransport(TestConstants.REMOTE_HOST, TestConstants.REMOTE_PORT,
+        true);
+    JSTPConnection connection = new JSTPConnection(transport);
+    connection.addSocketListener(new SimpleJSTPConnectionListener() {
+      @Override
+      public void onConnected(boolean restored) {
+        valid[0] = true;
+        synchronized (JSTPConnectionTest.this) {
+          JSTPConnectionTest.this.notify();
+        }
+      }
+    });
+    connection.connect("superIn");
+
+    synchronized (this) {
+      wait(3000);
+    }
+
+    assertTrue(valid[0]);
+  }
+
+  @Test
   public void sendEscapedCharacters() throws Exception {
     final boolean[] test = {false};
-    TCPTransport transport = new TCPTransport(TestConstants.REMOTE_HOST, TestConstants.REMOTE_PORT, true);
+    TCPTransport transport = new TCPTransport(TestConstants.REMOTE_HOST, TestConstants.REMOTE_PORT,
+        true);
     final JSTPConnection connection = new JSTPConnection(transport);
     connection.addSocketListener(new SimpleJSTPConnectionListener() {
       @Override
@@ -213,12 +195,80 @@ public class JSTPConnectionTest {
   }
 
   @Test
-  public void checkPingPong() throws Exception {
-    String input = "{ping:[42]}" + JSTPConnection.TERMINATOR;
-    String response = "{pong:[42]}" + JSTPConnection.TERMINATOR;
+  public void handshakeSendRecv() throws Exception {
+    AbstractSocket socket = mock(AbstractSocket.class);
+    when(socket.isConnected()).thenReturn(true);
 
-    connection.onPacketReceived((JSObject) JSParser.parse(input));
+    JSTPConnection connection = spy(new JSTPConnection(socket));
+    doAnswer(new HandshakeAnswer(connection)).when(connection)
+        .handshake(anyString(), Mockito.<ManualHandler>isNull());
 
-    verify(transport, times(1)).send(response);
+    connection.handshake(TestConstants.MOCK_APP_NAME, null);
+
+    assertTrue(connection.isHandshakeFinished());
   }
+
+  @Test
+  public void handshakeError() throws Exception {
+    AbstractSocket socket = mock(AbstractSocket.class);
+    when(socket.isConnected()).thenReturn(true);
+
+    final JSTPConnection connection = spy(new JSTPConnection(socket));
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        JSObject errPacket = new JSParser(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR)
+            .parseObject();
+        connection.onPacketReceived(errPacket);
+        return null;
+      }
+    }).when(connection)
+        .handshake(anyString(), Mockito.<ManualHandler>isNull());
+
+    JSTPConnectionListener listener = mock(JSTPConnectionListener.class);
+    connection.addSocketListener(listener);
+
+    connection.handshake(TestConstants.MOCK_APP_NAME, null);
+
+    verify(listener, times(1))
+        .onConnectionError(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR_CODE);
+    assertTrue(connection.getSessionID() == null);
+    assertFalse(connection.isHandshakeFinished());
+  }
+
+  @Test
+  public void temporary() throws Exception {
+    final boolean[] test = {false};
+    TCPTransport transport = new TCPTransport("since.tv", 4000, true);
+    final JSTPConnection connection = new JSTPConnection(transport);
+    connection.addSocketListener(new SimpleJSTPConnectionListener() {
+      @Override
+      public void onConnected(boolean restored) {
+        connection
+            .call("auth", "authorize", new JSArray(new Object[]{"+380962415331", "hellokitty1337"}),
+                new ManualHandler() {
+                  @Override
+                  public void invoke(JSValue packet) {
+                    connection.call("profile", "get", new JSArray(), new ManualHandler() {
+                      @Override
+                      public void invoke(JSValue packet) {
+                        test[0] = true;
+                        synchronized (connection) {
+                          connection.notify();
+                        }
+                      }
+                    });
+                  }
+                });
+      }
+    });
+    connection.connect("superIn");
+
+    synchronized (connection) {
+      connection.wait(4000);
+    }
+
+    assertTrue(test[0]);
+  }
+
 }
