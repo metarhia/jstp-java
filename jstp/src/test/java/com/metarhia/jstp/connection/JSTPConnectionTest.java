@@ -1,5 +1,6 @@
 package com.metarhia.jstp.connection;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -22,6 +23,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.Spy;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class JSTPConnectionTest {
 
@@ -44,8 +47,10 @@ public class JSTPConnectionTest {
 
   @After
   public void tearDown() {
-    connection.close();
-    connection = null;
+    if (connection != null) {
+      connection.close();
+      connection = null;
+    }
   }
 
   @Test
@@ -123,5 +128,47 @@ public class JSTPConnectionTest {
     connection.onPacketReceived((JSObject) JSParser.parse(input));
 
     verify(transport, times(1)).send(response);
+  }
+
+  @Test
+  public void handshakeSendRecv() throws Exception {
+    AbstractSocket socket = mock(AbstractSocket.class);
+    when(socket.isConnected()).thenReturn(true);
+
+    JSTPConnection connection = spy(new JSTPConnection(socket));
+    doAnswer(new HandshakeAnswer(connection)).when(connection)
+        .handshake(anyString(), Mockito.<ManualHandler>isNull());
+
+    connection.handshake(TestConstants.MOCK_APP_NAME, null);
+
+    assertTrue(connection.isHandshakeFinished());
+  }
+
+  @Test
+  public void handshakeError() throws Exception {
+    AbstractSocket socket = mock(AbstractSocket.class);
+    when(socket.isConnected()).thenReturn(true);
+
+    final JSTPConnection connection = spy(new JSTPConnection(socket));
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        JSObject errPacket = new JSParser(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR)
+            .parseObject();
+        connection.onPacketReceived(errPacket);
+        return null;
+      }
+    }).when(connection)
+        .handshake(anyString(), Mockito.<ManualHandler>isNull());
+
+    JSTPConnectionListener listener = mock(JSTPConnectionListener.class);
+    connection.addSocketListener(listener);
+
+    connection.handshake(TestConstants.MOCK_APP_NAME, null);
+
+    verify(listener, times(1))
+        .onConnectionError(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR_CODE);
+    assertTrue(connection.getSessionID() == null);
+    assertFalse(connection.isHandshakeFinished());
   }
 }
