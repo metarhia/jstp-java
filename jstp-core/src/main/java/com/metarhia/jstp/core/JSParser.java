@@ -134,6 +134,6 @@ public class JSParser implements Serializable {
   }
 
   public void setInput(String input) {
-    tokenizer = new Tokenizer(input);
+    tokenizer.setInput(input);
   }
 }

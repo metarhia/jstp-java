@@ -19,7 +19,7 @@ public class Tokenizer implements Serializable {
   private static final CharRange LETTER_UPPER_RANGE = new CharRange(0x41, 0x5a);
   private static final CharRange LETTER_LOWER_RANGE = new CharRange(0x61, 0x7a);
 
-  private final int length;
+  private int length;
   private Double number;
   private String str;
   private String input;
@@ -28,13 +28,7 @@ public class Tokenizer implements Serializable {
   private Token lastToken;
 
   public Tokenizer(String input) {
-    number = null;
-    str = null;
-    this.input = input;
-    length = input.length();
-    index = 0;
-    prevIndex = 0;
-    lastToken = null;
+    setInput(input);
   }
 
   private static int getPastLastIndex(String input, int index) {
@@ -181,8 +175,23 @@ public class Tokenizer implements Serializable {
     return prevIndex;
   }
 
-  public interface MatchRange {
+  public void setInput(String input) {
+    reset();
+    this.input = input;
+    this.length = input.length();
+  }
 
+  private void reset() {
+    number = null;
+    str = null;
+    input = null;
+    index = 0;
+    prevIndex = 0;
+    lastToken = null;
+    length = 0;
+  }
+
+  public interface MatchRange {
     boolean matches(char ch);
   }
 }
