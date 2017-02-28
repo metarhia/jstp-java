@@ -73,7 +73,7 @@ public class JSTPConnectionTest {
     String packet = "{call:[17,'auth'], newAccount:['Payload data']}" + JSTPConnection.TERMINATOR;
 
     final Boolean[] success = {false};
-    connection.addCallHandler("newAccount", new ManualHandler() {
+    connection.setCallHandler("newAccount", new ManualHandler() {
       @Override
       public void invoke(JSValue packet) {
         success[0] = true;
