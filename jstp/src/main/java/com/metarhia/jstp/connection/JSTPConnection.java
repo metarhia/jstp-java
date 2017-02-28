@@ -501,8 +501,17 @@ public class JSTPConnection implements
 //        transport.send(streamMessage.getMessage() + TERMINATOR);
 //    }
 
+  @Deprecated
   public void addCallHandler(String methodName, ManualHandler callHandler) {
+    setCallHandler(methodName, callHandler);
+  }
+
+  public void setCallHandler(String methodName, ManualHandler callHandler) {
     callHandlers.put(methodName, callHandler);
+  }
+
+  public void removeCallHandler(String methodName) {
+    callHandlers.remove(methodName);
   }
 
   public void setStateHandler(StateHandler stateHandler) {
