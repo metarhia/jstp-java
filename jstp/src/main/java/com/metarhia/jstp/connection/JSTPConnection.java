@@ -1,5 +1,6 @@
 package com.metarhia.jstp.connection;
 
+import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSNumber;
@@ -108,9 +109,9 @@ public class JSTPConnection implements
   private StateHandler stateHandler;
 
   /**
-   * Client method names for incoming inspect packages
+   * Client method names for incoming inspect packages by interface
    */
-  private JSArray clientMethodNames;
+  private Map<String, JSArray> clientMethodNames;
 
   private List<JSTPConnectionListener> connectionListeners;
 
@@ -167,7 +168,7 @@ public class JSTPConnection implements
 
     this.connectionListeners = new ArrayList<>();
     this.eventHandlers = new ConcurrentHashMap<>();
-    this.clientMethodNames = new JSArray();
+    this.clientMethodNames = new ConcurrentHashMap<>();
     this.handlers = new ConcurrentHashMap<>();
     this.callHandlers = new ConcurrentHashMap<>();
 
@@ -466,7 +467,21 @@ public class JSTPConnection implements
   }
 
   private void inspectPacketHandler(JSObject packet) {
-    callback(JSCallback.OK, clientMethodNames);
+    final JSValue args = packet.get(0);
+    if (!(args instanceof JSArray)
+        || ((JSArray) args).size() < 2
+        || !(((JSArray) args).get(1) instanceof JSString)) {
+      rejectPacket(packet);
+      return;
+    }
+
+    String interfaceName = ((JSString) ((JSArray) args).get(1)).getValue();
+    JSArray methods = clientMethodNames.get(interfaceName);
+    if (methods != null) {
+      callback(JSCallback.OK, methods);
+    } else {
+      callback(JSCallback.ERROR, new JSNumber(Constants.ERR_INTERFACE_NOT_FOUND));
+    }
   }
 
   private void statePacketHandler(JSObject packet) {
@@ -591,10 +606,17 @@ public class JSTPConnection implements
         .getValue();
   }
 
-  public void setClientMethodNames(String... names) {
-    for (String name : names) {
-      clientMethodNames.add(name);
+  public void setClientMethodNames(String interfaceName, String... names) {
+    JSArray methods = clientMethodNames.get(interfaceName);
+    if (methods == null) {
+      methods = new JSArray();
+    } else {
+      methods.clear();
     }
+    for (String name : names) {
+      methods.add(name);
+    }
+    clientMethodNames.put(interfaceName, methods);
   }
 
   public boolean isConnected() {
