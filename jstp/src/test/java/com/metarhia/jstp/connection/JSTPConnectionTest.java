@@ -2,6 +2,7 @@ package com.metarhia.jstp.connection;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.isA;
@@ -16,6 +17,7 @@ import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSObject;
+import com.metarhia.jstp.core.JSTypes.JSString;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.transport.TCPTransport;
 import org.junit.After;
@@ -128,6 +130,44 @@ public class JSTPConnectionTest {
     connection.onPacketReceived((JSObject) JSParser.parse(input));
 
     verify(transport, times(1)).send(response);
+  }
+
+  @Test
+  public void checkCallback() throws Exception {
+    final JSArray args = new JSArray(new Object[]{"data"});
+    int packageNumber = 13;
+    String message = String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR,
+        packageNumber, args);
+
+    connection.callback(JSCallback.OK, args, packageNumber);
+
+    verify(transport, times(1)).send(message);
+  }
+
+  @Test
+  public void checkInspectCall() throws Exception {
+    String interfaceName = "interfaceName";
+    String message = String.format("\\{inspect:\\[\\d+,'%s'\\]\\}" + JSTPConnection.TERMINATOR,
+        interfaceName);
+
+    connection.inspect(interfaceName, null);
+
+    verify(transport, times(1)).send(matches(message));
+  }
+
+  @Test
+  public void checkInspectResponse() throws Exception {
+    String interfaceName = "interfaceName";
+    connection.setClientMethodNames(interfaceName, "method1", "method2");
+    String methods = "'method1','method2'";
+    String message = String
+        .format("\\{callback:\\[\\d+\\],ok:\\[%s\\]\\}" + JSTPConnection.TERMINATOR, methods);
+
+    String inspectMessage = String.format("{inspect:[12, %s]}", new JSString(interfaceName));
+    JSObject inspectPacket = new JSParser(inspectMessage).parseObject();
+    connection.onPacketReceived(inspectPacket);
+
+    verify(transport, times(1)).send(matches(message));
   }
 
   @Test

@@ -45,8 +45,7 @@ public class TCPTransportTest {
 
   @Test
   public void onMessageReceivedMultiple() throws Exception {
-    String packet = "{error:12}" + JSTPConnection.TERMINATOR
-        + "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
+    String packet = "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
         + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
 
     final Boolean[] success = {false, false};
@@ -57,6 +56,9 @@ public class TCPTransportTest {
         try {
           while (tcpTransport != null) {
             tcpTransport.processMessage();
+          }
+          synchronized (TCPTransportTest.this) {
+            TCPTransportTest.this.notify();
           }
         } catch (IOException e) {
           e.printStackTrace();
@@ -100,7 +102,7 @@ public class TCPTransportTest {
     readThread.start();
 
     synchronized (TCPTransportTest.this) {
-      wait(2000);
+      wait(3000);
       readThread.interrupt();
     }
 
