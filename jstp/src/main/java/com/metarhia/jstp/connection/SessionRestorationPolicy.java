@@ -16,7 +16,7 @@ public class SessionRestorationPolicy implements RestorationPolicy {
   @Override
   public boolean restore(Queue<JSTPMessage> sendQueue) {
     for (JSTPMessage message : sendQueue) {
-      connection.send(message.getStringRepresantation());
+      connection.send(message.getStringRepresentation());
     }
     return true;
   }

@@ -15,7 +15,7 @@ public class JSTPMessage {
    * Custom user arguments contained in message (added for convenience as there are
    * usually only payload object
    */
-  private JSArray args;
+  private JSValue args;
 
   /**
    * Arguments specific for protocol (always contains packageNumber)
@@ -31,25 +31,18 @@ public class JSTPMessage {
    * Implementation will by no means invalidate this value, it is the responsibility of the user to
    * keep this Optional field consistent
    */
-  private String stringRepresantation;
+  private String stringRepresentation;
 
   private JSTPMessage() {
     this.message = new JSObject();
     this.args = new JSArray();
   }
 
-  public JSTPMessage(int packageNumber, String type, String argsKey, JSArray args) {
-    this(packageNumber, type);
-
-    this.args = args;
-    message.put(argsKey, this.args);
-  }
-
   public JSTPMessage(int packageNumber, String type) {
-    this(packageNumber, type, null);
+    this(packageNumber, type, null, null);
   }
 
-  public JSTPMessage(int packageNumber, String type, String argsKey, JSValue... args) {
+  public JSTPMessage(int packageNumber, String type, String argsKey, JSValue args) {
     this();
 
     this.packageNumber = packageNumber;
@@ -60,7 +53,7 @@ public class JSTPMessage {
     message.put(type, this.protocolArgs);
 
     if (argsKey != null) {
-      this.args.addAll(args);
+      this.args = args;
       message.put(argsKey, this.args);
     }
   }
@@ -81,22 +74,6 @@ public class JSTPMessage {
     this.protocolArgs.add(value);
   }
 
-  public void addArgs(JSValue... args) {
-    this.args.addAll(args);
-  }
-
-  public void addArg(String value) {
-    this.args.add(value);
-  }
-
-  public void addArg(double number) {
-    this.args.add(number);
-  }
-
-  public void addArg(boolean value) {
-    this.args.add(value);
-  }
-
   public void put(String key, JSValue value) {
     message.put(key, value);
   }
@@ -105,7 +82,7 @@ public class JSTPMessage {
     return message;
   }
 
-  public JSArray getArgs() {
+  public JSValue getArgs() {
     return args;
   }
 
@@ -119,11 +96,11 @@ public class JSTPMessage {
     this.protocolArgs.set(0, this.packageNumber);
   }
 
-  public String getStringRepresantation() {
-    return stringRepresantation;
+  public String getStringRepresentation() {
+    return stringRepresentation;
   }
 
-  public void setStringRepresantation(String stringRepresantation) {
-    this.stringRepresantation = stringRepresantation;
+  public void setStringRepresentation(String stringRepresentation) {
+    this.stringRepresentation = stringRepresentation;
   }
 }
