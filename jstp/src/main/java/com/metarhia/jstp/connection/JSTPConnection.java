@@ -688,6 +688,7 @@ public class JSTPConnection implements
   }
 
   private void rejectPacket(JSObject packet) {
+    close();
     for (JSTPConnectionListener listener : connectionListeners) {
       listener.onPacketRejected(packet);
     }
