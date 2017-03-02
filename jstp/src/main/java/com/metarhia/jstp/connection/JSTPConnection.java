@@ -335,7 +335,7 @@ public class JSTPConnection implements
 
   private void send(JSTPMessage message, boolean buffer) {
     if (transport.isConnected() || noConnBufferingPolicy == NoConnBufferingPolicy.BUFFER) {
-      message.setStringRepresantation(message.getMessage() + TERMINATOR);
+      message.setStringRepresentation(message.getMessage() + TERMINATOR);
       if (buffer) {
         // policy can only be applied to messages that actually can be buffered
         sendQueue.offer(message);
@@ -347,7 +347,7 @@ public class JSTPConnection implements
 
     // for now no buffering means no counting
     if (transport.isConnected()) {
-      send(message.getStringRepresantation(), buffer);
+      send(message.getStringRepresentation(), buffer);
     }
   }
 
