@@ -78,11 +78,6 @@ public class JSTPConnection implements
   private long id;
 
   /**
-   * Package counter
-   */
-  private AtomicLong packetCounter;
-
-  /**
    * Transport to send/receive packets
    */
   private AbstractSocket transport;
@@ -117,9 +112,7 @@ public class JSTPConnection implements
 
   private RestorationPolicy restorationPolicy;
 
-  private long numSentPackets;
-
-  private long numReceivedPackets;
+  private SessionData sessionData;
 
   private Queue<JSTPMessage> sendQueue;
 
@@ -128,10 +121,6 @@ public class JSTPConnection implements
   private NoConnBufferingPolicy noConnBufferingPolicy;
 
   private boolean handshakeFinished;
-
-  private String sessionID;
-
-  private String appName;
 
   @Deprecated
   public JSTPConnection(String host, int port) {
@@ -156,7 +145,7 @@ public class JSTPConnection implements
 
   public JSTPConnection(AbstractSocket transport, RestorationPolicy restorationPolicy) {
     this.id = nextConnectionID.getAndIncrement();
-    this.packetCounter = new AtomicLong(0);
+    this.sessionData = new SessionData();
     this.sendBufferCapacity = DEFAULT_SEND_BUFFER_CAPACITY;
     this.sendQueue = new ConcurrentLinkedQueue<>();
 
@@ -191,8 +180,9 @@ public class JSTPConnection implements
   }
 
   private boolean restoreSession(long numServerReceivedPackets) {
-    long redundantPackets = sendQueue.size() - numSentPackets - numServerReceivedPackets;
-    numSentPackets = numServerReceivedPackets;
+    long redundantPackets =
+        sendQueue.size() - sessionData.getNumSentPackets() - numServerReceivedPackets;
+    sessionData.setNumSentPackets(numServerReceivedPackets);
     while (redundantPackets-- > 0) {
       sendQueue.poll();
     }
@@ -210,10 +200,10 @@ public class JSTPConnection implements
 
   public void connect(String appName, String sessionID) {
     if (appName != null) {
-      this.appName = appName;
+      sessionData.setAppName(appName);
     }
     if (sessionID != null) {
-      this.sessionID = sessionID;
+      sessionData.setSessionID(sessionID);
     }
     if (!transport.isConnected()) {
       transport.connect();
@@ -242,15 +232,15 @@ public class JSTPConnection implements
    * the server
    */
   public void handshake(String appName, String sessionID, ManualHandler handler) {
-    this.appName = appName;
-    this.sessionID = sessionID;
-    long packageCounter = this.packetCounter.getAndIncrement();
+    sessionData.setAppName(appName);
+    sessionData.setSessionID(sessionID);
+    long packageCounter = sessionData.getAndIncrementPacketCounter();
     if (handler != null) {
       handlers.put(packageCounter, handler);
     }
 
     JSTPMessage hm;
-    JSArray args = new JSArray(new Object[]{sessionID, numReceivedPackets});
+    JSArray args = new JSArray(new Object[]{sessionID, sessionData.getNumReceivedPackets()});
     hm = new JSTPMessage(packageCounter, HANDSHAKE, "session", args);
     hm.addProtocolArg(appName);
 
@@ -267,8 +257,8 @@ public class JSTPConnection implements
    * the server
    */
   public void handshake(String appName, String username, String password, ManualHandler handler) {
-    this.appName = appName;
-    long packageCounter = this.packetCounter.getAndIncrement();
+    sessionData.setAppName(appName);
+    long packageCounter = sessionData.getAndIncrementPacketCounter();
     if (handler != null) {
       handlers.put(packageCounter, handler);
     }
@@ -288,7 +278,7 @@ public class JSTPConnection implements
       String methodName,
       JSArray args,
       ManualHandler handler) {
-    long packageCounter = this.packetCounter.getAndIncrement();
+    long packageCounter = sessionData.getAndIncrementPacketCounter();
     JSTPMessage callMessage = new JSTPMessage(packageCounter, CALL, methodName, args);
     callMessage.addProtocolArg(interfaceName);
 
@@ -304,7 +294,12 @@ public class JSTPConnection implements
   }
 
   public void callback(JSCallback value, JSValue args, Long customPackageIndex) {
-    long packageNumber = customPackageIndex == null ? this.packetCounter.getAndIncrement() : customPackageIndex;
+    long packageNumber;
+    if (customPackageIndex == null) {
+      packageNumber = sessionData.getAndIncrementPacketCounter();
+    } else {
+      packageNumber = customPackageIndex;
+    }
 
     JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK, value.toString(), args);
 
@@ -312,7 +307,7 @@ public class JSTPConnection implements
   }
 
   public void inspect(String interfaceName, ManualHandler handler) {
-    long packageCounter = this.packetCounter.getAndIncrement();
+    long packageCounter = sessionData.getAndIncrementPacketCounter();
     JSTPMessage inspectMessage = new JSTPMessage(packageCounter, INSPECT);
     inspectMessage.addProtocolArg(interfaceName);
 
@@ -324,7 +319,7 @@ public class JSTPConnection implements
   }
 
   public void event(String interfaceName, String methodName, JSArray args) {
-    long packageCounter = this.packetCounter.getAndIncrement();
+    long packageCounter = sessionData.getAndIncrementPacketCounter();
     JSTPMessage eventMessage = new JSTPMessage(packageCounter, EVENT, methodName, args);
     eventMessage.addProtocolArg(interfaceName);
 
@@ -359,7 +354,7 @@ public class JSTPConnection implements
 
   private void send(String message, boolean count) {
     if (count) {
-      numSentPackets++;
+      sessionData.incrementNumSentPackets();
     }
     transport.send(message);
   }
@@ -384,7 +379,7 @@ public class JSTPConnection implements
         }
       }
       if (!handshake) {
-        numReceivedPackets++;
+        sessionData.incrementNumReceivedPackets();
       }
     } catch (IllegalAccessException e) {
       e.printStackTrace();
@@ -399,7 +394,6 @@ public class JSTPConnection implements
       return;
     }
     if (packet.getOrderedKeys().get(1).equals("error")) {
-      sessionID = null;
       int errorCode = (int) JSTypesUtil.jsToJava(((JSArray) packet.get(1)).get(0), true);
       reportError(errorCode);
       close(true);
@@ -411,8 +405,8 @@ public class JSTPConnection implements
         restored = processHandshakeRestoreResponse(packet);
       }
       if (!restored) {
-        reset();
-        packetCounter.set(1);
+        // count first handshake
+        reset(sessionData.getAppName(), 1);
       }
       reportConnected(restored);
     }
@@ -425,7 +419,7 @@ public class JSTPConnection implements
 
   private void processHandshakeResponse(JSObject packet) {
     handshakeFinished = true;
-    sessionID = (String) JSTypesUtil.jsToJava(packet.get(1));
+    sessionData.setSessionID((String) JSTypesUtil.jsToJava(packet.get(1)));
     long receiverIndex = getPacketNumber(packet);
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
     if (callbackHandler != null) {
@@ -546,9 +540,11 @@ public class JSTPConnection implements
   }
 
   private void reset() {
-    packetCounter.set(0);
-    numReceivedPackets = 0;
-    numSentPackets = 0;
+    reset(null, 0);
+  }
+
+  private void reset(String appName, long packetCounter) {
+    sessionData = new SessionData(appName, packetCounter);
     handlers = new ConcurrentHashMap<>();
     callHandlers = new ConcurrentHashMap<>();
   }
@@ -561,7 +557,6 @@ public class JSTPConnection implements
     if (transport != null) {
       transport.close(forced);
     }
-    sessionID = null;
     reset();
   }
 
@@ -572,7 +567,7 @@ public class JSTPConnection implements
   public void resume() {
     transport.resume();
   }
-  
+
   private String getInterfaceName(JSObject messageObject) {
     return (String) ((JSArray) messageObject.get(EVENT))
         .get(1)
@@ -611,7 +606,7 @@ public class JSTPConnection implements
   }
 
   public String getSessionID() {
-    return sessionID;
+    return sessionData.getSessionID();
   }
 
   public boolean isHandshakeFinished() {
@@ -633,13 +628,13 @@ public class JSTPConnection implements
 
   @Override
   public void onConnected() {
-    if (appName == null) {
+    if (sessionData.getAppName() == null) {
       return;
     }
     if (restorationPolicy != null) {
-      restorationPolicy.onTransportAvailable(appName, sessionID);
+      restorationPolicy.onTransportAvailable(sessionData.getAppName(), sessionData.getSessionID());
     } else {
-      handshake(appName, null);
+      handshake(sessionData.getAppName(), null);
     }
     // todo add calls and fields for username\password auth
   }
@@ -647,7 +642,7 @@ public class JSTPConnection implements
   @Override
   public void onConnectionClosed(int remainingMessages) {
     handshakeFinished = false;
-    numSentPackets -= remainingMessages;
+    sessionData.setNumSentPackets(sessionData.getNumSentPackets() - remainingMessages);
     for (JSTPConnectionListener listener : connectionListeners) {
       listener.onConnectionClosed();
     }
