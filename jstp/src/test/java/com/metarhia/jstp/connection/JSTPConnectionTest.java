@@ -135,7 +135,7 @@ public class JSTPConnectionTest {
   @Test
   public void checkCallback() throws Exception {
     final JSArray args = new JSArray(new Object[]{"data"});
-    int packageNumber = 13;
+    long packageNumber = 13;
     String message = String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR,
         packageNumber, args);
 

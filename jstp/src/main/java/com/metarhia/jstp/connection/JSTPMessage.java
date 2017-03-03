@@ -25,7 +25,7 @@ public class JSTPMessage {
   /**
    * Number of package corresponding to this message
    */
-  private int packageNumber;
+  private long packageNumber;
 
   /**
    * Implementation will by no means invalidate this value, it is the responsibility of the user to
@@ -38,11 +38,11 @@ public class JSTPMessage {
     this.args = new JSArray();
   }
 
-  public JSTPMessage(int packageNumber, String type) {
+  public JSTPMessage(long packageNumber, String type) {
     this(packageNumber, type, null, null);
   }
 
-  public JSTPMessage(int packageNumber, String type, String argsKey, JSValue args) {
+  public JSTPMessage(long packageNumber, String type, String argsKey, JSValue args) {
     this();
 
     this.packageNumber = packageNumber;
@@ -86,7 +86,7 @@ public class JSTPMessage {
     return args;
   }
 
-  public int getPackageNumber() {
+  public long getPackageNumber() {
     return packageNumber;
   }
 
