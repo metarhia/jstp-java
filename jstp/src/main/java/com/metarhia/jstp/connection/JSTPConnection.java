@@ -80,7 +80,7 @@ public class JSTPConnection implements
   /**
    * Package counter
    */
-  private int packageCounter;
+  private AtomicLong packageCounter;
 
   /**
    * Transport to send/receive packets
@@ -101,7 +101,7 @@ public class JSTPConnection implements
    * Callback, stream and handshake handlers. Handlers are associated with numbers of
    * packages incoming to server.
    */
-  private Map<Integer, ManualHandler> handlers;
+  private Map<Long, ManualHandler> handlers;
 
   /**
    * State handler
@@ -156,6 +156,7 @@ public class JSTPConnection implements
 
   public JSTPConnection(AbstractSocket transport, RestorationPolicy restorationPolicy) {
     this.id = nextConnectionID.getAndIncrement();
+    this.packageCounter = new AtomicLong(0);
     this.sendBufferCapacity = DEFAULT_SEND_BUFFER_CAPACITY;
     this.sendQueue = new ConcurrentLinkedQueue<>();
 
@@ -243,7 +244,7 @@ public class JSTPConnection implements
   public void handshake(String appName, String sessionID, ManualHandler handler) {
     this.appName = appName;
     this.sessionID = sessionID;
-    int packageCounter = this.packageCounter++;
+    long packageCounter = this.packageCounter.getAndIncrement();
     if (handler != null) {
       handlers.put(packageCounter, handler);
     }
@@ -267,7 +268,7 @@ public class JSTPConnection implements
    */
   public void handshake(String appName, String username, String password, ManualHandler handler) {
     this.appName = appName;
-    int packageCounter = this.packageCounter++;
+    long packageCounter = this.packageCounter.getAndIncrement();
     if (handler != null) {
       handlers.put(packageCounter, handler);
     }
@@ -287,7 +288,7 @@ public class JSTPConnection implements
       String methodName,
       JSArray args,
       ManualHandler handler) {
-    int packageCounter = this.packageCounter++;
+    long packageCounter = this.packageCounter.getAndIncrement();
     JSTPMessage callMessage = new JSTPMessage(packageCounter, CALL, methodName, args);
     callMessage.addProtocolArg(interfaceName);
 
@@ -302,8 +303,8 @@ public class JSTPConnection implements
     callback(value, args, null);
   }
 
-  public void callback(JSCallback value, JSValue args, Integer customPackageIndex) {
-    int packageNumber = customPackageIndex == null ? this.packageCounter++ : customPackageIndex;
+  public void callback(JSCallback value, JSValue args, Long customPackageIndex) {
+    long packageNumber = customPackageIndex == null ? this.packageCounter.getAndIncrement() : customPackageIndex;
 
     JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK, value.toString(), args);
 
@@ -311,7 +312,7 @@ public class JSTPConnection implements
   }
 
   public void inspect(String interfaceName, ManualHandler handler) {
-    int packageCounter = this.packageCounter++;
+    long packageCounter = this.packageCounter.getAndIncrement();
     JSTPMessage inspectMessage = new JSTPMessage(packageCounter, INSPECT);
     inspectMessage.addProtocolArg(interfaceName);
 
@@ -323,7 +324,7 @@ public class JSTPConnection implements
   }
 
   public void event(String interfaceName, String methodName, JSArray args) {
-    int packageCounter = this.packageCounter++;
+    long packageCounter = this.packageCounter.getAndIncrement();
     JSTPMessage eventMessage = new JSTPMessage(packageCounter, EVENT, methodName, args);
     eventMessage.addProtocolArg(interfaceName);
 
@@ -346,8 +347,8 @@ public class JSTPConnection implements
       }
     }
 
-    // for now no buffering means no counting
     if (transport.isConnected()) {
+      // for now no buffering means no counting
       send(message.getStringRepresentation(), buffer);
     }
   }
@@ -411,7 +412,7 @@ public class JSTPConnection implements
       }
       if (!restored) {
         reset();
-        packageCounter = 1;
+        packageCounter.set(1);
       }
       reportConnected(restored);
     }
@@ -425,7 +426,7 @@ public class JSTPConnection implements
   private void processHandshakeResponse(JSObject packet) {
     handshakeFinished = true;
     sessionID = (String) JSTypesUtil.jsToJava(packet.get(1));
-    int receiverIndex = getPacketNumber(packet);
+    long receiverIndex = getPacketNumber(packet);
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
     if (callbackHandler != null) {
       callbackHandler.invoke(packet);
@@ -441,7 +442,7 @@ public class JSTPConnection implements
   }
 
   private void callbackPacketHandler(JSObject packet) {
-    int receiverIndex = getPacketNumber(packet);
+    long receiverIndex = getPacketNumber(packet);
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
     if (callbackHandler != null) {
       callbackHandler.invoke(packet);
@@ -489,7 +490,7 @@ public class JSTPConnection implements
   }
 
   private void pingPacketHandler(JSObject packet) {
-    int pingNumber = getPacketNumber(packet);
+    long pingNumber = getPacketNumber(packet);
     JSTPMessage streamMessage = new JSTPMessage(pingNumber, PONG);
     send(streamMessage);
   }
@@ -497,24 +498,6 @@ public class JSTPConnection implements
   private void pongPacketHandler(JSObject packet) {
     callbackPacketHandler(packet);
   }
-
-//    private void streamPacketHandler(JSObject packet) {
-//        int receiverIndex = getPacketNumber(packet);
-//        ManualHandler responseHandler = handlers.get(receiverIndex);
-//        if (responseHandler != null) responseHandler.invoke(packet);
-//    }
-
-//    public int openStream(JSValue data) {
-//        int packageCounter = nextPackageCounter();
-//        JSTPMessage streamMessage = new JSTPMessage(packageCounter, STREAM, STREAM_DATA, data);
-//        transport.send(streamMessage.getMessage() + TERMINATOR);
-//        return packageCounter;
-//    }
-//
-//    public void writeStream(int packageNumber, JSValue data) {
-//        JSTPMessage streamMessage = new JSTPMessage(packageNumber, STREAM, STREAM_DATA, data);
-//        transport.send(streamMessage.getMessage() + TERMINATOR);
-//    }
 
   @Deprecated
   public void addCallHandler(String methodName, ManualHandler callHandler) {
@@ -558,12 +541,12 @@ public class JSTPConnection implements
     }
   }
 
-  public void addHandler(int packetNumber, ManualHandler manualHandler) {
+  public void addHandler(long packetNumber, ManualHandler manualHandler) {
     handlers.put(packetNumber, manualHandler);
   }
 
   private void reset() {
-    packageCounter = 0;
+    packageCounter.set(0);
     numReceivedPackets = 0;
     numSentPackets = 0;
     handlers = new ConcurrentHashMap<>();
@@ -589,7 +572,7 @@ public class JSTPConnection implements
   public void resume() {
     transport.resume();
   }
-
+  
   private String getInterfaceName(JSObject messageObject) {
     return (String) ((JSArray) messageObject.get(EVENT))
         .get(1)
@@ -600,8 +583,8 @@ public class JSTPConnection implements
     return messageObject.getOrderedKeys().get(1);
   }
 
-  private int getPacketNumber(JSObject messageObject) {
-    return (int) ((JSNumber) ((JSArray) messageObject.get(0))
+  private long getPacketNumber(JSObject messageObject) {
+    return (long) ((JSNumber) ((JSArray) messageObject.get(0))
         .get(0))
         .getValue();
   }
