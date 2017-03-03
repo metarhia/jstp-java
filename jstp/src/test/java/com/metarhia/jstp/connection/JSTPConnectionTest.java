@@ -19,6 +19,7 @@ import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSString;
 import com.metarhia.jstp.core.JSTypes.JSValue;
+import com.metarhia.jstp.storage.FileStorage;
 import com.metarhia.jstp.transport.TCPTransport;
 import org.junit.After;
 import org.junit.Before;
@@ -168,6 +169,21 @@ public class JSTPConnectionTest {
     connection.onPacketReceived(inspectPacket);
 
     verify(transport, times(1)).send(matches(message));
+  }
+
+  @Test
+  public void saveRestoreSession() throws Exception {
+    String folder = "/tmp";
+    FileStorage storage = new FileStorage(folder);
+
+    connection.saveSession(storage);
+
+    AbstractSocket socket = mock(AbstractSocket.class);
+    JSTPConnection anotherConn = new JSTPConnection(socket);
+
+    anotherConn.restoreSession(storage);
+
+    assertTrue(connection.getSessionData().equals(anotherConn.getSessionData()));
   }
 
   @Test
