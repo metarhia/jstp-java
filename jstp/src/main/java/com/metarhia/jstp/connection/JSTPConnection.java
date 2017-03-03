@@ -80,7 +80,7 @@ public class JSTPConnection implements
   /**
    * Package counter
    */
-  private AtomicLong packageCounter;
+  private AtomicLong packetCounter;
 
   /**
    * Transport to send/receive packets
@@ -156,7 +156,7 @@ public class JSTPConnection implements
 
   public JSTPConnection(AbstractSocket transport, RestorationPolicy restorationPolicy) {
     this.id = nextConnectionID.getAndIncrement();
-    this.packageCounter = new AtomicLong(0);
+    this.packetCounter = new AtomicLong(0);
     this.sendBufferCapacity = DEFAULT_SEND_BUFFER_CAPACITY;
     this.sendQueue = new ConcurrentLinkedQueue<>();
 
@@ -244,7 +244,7 @@ public class JSTPConnection implements
   public void handshake(String appName, String sessionID, ManualHandler handler) {
     this.appName = appName;
     this.sessionID = sessionID;
-    long packageCounter = this.packageCounter.getAndIncrement();
+    long packageCounter = this.packetCounter.getAndIncrement();
     if (handler != null) {
       handlers.put(packageCounter, handler);
     }
@@ -268,7 +268,7 @@ public class JSTPConnection implements
    */
   public void handshake(String appName, String username, String password, ManualHandler handler) {
     this.appName = appName;
-    long packageCounter = this.packageCounter.getAndIncrement();
+    long packageCounter = this.packetCounter.getAndIncrement();
     if (handler != null) {
       handlers.put(packageCounter, handler);
     }
@@ -288,7 +288,7 @@ public class JSTPConnection implements
       String methodName,
       JSArray args,
       ManualHandler handler) {
-    long packageCounter = this.packageCounter.getAndIncrement();
+    long packageCounter = this.packetCounter.getAndIncrement();
     JSTPMessage callMessage = new JSTPMessage(packageCounter, CALL, methodName, args);
     callMessage.addProtocolArg(interfaceName);
 
@@ -304,7 +304,7 @@ public class JSTPConnection implements
   }
 
   public void callback(JSCallback value, JSValue args, Long customPackageIndex) {
-    long packageNumber = customPackageIndex == null ? this.packageCounter.getAndIncrement() : customPackageIndex;
+    long packageNumber = customPackageIndex == null ? this.packetCounter.getAndIncrement() : customPackageIndex;
 
     JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK, value.toString(), args);
 
@@ -312,7 +312,7 @@ public class JSTPConnection implements
   }
 
   public void inspect(String interfaceName, ManualHandler handler) {
-    long packageCounter = this.packageCounter.getAndIncrement();
+    long packageCounter = this.packetCounter.getAndIncrement();
     JSTPMessage inspectMessage = new JSTPMessage(packageCounter, INSPECT);
     inspectMessage.addProtocolArg(interfaceName);
 
@@ -324,7 +324,7 @@ public class JSTPConnection implements
   }
 
   public void event(String interfaceName, String methodName, JSArray args) {
-    long packageCounter = this.packageCounter.getAndIncrement();
+    long packageCounter = this.packetCounter.getAndIncrement();
     JSTPMessage eventMessage = new JSTPMessage(packageCounter, EVENT, methodName, args);
     eventMessage.addProtocolArg(interfaceName);
 
@@ -412,7 +412,7 @@ public class JSTPConnection implements
       }
       if (!restored) {
         reset();
-        packageCounter.set(1);
+        packetCounter.set(1);
       }
       reportConnected(restored);
     }
@@ -546,7 +546,7 @@ public class JSTPConnection implements
   }
 
   private void reset() {
-    packageCounter.set(0);
+    packetCounter.set(0);
     numReceivedPackets = 0;
     numSentPackets = 0;
     handlers = new ConcurrentHashMap<>();
