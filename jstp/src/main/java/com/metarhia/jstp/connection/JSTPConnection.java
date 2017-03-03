@@ -9,6 +9,7 @@ import com.metarhia.jstp.core.JSTypes.JSString;
 import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.handlers.StateHandler;
+import com.metarhia.jstp.storage.StorageInterface;
 import com.metarhia.jstp.transport.TCPTransport;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -617,6 +618,10 @@ public class JSTPConnection implements
     this.handshakeFinished = handshakeFinished;
   }
 
+  SessionData getSessionData() {
+    return sessionData;
+  }
+
   public long getId() {
     return id;
   }
@@ -651,6 +656,14 @@ public class JSTPConnection implements
   @Override
   public void onError(Exception e) {
     logger.info("Transport error", e);
+  }
+
+  public void saveSession(StorageInterface storageInterface) {
+    storageInterface.putSerializable(Constants.KEY_SESSION_DATA, sessionData);
+  }
+
+  public void restoreSession(StorageInterface storageInterface) {
+    sessionData = (SessionData) storageInterface.getSerializable(Constants.KEY_SESSION_DATA, sessionData);
   }
 
   private void reportConnected(boolean restored) {

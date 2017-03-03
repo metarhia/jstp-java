@@ -57,6 +57,42 @@ public class SessionData implements Serializable {
     this.numSentPackets = 0;
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SessionData that = (SessionData) o;
+
+    if (numSentPackets != that.numSentPackets) {
+      return false;
+    }
+    if (numReceivedPackets != that.numReceivedPackets) {
+      return false;
+    }
+    if (appName != null ? !appName.equals(that.appName) : that.appName != null) {
+      return false;
+    }
+    if (sessionID != null ? !sessionID.equals(that.sessionID) : that.sessionID != null) {
+      return false;
+    }
+    return packetCounter.get() == that.packetCounter.get();
+  }
+
+  @Override
+  public int hashCode() {
+    int result = appName != null ? appName.hashCode() : 0;
+    result = 31 * result + (sessionID != null ? sessionID.hashCode() : 0);
+    result = 31 * result + packetCounter.hashCode();
+    result = 31 * result + (int) (numSentPackets ^ (numSentPackets >>> 32));
+    result = 31 * result + (int) (numReceivedPackets ^ (numReceivedPackets >>> 32));
+    return result;
+  }
+
   public String getAppName() {
     return appName;
   }
