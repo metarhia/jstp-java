@@ -153,7 +153,7 @@ public class JSTPConnection implements
     useTransport(transport);
 
     if (restorationPolicy == null) {
-      restorationPolicy = new SessionRestorationPolicy(this);
+      restorationPolicy = new SessionRestorationPolicy();
     }
     this.restorationPolicy = restorationPolicy;
 
@@ -188,7 +188,7 @@ public class JSTPConnection implements
       sendQueue.poll();
     }
 
-    return restorationPolicy != null && restorationPolicy.restore(sendQueue);
+    return restorationPolicy != null && restorationPolicy.restore(this, sendQueue);
   }
 
   public void connect() {
@@ -637,7 +637,8 @@ public class JSTPConnection implements
       return;
     }
     if (restorationPolicy != null) {
-      restorationPolicy.onTransportAvailable(sessionData.getAppName(), sessionData.getSessionID());
+      restorationPolicy.onTransportAvailable(this,
+          sessionData.getAppName(), sessionData.getSessionID());
     } else {
       handshake(sessionData.getAppName(), null);
     }
@@ -663,7 +664,8 @@ public class JSTPConnection implements
   }
 
   public void restoreSession(StorageInterface storageInterface) {
-    sessionData = (SessionData) storageInterface.getSerializable(Constants.KEY_SESSION_DATA, sessionData);
+    sessionData = (SessionData) storageInterface
+        .getSerializable(Constants.KEY_SESSION_DATA, sessionData);
   }
 
   private void reportConnected(boolean restored) {
@@ -695,5 +697,13 @@ public class JSTPConnection implements
 
   public void setSendBufferCapacity(int sendBufferCapacity) {
     this.sendBufferCapacity = sendBufferCapacity;
+  }
+
+  public RestorationPolicy getRestorationPolicy() {
+    return restorationPolicy;
+  }
+
+  public void setRestorationPolicy(RestorationPolicy restorationPolicy) {
+    this.restorationPolicy = restorationPolicy;
   }
 }
