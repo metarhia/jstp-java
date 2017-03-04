@@ -141,7 +141,7 @@ public class JSTPConnection implements
   }
 
   public JSTPConnection(AbstractSocket transport) {
-    this(transport, null);
+    this(transport, new SessionRestorationPolicy());
   }
 
   public JSTPConnection(AbstractSocket transport, RestorationPolicy restorationPolicy) {
@@ -152,9 +152,6 @@ public class JSTPConnection implements
 
     useTransport(transport);
 
-    if (restorationPolicy == null) {
-      restorationPolicy = new SessionRestorationPolicy();
-    }
     this.restorationPolicy = restorationPolicy;
 
     this.connectionListeners = new ArrayList<>();
