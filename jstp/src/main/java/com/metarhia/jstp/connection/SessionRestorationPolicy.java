@@ -7,14 +7,14 @@ import java.util.Queue;
  */
 public class SessionRestorationPolicy implements RestorationPolicy {
 
-  private JSTPConnection connection;
+  private boolean reconnectWhenTransportReady;
 
-  public SessionRestorationPolicy(JSTPConnection connection) {
-    this.connection = connection;
+  public SessionRestorationPolicy() {
+    this.reconnectWhenTransportReady = true;
   }
 
   @Override
-  public boolean restore(Queue<JSTPMessage> sendQueue) {
+  public boolean restore(JSTPConnection connection, Queue<JSTPMessage> sendQueue) {
     for (JSTPMessage message : sendQueue) {
       connection.send(message.getStringRepresentation());
     }
@@ -22,11 +22,22 @@ public class SessionRestorationPolicy implements RestorationPolicy {
   }
 
   @Override
-  public void onTransportAvailable(String appName, String sessionID) {
+  public void onTransportAvailable(JSTPConnection connection, String appName, String sessionID) {
+    if (!reconnectWhenTransportReady) {
+      return;
+    }
     if (sessionID != null) {
       connection.handshake(appName, sessionID, null);
     } else {
       connection.handshake(appName, null);
     }
+  }
+
+  public boolean isReconnectWhenTransportReady() {
+    return reconnectWhenTransportReady;
+  }
+
+  public void setReconnectWhenTransportReady(boolean reconnectWhenTransportReady) {
+    this.reconnectWhenTransportReady = reconnectWhenTransportReady;
   }
 }

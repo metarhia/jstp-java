@@ -7,20 +7,31 @@ import java.util.Queue;
  */
 public class DropRestorationPolicy implements RestorationPolicy {
 
-  private JSTPConnection connection;
+  private boolean reconnectWhenTransportReady;
 
-  public DropRestorationPolicy(JSTPConnection connection) {
-    this.connection = connection;
+  public DropRestorationPolicy() {
+    this.reconnectWhenTransportReady = true;
   }
 
   @Override
-  public boolean restore(Queue<JSTPMessage> sendQueue) {
+  public boolean restore(JSTPConnection connection, Queue<JSTPMessage> sendQueue) {
     sendQueue.clear();
     return false;
   }
 
   @Override
-  public void onTransportAvailable(String appName, String sessionID) {
+  public void onTransportAvailable(JSTPConnection connection, String appName, String sessionID) {
+    if (!reconnectWhenTransportReady) {
+      return;
+    }
     connection.handshake(appName, null);
+  }
+
+  public boolean isReconnectWhenTransportReady() {
+    return reconnectWhenTransportReady;
+  }
+
+  public void setReconnectWhenTransportReady(boolean reconnectWhenTransportReady) {
+    this.reconnectWhenTransportReady = reconnectWhenTransportReady;
   }
 }
