@@ -1,5 +1,6 @@
 package com.metarhia.jstp.connection;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.matches;
@@ -21,6 +22,10 @@ import com.metarhia.jstp.core.JSTypes.JSString;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.storage.FileStorage;
 import com.metarhia.jstp.transport.TCPTransport;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,6 +35,44 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 public class JSTPConnectionTest {
+
+  private static final Map<String, List<String>> illPackets = new HashMap<>();
+
+  static {
+    illPackets.put("Call packet", Arrays.asList(
+        "{call:[ss,'auth'],newAccount:['Payload data']}",
+        "{call:[17,14],newAccount:['Payload data']}",
+        "{call:[17,'auth']}"
+    ));
+    illPackets.put("Callback packet", Arrays.asList(
+        "{callback:[ss],ok:[15703]}"
+    ));
+
+    illPackets.put("Event packet", Arrays.asList(
+        "{event:['chat'],message:['Marcus','Hello there!']}",
+        "{event:[-12,'chat']}"
+    ));
+
+//    illPackets.put("Handshake request packet", Arrays.asList(
+//        "{handshake:[0],marcus:'7b458e1a9dda67cb7a3e'}",
+//        "{handshake:[0,'example']}",
+//        "{handshake:[0,'example'],marcus:1111}",
+//        "{handshake:[0,'example'],marcus:'7b458e1a9dda67cb7a3e'}"
+//    ));
+    illPackets.put("Handshake response packet", Arrays.asList(
+        "{handshake:['xx'],ok:'9b71d224bd62bcdec043'}",
+        "{handshake:[0],ok:333}"
+    ));
+
+    illPackets.put("inspect request packet", Arrays.asList(
+        "{inspect:[aa,'interfaceName']}",
+        "{inspect:[42]}"
+    ));
+    illPackets.put("inspect response packet", Arrays.asList(
+        "{callback:[42]}",
+        "{callback:[42],ok:{'method1':'method2'}}"
+    ));
+  }
 
   @Spy
   private JSTPConnection connection;
@@ -184,6 +227,31 @@ public class JSTPConnectionTest {
     anotherConn.restoreSession(storage);
 
     assertTrue(connection.getSessionData().equals(anotherConn.getSessionData()));
+  }
+
+  @Test
+  public void illFormedPackets() throws Exception {
+    final int[] actualRejectedCalls = new int[]{0};
+    connection.addSocketListener(new SimpleJSTPConnectionListener() {
+      @Override
+      public void onPacketRejected(JSObject packet) {
+        actualRejectedCalls[0]++;
+      }
+    });
+    int expectedRejectedCalls = 0;
+    JSParser parser = new JSParser();
+    for (Map.Entry<String, List<String>> illList : illPackets.entrySet()) {
+      for (String packet: illList.getValue()) {
+        expectedRejectedCalls++;
+        connection.handshake(TestConstants.MOCK_APP_NAME, null);
+        parser.setInput(packet);
+        connection.onPacketReceived(parser.parseObject());
+      }
+    }
+
+    assertEquals(expectedRejectedCalls, actualRejectedCalls[0]);
+
+    connection.handshake(TestConstants.MOCK_APP_NAME, null);
   }
 
   @Test
