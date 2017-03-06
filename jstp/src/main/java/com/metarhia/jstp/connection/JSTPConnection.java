@@ -65,8 +65,6 @@ public class JSTPConnection implements
           JSTPConnection.class.getDeclaredMethod("inspectPacketHandler", JSObject.class));
       METHOD_HANDLERS.put(STATE,
           JSTPConnection.class.getDeclaredMethod("statePacketHandler", JSObject.class));
-//            METHOD_HANDLERS.put(STREAM,
-//                    JSTPConnection.class.getDeclaredMethod("streamPacketHandler", JSObject.class));
       METHOD_HANDLERS.put(PING,
           JSTPConnection.class.getDeclaredMethod("pingPacketHandler", JSObject.class));
       METHOD_HANDLERS.put(PONG,
@@ -77,6 +75,8 @@ public class JSTPConnection implements
   }
 
   private long id;
+
+  private ConnectionState state;
 
   /**
    * Transport to send/receive packets
@@ -121,8 +121,6 @@ public class JSTPConnection implements
 
   private NoConnBufferingPolicy noConnBufferingPolicy;
 
-  private boolean handshakeFinished;
-
   @Deprecated
   public JSTPConnection(String host, int port) {
     this(host, port, true);
@@ -146,6 +144,7 @@ public class JSTPConnection implements
 
   public JSTPConnection(AbstractSocket transport, RestorationPolicy restorationPolicy) {
     this.id = nextConnectionID.getAndIncrement();
+    this.state = ConnectionState.STATE_AWAITING_HANDSHAKE;
     this.sessionData = new SessionData();
     this.sendBufferCapacity = DEFAULT_SEND_BUFFER_CAPACITY;
     this.sendQueue = new ConcurrentLinkedQueue<>();
@@ -170,6 +169,7 @@ public class JSTPConnection implements
     }
     this.transport = transport;
     this.transport.setSocketListener(this);
+    state = ConnectionState.STATE_AWAITING_HANDSHAKE;
   }
 
   @Deprecated
@@ -366,7 +366,9 @@ public class JSTPConnection implements
     try {
       List<String> keys = packet.getOrderedKeys();
       boolean handshake = false;
-      if (keys.size() == 0 || !(handshake = keys.get(0).equals(HANDSHAKE)) && !handshakeFinished) {
+      if (keys.size() == 0
+          || !(handshake = keys.get(0).equals(HANDSHAKE))
+          && state != ConnectionState.STATE_CONNECTED) {
         rejectPacket(packet);
       } else {
         final Method handler = METHOD_HANDLERS.get(keys.get(0));
@@ -387,7 +389,7 @@ public class JSTPConnection implements
   }
 
   private void handshakePacketHandler(JSObject packet) {
-    if (handshakeFinished) {
+    if (state == ConnectionState.STATE_CONNECTED) {
       rejectPacket(packet);
       return;
     }
@@ -396,6 +398,7 @@ public class JSTPConnection implements
       reportError(errorCode);
       close(true);
     } else {
+      state = ConnectionState.STATE_CONNECTED;
       boolean restored = false;
       if (packet.get(1) instanceof JSString) {
         processHandshakeResponse(packet);
@@ -416,7 +419,6 @@ public class JSTPConnection implements
   }
 
   private void processHandshakeResponse(JSObject packet) {
-    handshakeFinished = true;
     sessionData.setSessionID((String) JSTypesUtil.jsToJava(packet.get(1)));
     long receiverIndex = getPacketNumber(packet);
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
@@ -545,6 +547,7 @@ public class JSTPConnection implements
     sessionData = new SessionData(appName, packetCounter);
     handlers = new ConcurrentHashMap<>();
     callHandlers = new ConcurrentHashMap<>();
+    sendQueue.clear();
   }
 
   public void close() {
@@ -552,10 +555,11 @@ public class JSTPConnection implements
   }
 
   public void close(boolean forced) {
+    reset();
+    state = ConnectionState.STATE_CLOSING;
     if (transport != null) {
       transport.close(forced);
     }
-    reset();
   }
 
   public void pause() {
@@ -596,23 +600,15 @@ public class JSTPConnection implements
   }
 
   public boolean isConnected() {
-    return handshakeFinished && transport.isConnected();
+    return state == ConnectionState.STATE_CONNECTED;
   }
 
   public boolean isClosed() {
-    return transport.isClosed();
+    return state == ConnectionState.STATE_CLOSED;
   }
 
   public String getSessionID() {
     return sessionData.getSessionID();
-  }
-
-  public boolean isHandshakeFinished() {
-    return handshakeFinished;
-  }
-
-  void setHandshakeFinished(boolean handshakeFinished) {
-    this.handshakeFinished = handshakeFinished;
   }
 
   SessionData getSessionData() {
@@ -630,7 +626,8 @@ public class JSTPConnection implements
 
   @Override
   public void onConnected() {
-    if (sessionData.getAppName() == null) {
+    if (state != ConnectionState.STATE_AWAITING_RECONNECT
+        && state != ConnectionState.STATE_AWAITING_HANDSHAKE) {
       return;
     }
     if (restorationPolicy != null) {
@@ -644,7 +641,11 @@ public class JSTPConnection implements
 
   @Override
   public void onConnectionClosed(int remainingMessages) {
-    handshakeFinished = false;
+    if (sessionData.getAppName() != null) {
+      state = ConnectionState.STATE_CLOSED;
+    } else {
+      state = ConnectionState.STATE_AWAITING_RECONNECT;
+    }
     sessionData.setNumSentPackets(sessionData.getNumSentPackets() - remainingMessages);
     for (JSTPConnectionListener listener : connectionListeners) {
       listener.onConnectionClosed();
@@ -694,6 +695,10 @@ public class JSTPConnection implements
 
   public void setSendBufferCapacity(int sendBufferCapacity) {
     this.sendBufferCapacity = sendBufferCapacity;
+  }
+
+  public ConnectionState getState() {
+    return state;
   }
 
   public RestorationPolicy getRestorationPolicy() {
