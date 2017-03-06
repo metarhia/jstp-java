@@ -197,7 +197,7 @@ public class JSTPConnectionTest {
 
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
 
-    assertTrue(connection.isHandshakeFinished());
+    assertTrue(connection.isConnected());
   }
 
   @Test
@@ -225,6 +225,6 @@ public class JSTPConnectionTest {
     verify(listener, times(1))
         .onConnectionError(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR_CODE);
     assertTrue(connection.getSessionID() == null);
-    assertFalse(connection.isHandshakeFinished());
+    assertFalse(connection.isConnected());
   }
 }
