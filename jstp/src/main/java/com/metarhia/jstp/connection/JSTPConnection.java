@@ -381,10 +381,12 @@ public class JSTPConnection implements
       if (!handshake) {
         sessionData.incrementNumReceivedPackets();
       }
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
-    } catch (InvocationTargetException e) {
-      e.printStackTrace();
+    } catch (IllegalAccessException | InvocationTargetException e) {
+      // should not happen at all
+      logger.error("Cannot find or access packet handler method", e);
+    } catch (ClassCastException | NullPointerException e) {
+      // means packet was ill formed
+      rejectPacket(packet);
     }
   }
 
@@ -393,16 +395,19 @@ public class JSTPConnection implements
       rejectPacket(packet);
       return;
     }
-    if (packet.getOrderedKeys().get(1).equals("error")) {
-      int errorCode = (int) JSTypesUtil.jsToJava(((JSArray) packet.get(1)).get(0), true);
+
+    final String payloadKey = packet.getOrderedKeys().get(1);
+    final JSValue payload = packet.get(payloadKey);
+    if (payloadKey.equals("error")) {
+      int errorCode = (int) JSTypesUtil.jsToJava(((JSArray) payload).get(0), true);
       reportError(errorCode);
       close(true);
     } else {
       state = ConnectionState.STATE_CONNECTED;
       boolean restored = false;
-      if (packet.get(1) instanceof JSString) {
+      if (payload instanceof JSString) {
         processHandshakeResponse(packet);
-      } else if (packet.get(1) instanceof JSArray) {
+      } else if (payload instanceof JSArray) {
         restored = processHandshakeRestoreResponse(packet);
       }
       if (!restored) {
@@ -462,15 +467,7 @@ public class JSTPConnection implements
   }
 
   private void inspectPacketHandler(JSObject packet) {
-    final JSValue args = packet.get(0);
-    if (!(args instanceof JSArray)
-        || ((JSArray) args).size() < 2
-        || !(((JSArray) args).get(1) instanceof JSString)) {
-      rejectPacket(packet);
-      return;
-    }
-
-    String interfaceName = ((JSString) ((JSArray) args).get(1)).getValue();
+    String interfaceName = ((JSString) ((JSArray) packet.get(0)).get(1)).getValue();
     JSArray methods = clientMethodNames.get(interfaceName);
     if (methods != null) {
       callback(JSCallback.OK, methods);
