@@ -34,6 +34,7 @@ bintray {
     pkg {
         repo = 'maven'
         name = packetName
+        userOrg = properties.getProperty('bintray.userOrg')
 
         version {
             name = compilerVersion

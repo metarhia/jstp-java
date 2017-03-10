@@ -9,7 +9,7 @@ sourceCompatibility = '1.7'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
-def jstpVersion = '0.9.9.6'
+def jstpVersion = '0.6'
 def packetName = 'jstp'
 
 publishing {
@@ -34,10 +34,11 @@ bintray {
     pkg {
         repo = 'maven'
         name = packetName
+        userOrg = properties.getProperty('bintray.userOrg')
 
         version {
             name = jstpVersion
-            desc = 'Java JSTP parser'
+            desc = 'JSTP Java implementation'
             released = new Date()
         }
     }
