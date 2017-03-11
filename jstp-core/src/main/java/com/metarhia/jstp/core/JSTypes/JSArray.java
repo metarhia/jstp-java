@@ -1,8 +1,8 @@
 package com.metarhia.jstp.core.JSTypes;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -28,22 +28,16 @@ public class JSArray implements JSValue {
    */
   public JSArray(Collection<Object> values) {
     this.values = new ArrayList<>(values.size());
-    for (Object value : values) {
-      JSValue jsValue = JSTypesUtil.javaToJS(value);
-      this.values.add(jsValue);
-    }
+    addAll(values);
   }
 
   /**
    * Parses {@param values} with {@link JSTypesUtil#javaToJS(Object)},
    * see supported types in the link
    */
-  public JSArray(Object[] values) {
+  public JSArray(Object... values) {
     this.values = new ArrayList<>(values.length);
-    for (Object value : values) {
-      JSValue jsValue = JSTypesUtil.javaToJS(value);
-      this.values.add(jsValue);
-    }
+    addAll((Object[]) values);
   }
 
   public boolean contains(JSValue value) {
@@ -140,12 +134,20 @@ public class JSArray implements JSValue {
     return values;
   }
 
-  public void addAll(JSValue[] values) {
-    this.values.addAll(Arrays.asList(values));
+  public void addAll(Collection<Object> values) {
+    for (Object value : values) {
+      add(value);
+    }
   }
 
-  public void addAll(Collection<JSValue> values) {
-    this.values.addAll(values);
+  public void addAll(Object... values) {
+    for (Object value : values) {
+      add(value);
+    }
+  }
+
+  public void addAll(JSValue... values) {
+    Collections.addAll(this.values, values);
   }
 
   public int size() {
