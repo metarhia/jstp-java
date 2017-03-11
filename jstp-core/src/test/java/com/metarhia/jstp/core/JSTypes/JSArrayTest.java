@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import org.junit.After;
 import org.junit.Before;
@@ -31,6 +32,28 @@ public class JSArrayTest {
   @After
   public void tearDown() {
     jsArray.clear();
+  }
+
+  @Test
+  public void constructorCollection() throws Exception {
+    final List<Object> list = Arrays.<Object>asList("10", 11, JSNull.get());
+    JSArray array = new JSArray(list);
+
+    for (Object o : list) {
+      JSValue jsObject = JSTypesUtil.javaToJS(o);
+      assertTrue(array.contains(jsObject));
+    }
+  }
+
+  @Test
+  public void constructorObjects() throws Exception {
+    final Object[] list = new Object[] {"10", 11, JSNull.get()};
+    JSArray array = new JSArray(list);
+
+    for (Object o : list) {
+      JSValue jsObject = JSTypesUtil.javaToJS(o);
+      assertTrue(array.contains(jsObject));
+    }
   }
 
   @Test
