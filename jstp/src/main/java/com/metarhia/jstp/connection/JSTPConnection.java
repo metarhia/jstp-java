@@ -232,13 +232,13 @@ public class JSTPConnection implements
   public void handshake(String appName, String sessionID, ManualHandler handler) {
     sessionData.setAppName(appName);
     sessionData.setSessionID(sessionID);
-    long packageCounter = sessionData.getAndIncrementPacketCounter();
+    long packageCounter = 0;
     if (handler != null) {
       handlers.put(packageCounter, handler);
     }
 
     JSTPMessage hm;
-    JSArray args = new JSArray(new Object[]{sessionID, sessionData.getNumReceivedPackets()});
+    JSArray args = new JSArray(sessionID, sessionData.getNumReceivedPackets());
     hm = new JSTPMessage(packageCounter, HANDSHAKE, "session", args);
     hm.addProtocolArg(appName);
 
@@ -256,7 +256,7 @@ public class JSTPConnection implements
    */
   public void handshake(String appName, String username, String password, ManualHandler handler) {
     sessionData.setAppName(appName);
-    long packageCounter = sessionData.getAndIncrementPacketCounter();
+    long packageCounter = 0;
     if (handler != null) {
       handlers.put(packageCounter, handler);
     }
@@ -405,29 +405,41 @@ public class JSTPConnection implements
     } else {
       state = ConnectionState.STATE_CONNECTED;
       boolean restored = false;
-      if (payload instanceof JSArray) {
+      if (payload instanceof JSNumber) {
         restored = processHandshakeRestoreResponse(packet);
-      }
-      if (!restored) {
-        // count first handshake
-        reset(sessionData.getAppName(), 1);
-        if (payload instanceof JSString) {
-          processHandshakeResponse(packet);
-        }
+        if (!restored) reset(sessionData.getAppName(), 1);
+      } else if (payload instanceof JSString) {
+        processHandshakeResponse(packet);
       }
       reportConnected(restored);
     }
   }
 
   private boolean processHandshakeRestoreResponse(JSObject packet) {
-    long numServerReceivedPackets = (long) JSTypesUtil.jsToJava(packet.get(1));
-    return restoreSession(numServerReceivedPackets);
+    if (sessionData.getPacketCounter().get() == 0) {
+      sessionData.getAndIncrementPacketCounter();
+    }
+    long numServerReceivedPackets = (long) ((JSNumber) packet.get(1)).getValue();
+    boolean restored = restoreSession(numServerReceivedPackets);
+
+    long receiverIndex = 0;
+    ManualHandler callbackHandler = handlers.remove(receiverIndex);
+    if (callbackHandler != null) {
+      callbackHandler.invoke(packet);
+    }
+
+    return restored;
   }
 
   private void processHandshakeResponse(JSObject packet) {
     sessionData.setSessionID((String) JSTypesUtil.jsToJava(packet.get(1)));
-    long receiverIndex = getPacketNumber(packet);
+    long receiverIndex = 0;
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
+
+    // always reset connection on basic handshake
+    // count first handshake
+    reset(sessionData.getAppName(), 1);
+
     if (callbackHandler != null) {
       callbackHandler.invoke(packet);
     }
@@ -639,10 +651,12 @@ public class JSTPConnection implements
 
   @Override
   public void onConnectionClosed(int remainingMessages) {
-    if (sessionData.getAppName() != null) {
+    if (state == ConnectionState.STATE_CLOSING) {
       state = ConnectionState.STATE_CLOSED;
-    } else {
+    } else if (sessionData.getAppName() != null) {
       state = ConnectionState.STATE_AWAITING_RECONNECT;
+    } else {
+      state = ConnectionState.STATE_AWAITING_HANDSHAKE;
     }
     sessionData.setNumSentPackets(sessionData.getNumSentPackets() - remainingMessages);
     for (JSTPConnectionListener listener : connectionListeners) {

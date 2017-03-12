@@ -13,18 +13,28 @@ import org.mockito.stubbing.Answer;
 public class HandshakeAnswer implements Answer<Void> {
 
   private JSTPConnection connection;
+  private String response;
+  private boolean manualCall;
 
   public HandshakeAnswer(JSTPConnection connection) {
+    this(connection, TestConstants.MOCK_HANDSHAKE_RESPONSE, true);
+  }
+
+  public HandshakeAnswer(JSTPConnection connection, String response, boolean manualCall) {
     this.connection = connection;
+    this.response = response;
+    this.manualCall = manualCall;
   }
 
   @Override
   public Void answer(InvocationOnMock invocation) throws Throwable {
-    final JSObject handshakePacket = new JSParser(TestConstants.MOCK_HANDSHAKE_RESPONSE).parseObject();
+    final JSObject handshakePacket = new JSParser(response).parseObject();
     connection.onPacketReceived(handshakePacket);
-    final ManualHandler handler = invocation.getArgument(1);
-    if (handler != null) {
-      handler.invoke(handshakePacket);
+    if (manualCall) {
+      final ManualHandler handler = invocation.getArgument(1);
+      if (handler != null) {
+        handler.invoke(handshakePacket);
+      }
     }
     return null;
   }
