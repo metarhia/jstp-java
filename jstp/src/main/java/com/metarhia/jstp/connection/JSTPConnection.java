@@ -164,8 +164,8 @@ public class JSTPConnection implements
 
   public void useTransport(AbstractSocket transport) {
     if (this.transport != null) {
-      this.transport.close(true);
       this.transport.setSocketListener(null);
+      this.transport.close(true);
     }
     this.transport = transport;
     this.transport.setSocketListener(this);
@@ -287,11 +287,11 @@ public class JSTPConnection implements
     send(callMessage);
   }
 
-  public void callback(JSCallback value, JSValue args) {
-    callback(value, args, null);
+  public void callback(JSCallback result, JSValue args) {
+    callback(result, args, null);
   }
 
-  public void callback(JSCallback value, JSValue args, Long customPackageIndex) {
+  public void callback(JSCallback result, JSValue args, Long customPackageIndex) {
     long packageNumber;
     if (customPackageIndex == null) {
       packageNumber = sessionData.getAndIncrementPacketCounter();
@@ -299,7 +299,7 @@ public class JSTPConnection implements
       packageNumber = customPackageIndex;
     }
 
-    JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK, value.toString(), args);
+    JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK, result.toString(), args);
 
     send(callbackMessage);
   }
@@ -405,14 +405,15 @@ public class JSTPConnection implements
     } else {
       state = ConnectionState.STATE_CONNECTED;
       boolean restored = false;
-      if (payload instanceof JSString) {
-        processHandshakeResponse(packet);
-      } else if (payload instanceof JSArray) {
+      if (payload instanceof JSArray) {
         restored = processHandshakeRestoreResponse(packet);
       }
       if (!restored) {
         // count first handshake
         reset(sessionData.getAppName(), 1);
+        if (payload instanceof JSString) {
+          processHandshakeResponse(packet);
+        }
       }
       reportConnected(restored);
     }
