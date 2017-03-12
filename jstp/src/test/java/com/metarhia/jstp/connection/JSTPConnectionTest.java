@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -243,7 +244,7 @@ public class JSTPConnectionTest {
     int expectedRejectedCalls = 0;
     JSParser parser = new JSParser();
     for (Map.Entry<String, List<String>> illList : illPackets.entrySet()) {
-      for (String packet: illList.getValue()) {
+      for (String packet : illList.getValue()) {
         expectedRejectedCalls++;
         connection.handshake(TestConstants.MOCK_APP_NAME, null);
         parser.setInput(packet);
@@ -274,6 +275,62 @@ public class JSTPConnectionTest {
     });
     connection.onPacketReceived(callback);
     verify(connection, times(1)).callback(JSCallback.OK, responseArgs, packetNum);
+  }
+
+  @Test
+  public void restorationPolicyCheck() throws Exception {
+    final boolean[] success = {false, false};
+
+    AbstractSocket transport = mock(AbstractSocket.class);
+    when(transport.isConnected()).thenReturn(true);
+
+    JSTPConnection connection = spy(new JSTPConnection(transport, new RestorationPolicy() {
+      @Override
+      public boolean restore(JSTPConnection connection, Queue<JSTPMessage> sendQueue) {
+        success[1] = true;
+        synchronized (JSTPConnectionTest.this) {
+          JSTPConnectionTest.this.notify();
+        }
+        return true;
+      }
+
+      @Override
+      public void onTransportAvailable(JSTPConnection connection, String appName,
+          String sessionID) {
+        connection.handshake("appName", new ManualHandler() {
+          @Override
+          public void invoke(JSValue packet) {
+            success[0] = true;
+          }
+        });
+      }
+    }));
+
+    doAnswer(new HandshakeAnswer(connection, TestConstants.MOCK_HANDSHAKE_RESPONSE, false))
+//        .when(transport).send(TestConstants.MOCK_HANDSHAKE_REQUEST);
+        .when(transport).send(anyString());
+    connection.onConnected();
+
+    synchronized (JSTPConnectionTest.this) {
+      JSTPConnectionTest.this.wait(2000);
+    }
+
+    assertTrue("Without session restoration 'restore' must not be called",
+        success[0] && !success[1]);
+    success[0] = false;
+    connection.onConnectionClosed(0);
+
+    doAnswer(new HandshakeAnswer(connection, TestConstants.MOCK_HANDSHAKE_RESTORE, false))
+//        .when(transport).send(TestConstants.MOCK_HANDSHAKE_REQUEST_RESTORE);
+        .when(transport).send(anyString());
+    connection.onConnected();
+
+    synchronized (JSTPConnectionTest.this) {
+      JSTPConnectionTest.this.wait(2000);
+    }
+
+    assertTrue("With session restoration both methods of Restoration policy must be called",
+        success[0] && success[1]);
   }
 
   @Test
