@@ -17,9 +17,11 @@ import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSTypes.JSArray;
+import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSString;
 import com.metarhia.jstp.core.JSTypes.JSValue;
+import com.metarhia.jstp.handlers.CallHandler;
 import com.metarhia.jstp.storage.FileStorage;
 import com.metarhia.jstp.transport.TCPTransport;
 import java.util.Arrays;
@@ -252,6 +254,26 @@ public class JSTPConnectionTest {
     assertEquals(expectedRejectedCalls, actualRejectedCalls[0]);
 
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
+  }
+
+  @Test
+  public void callbackHandler() throws Exception {
+    long packetNum = 42;
+    String methodName = "method";
+    final JSArray recvArgs = new JSArray(JSNull.get());
+    final JSArray responseArgs = new JSArray(24, "whatever");
+
+    final String input = String.format("{call:[%d], %s:%s}", packetNum, methodName, recvArgs);
+    JSObject callback = new JSParser(input).parseObject();
+    connection.setCallHandler("method", new CallHandler() {
+      @Override
+      public void handleCallback(JSArray data) {
+        assertTrue(data.equals(recvArgs));
+        callback(connection, JSCallback.OK, responseArgs);
+      }
+    });
+    connection.onPacketReceived(callback);
+    verify(connection, times(1)).callback(JSCallback.OK, responseArgs, packetNum);
   }
 
   @Test
