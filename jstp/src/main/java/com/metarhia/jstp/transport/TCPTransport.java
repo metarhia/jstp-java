@@ -205,6 +205,9 @@ public class TCPTransport extends AbstractSocket {
   void processMessage() throws IOException {
     int b;
     synchronized (socketLock) {
+      if (in == null) {
+        return;
+      }
       while ((b = in.read()) > 0) {
         packetBuilder.write(b);
       }
