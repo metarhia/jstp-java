@@ -30,6 +30,8 @@ public final class JSTypesUtil {
       return new JSArray((List<Object>) value);
     } else if (value instanceof JSValue) {
       return (JSValue) value;
+    } else if (value == null) {
+      return JSNull.get();
     }
     return JSUndefined.get();
   }

@@ -1,6 +1,7 @@
 package com.metarhia.jstp.core.JSTypes;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import com.metarhia.jstp.core.JSParser;
 import java.util.ArrayList;
@@ -80,5 +81,10 @@ public class JSTypesUtilTest {
     JSValue actual = JSTypesUtil.javaToJS(values);
 
     assertEquals(expected, actual);
+  }
+
+  @Test
+  public void javaToJSNull() throws Exception {
+    assertTrue(JSNull.get() == JSTypesUtil.javaToJS(null));
   }
 }
