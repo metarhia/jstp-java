@@ -102,7 +102,8 @@ public class JSTPAnnotationProcessor extends AbstractProcessor {
   @Override
   public Set<String> getSupportedAnnotationTypes() {
     return new HashSet<>(Arrays.asList(
-        JSTPReceiver.class.getCanonicalName()
+        JSTPReceiver.class.getCanonicalName(),
+        JSTPHandler.class.getCanonicalName()
     ));
   }
 
