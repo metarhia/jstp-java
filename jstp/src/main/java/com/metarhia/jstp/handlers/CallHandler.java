@@ -25,7 +25,7 @@ public abstract class CallHandler implements ManualHandler {
 
   public abstract void handleCallback(JSArray data);
 
-  protected void callback(JSTPConnection connection, JSCallback result, JSArray args) {
+  public void callback(JSTPConnection connection, JSCallback result, JSArray args) {
     connection.callback(result, args, callbackNumber);
   }
 }
