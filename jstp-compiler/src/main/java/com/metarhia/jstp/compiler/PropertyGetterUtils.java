@@ -1,11 +1,15 @@
 package com.metarhia.jstp.compiler;
 
+import com.metarhia.jstp.compiler.annotations.CustomNamed;
+import com.metarhia.jstp.compiler.annotations.Indexed;
+import com.metarhia.jstp.compiler.annotations.Named;
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import java.util.LinkedList;
 import java.util.regex.Pattern;
+import javax.lang.model.element.Element;
 
 public final class PropertyGetterUtils {
 
@@ -16,6 +20,26 @@ public final class PropertyGetterUtils {
   private static final Pattern SIMPLE_DOUBLE_PATTERN = Pattern.compile("\\d+\\.?\\d*");
 
   private PropertyGetterUtils() {
+  }
+
+  static CodeBlock composeGetterFromAnnotations(String name, Element element)
+      throws PropertyFormatException {
+    return composeGetterFromAnnotations(CodeBlock.of(name), element);
+  }
+
+  static CodeBlock composeGetterFromAnnotations(CodeBlock name, Element element)
+      throws PropertyFormatException {
+    if (element.getAnnotation(CustomNamed.class) != null) {
+      CustomNamed annotation = element.getAnnotation(CustomNamed.class);
+      return composeCustomGetter(name, annotation.value());
+    } else if (element.getAnnotation(Named.class) != null) {
+      Named annotation = element.getAnnotation(Named.class);
+      return composeObjectGetter(name, annotation.value());
+    } else if (element.getAnnotation(Indexed.class) != null) {
+      Indexed annotation = element.getAnnotation(Indexed.class);
+      return composeArrayGetter(name, annotation.value());
+    }
+    return null;
   }
 
   public static CodeBlock composeArrayGetter(String identifier, int... indices) {
