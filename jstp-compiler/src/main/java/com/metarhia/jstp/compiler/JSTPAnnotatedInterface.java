@@ -1,12 +1,11 @@
 package com.metarhia.jstp.compiler;
 
-import com.metarhia.jstp.compiler.annotations.CustomNamed;
 import com.metarhia.jstp.compiler.annotations.ErrorHandler;
-import com.metarhia.jstp.compiler.annotations.Indexed;
-import com.metarhia.jstp.compiler.annotations.Named;
+import com.metarhia.jstp.compiler.annotations.JSTPReceiver;
 import com.metarhia.jstp.compiler.annotations.NotNull;
 import com.metarhia.jstp.compiler.annotations.Typed;
 import com.metarhia.jstp.core.Handlers.Handler;
+import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSValue;
@@ -40,7 +39,7 @@ import javax.lang.model.util.Types;
 /**
  * Created by lundibundi on 8/7/16.
  */
-public class JSTPReceiverAnnotatedInterface {
+public class JSTPAnnotatedInterface {
 
   private static final String PACKET_PARAMETER_NAME = "packet";
   private static final String INVOKE_PREFIX = "invoke";
@@ -55,22 +54,23 @@ public class JSTPReceiverAnnotatedInterface {
 
   private static final TypeName JSTP_VALUE_TYPE = TypeName.get(JSValue.class);
 
+  private static Class receiverSuperinterface = ManualHandler.class;
   private static Class handlerSuperClass = Handler.class;
+  private final Class<?> annotation;
   private TypeElement annotatedInterface;
-  private Types typeUtils;
 
   private List<ExecutableElement> errorHandlers;
   private List<com.squareup.javapoet.MethodSpec> packetHandlers;
 
   private MethodSpec.Builder mainInvokeBuilder;
   private TypeSpec.Builder jstpClassBuilder;
-  private Elements elementUtils;
+  private TypeUtils typeUtils;
 
-  public JSTPReceiverAnnotatedInterface(TypeElement typeElement, Elements elementUtils,
-      Types typeUtils) {
+  public JSTPAnnotatedInterface(Class<?> annotation, TypeElement typeElement, Elements elements,
+      Types types) {
+    this.annotation = annotation;
     annotatedInterface = typeElement;
-    this.elementUtils = elementUtils;
-    this.typeUtils = typeUtils;
+    typeUtils = new TypeUtils(types, elements);
     errorHandlers = new LinkedList<>();
     packetHandlers = new LinkedList<>();
 
@@ -80,89 +80,82 @@ public class JSTPReceiverAnnotatedInterface {
         .addParameter(JSTP_VALUE_TYPE, PACKET_PARAMETER_NAME);
   }
 
-  private static CodeBlock composeGetterFromAnnotations(String name, Element element)
-      throws PropertyFormatException {
-    return composeGetterFromAnnotations(CodeBlock.of(name), element);
-  }
-
-  private static CodeBlock composeGetterFromAnnotations(CodeBlock name, Element element)
-      throws PropertyFormatException {
-    if (element.getAnnotation(CustomNamed.class) != null) {
-      CustomNamed annotation = element.getAnnotation(CustomNamed.class);
-      return PropertyGetterUtils.composeCustomGetter(name, annotation.value());
-    } else if (element.getAnnotation(Named.class) != null) {
-      Named annotation = element.getAnnotation(Named.class);
-      return PropertyGetterUtils.composeObjectGetter(name, annotation.value());
-    } else if (element.getAnnotation(Indexed.class) != null) {
-      Indexed annotation = element.getAnnotation(Indexed.class);
-      return PropertyGetterUtils.composeArrayGetter(name, annotation.value());
-    }
-    return null;
-  }
-
   public void generateCode(Filer filer) throws
       ExceptionHandlerInvokeException,
       ClassCastException,
       IOException, PropertyFormatException {
-    String jstpReceiverClassName = PREFIX + annotatedInterface.getSimpleName();
+    String implementationClassName = PREFIX + annotatedInterface.getSimpleName();
+    final TypeName interfaceTypeName = TypeName.get(annotatedInterface.asType());
 
+    String handlersName = null;
+    if (annotation == JSTPReceiver.class) {
+      handlersName = "handlers";
+    }
+
+    if (handlersName == null) {
+      jstpClassBuilder = TypeSpec.classBuilder(implementationClassName)
+          .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
+          .addSuperinterface(ManualHandler.class)
+          .addSuperinterface(interfaceTypeName);
+    } else {
+      final ParameterizedTypeName handlerSuperclass =
+          ParameterizedTypeName.get(ClassName.get(handlerSuperClass), interfaceTypeName);
+
+      jstpClassBuilder = TypeSpec.classBuilder(implementationClassName)
+          .addModifiers(Modifier.PUBLIC)
+          .superclass(handlerSuperclass);
+
+      final MethodSpec defaultConstructor = MethodSpec.constructorBuilder()
+          .addModifiers(Modifier.PUBLIC)
+          .addStatement("super()").build();
+
+      final MethodSpec mainConstructor = MethodSpec.constructorBuilder()
+          .addModifiers(Modifier.PUBLIC)
+          .addParameter(interfaceTypeName, "handler")
+          .addStatement("super($N)", "handler")
+          .build();
+
+      jstpClassBuilder.addMethod(defaultConstructor);
+      jstpClassBuilder.addMethod(mainConstructor);
+    }
+
+    // generate methods to enclose the ones in the interface
     for (Element e : annotatedInterface.getEnclosedElements()) {
-      // generate methods to enclose the ones in the interface
       if (e.getKind() == ElementKind.METHOD) {
         // check for error handler
         ExecutableElement method = (ExecutableElement) e;
-
         if (method.getAnnotation(ErrorHandler.class) != null) {
           errorHandlers.add(method);
         } else {
           // create new invoke wrapper
-          MethodSpec invokeMethod = createInvokeMethod(method);
+          MethodSpec invokeMethod = createInvokeMethod(method, handlersName);
           packetHandlers.add(invokeMethod);
         }
       }
     }
 
-    final TypeName interfaceTypeName = TypeName.get(annotatedInterface.asType());
-
-    final ParameterizedTypeName handlerSuperclass =
-        ParameterizedTypeName.get(ClassName.get(Handler.class), interfaceTypeName);
-
-    jstpClassBuilder = TypeSpec.classBuilder(jstpReceiverClassName)
-        .addModifiers(Modifier.PUBLIC)
-        .superclass(handlerSuperclass);
-
-    final MethodSpec defaultConstructor = MethodSpec.constructorBuilder()
-        .addModifiers(Modifier.PUBLIC)
-        .addStatement("super()").build();
-
-    final MethodSpec mainConstructor = MethodSpec.constructorBuilder()
-        .addModifiers(Modifier.PUBLIC)
-        .addParameter(interfaceTypeName, "handler")
-        .addStatement("super($N)", "handler")
-        .build();
-
-    jstpClassBuilder.addMethod(defaultConstructor);
-    jstpClassBuilder.addMethod(mainConstructor);
-
+    // generate main invocation function
     mainInvokeBuilder.beginControlFlow("try ");
     for (MethodSpec ms : packetHandlers) {
       mainInvokeBuilder.addStatement("$L($L)", ms.name, PACKET_PARAMETER_NAME);
       jstpClassBuilder.addMethod(ms);
     }
     composeCatchClauses(mainInvokeBuilder, errorHandlers);
-
     jstpClassBuilder.addMethod(mainInvokeBuilder.build());
 
+    // save to file
     JavaFile javaFile = JavaFile.builder(
-        elementUtils.getPackageOf(annotatedInterface).getQualifiedName().toString(),
+        typeUtils.getElements()
+            .getPackageOf(annotatedInterface)
+            .getQualifiedName()
+            .toString(),
         jstpClassBuilder.build())
         .indent("    ")
         .build();
-
     javaFile.writeTo(filer);
   }
 
-  private MethodSpec createInvokeMethod(ExecutableElement method)
+  private MethodSpec createInvokeMethod(ExecutableElement method, String handlersName)
       throws ClassCastException, PropertyFormatException {
     final String name = INVOKE_PREFIX + capitalize(method.getSimpleName().toString());
     MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(name)
@@ -172,7 +165,8 @@ public class JSTPReceiverAnnotatedInterface {
     String payloadName = "internalPayload";
 
     TypeMirror payloadType = getClassFromTyped(method, true);
-    CodeBlock payloadData = composeGetterFromAnnotations(PACKET_PARAMETER_NAME, method);
+    CodeBlock payloadData = PropertyGetterUtils
+        .composeGetterFromAnnotations(PACKET_PARAMETER_NAME, method);
     if (payloadData == null) {
       // nothing changed so by default payload is second argument
       payloadData = PropertyGetterUtils.composeCustomGetter(PACKET_PARAMETER_NAME, "{1}");
@@ -199,15 +193,17 @@ public class JSTPReceiverAnnotatedInterface {
 
     TypeName interfaceType = ClassName.get(annotatedInterface.asType());
     String methodCall = composeMethodCall(method.getSimpleName().toString(), parameters);
-    methodBuilder.beginControlFlow("for ($T h : handlers)", interfaceType)
-        .addStatement("h.$L", methodCall)
-        .endControlFlow();
+
+    if (handlersName != null) {
+      final String handlersForLoop = String.format("for ($T h : %s)", handlersName);
+      methodBuilder.beginControlFlow(handlersForLoop, interfaceType)
+          .addStatement("h.$L", methodCall)
+          .endControlFlow();
+    } else {
+      methodBuilder.addStatement(methodCall);
+    }
 
     return methodBuilder.build();
-  }
-
-  private TypeMirror getTypeMirror(Class clazz) {
-    return typeUtils.erasure(elementUtils.getTypeElement(clazz.getCanonicalName()).asType());
   }
 
   private String capitalize(String name) {
@@ -224,14 +220,15 @@ public class JSTPReceiverAnnotatedInterface {
 
     final List<? extends VariableElement> parameters = method.getParameters();
     for (VariableElement parameter : parameters) {
-      CodeBlock getter = composeGetterFromAnnotations(payloadNameBlock, parameter);
+      CodeBlock getter = PropertyGetterUtils
+          .composeGetterFromAnnotations(payloadNameBlock, parameter);
       // if there are more then one parameter then split payload sequentially
       if (parameters.size() > 1 && getter == null) {
-        if (isSameType(payloadType, JSObject.class)) {
+        if (typeUtils.isSameType(payloadType, JSObject.class)) {
           getter = PropertyGetterUtils
               .composeCustomGetter(payloadNameBlock, String.format("{%d}", argCounter));
           composeArgumentGetter(methodBuilder, parameter, getter, false);
-        } else if (isSameType(payloadType, JSArray.class)) {
+        } else if (typeUtils.isSameType(payloadType, JSArray.class)) {
           getter = PropertyGetterUtils.composeArrayGetter(payloadNameBlock, argCounter);
           composeArgumentGetter(methodBuilder, parameter, getter, false);
         } else {
@@ -268,7 +265,7 @@ public class JSTPReceiverAnnotatedInterface {
       CodeBlock getter, boolean declared) {
     TypeMirror parameterType = parameter.asType();
     String pattern;
-    if (isSubtype(parameterType, JSValue.class)) {
+    if (typeUtils.isSubtype(parameterType, JSValue.class)) {
       pattern = declared ? VARIABLE_ASSIGNMENT : VARIABLE_DEFINITION;
     } else {
       pattern = declared ? VARIABLE_ASSIGNMENT_JAVA_TYPE : VARIABLE_DEFINITION_JAVA_TYPE;
@@ -286,12 +283,12 @@ public class JSTPReceiverAnnotatedInterface {
         // intended ...
         payloadType = e.getTypeMirror();
       }
-      if (strictJSType && !isSubtype(payloadType, JSValue.class)) {
+      if (strictJSType && !typeUtils.isSubtype(payloadType, JSValue.class)) {
         throw new ClassCastException(
             "Cannot cast jstp packet data to " + payloadType.toString());
       }
     } else {
-      payloadType = elementUtils.getTypeElement(JSValue.class.getCanonicalName()).asType();
+      payloadType = typeUtils.getTypeElement(JSValue.class.getCanonicalName());
     }
     return typeUtils.erasure(payloadType);
   }
@@ -356,7 +353,9 @@ public class JSTPReceiverAnnotatedInterface {
         // intended ...
         exceptions = e.getTypeMirrors();
       }
-      if (exceptions == null) return;
+      if (exceptions == null) {
+        return;
+      }
       for (TypeMirror e : exceptions) {
         List<ExecutableElement> functions = exceptionHandlers.get(e);
         if (functions == null) {
@@ -367,7 +366,7 @@ public class JSTPReceiverAnnotatedInterface {
       }
     }
 
-    final TypeMirror exceptionMirror = getTypeMirror(Exception.class);
+    final TypeMirror exceptionMirror = typeUtils.getTypeMirror(Exception.class);
     boolean addedGeneralClause = false;
 
     for (Map.Entry<TypeMirror, List<ExecutableElement>> me : exceptionHandlers.entrySet()) {
@@ -401,18 +400,5 @@ public class JSTPReceiverAnnotatedInterface {
   private boolean checkFirstCast(List<? extends VariableElement> parameters, TypeMirror type) {
     return parameters.size() == 1
         && typeUtils.isAssignable(parameters.get(0).asType(), type);
-  }
-
-  public boolean isSubtype(TypeMirror type, Class<?> clazz) {
-    return typeUtils.isSubtype(type, getTypeMirror(clazz));
-  }
-
-  public boolean isSameType(TypeMirror type, Class<?> clazz) {
-    return isSameType(type, clazz.getCanonicalName());
-  }
-
-  public boolean isSameType(TypeMirror type, String canonicalName) {
-    TypeMirror otherType = elementUtils.getTypeElement(canonicalName).asType();
-    return typeUtils.isSameType(type, typeUtils.erasure(otherType));
   }
 }

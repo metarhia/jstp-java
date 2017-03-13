@@ -2,6 +2,7 @@ package com.metarhia.jstp.compiler;
 
 import static javax.annotation.processing.Completions.of;
 
+import com.metarhia.jstp.compiler.annotations.JSTPHandler;
 import com.metarhia.jstp.compiler.annotations.JSTPReceiver;
 import java.io.IOException;
 import java.util.Arrays;
@@ -45,32 +46,41 @@ public class JSTPAnnotationProcessor extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
     for (Element annotatedElement : roundEnvironment.getElementsAnnotatedWith(JSTPReceiver.class)) {
-      try {
-        if (annotatedElement.getKind() != ElementKind.INTERFACE) {
-          error(annotatedElement, "Only interfaces can be annotated with @%s",
-              JSTPReceiver.class.getSimpleName());
-          return true;
-        }
-
-        TypeElement typeElement = (TypeElement) annotatedElement;
-        JSTPReceiverAnnotatedInterface jstpReceiver = new JSTPReceiverAnnotatedInterface(
-            typeElement, elementUtils, typeUtils);
-
-        jstpReceiver.generateCode(filer);
-      } catch (PropertyFormatException e) {
-        messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
-      } catch (ExceptionHandlerInvokeException e) {
-        messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
-      } catch (ClassCastException e) {
-        messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
-      } catch (IOException e) {
-        messager
-            .printMessage(Diagnostic.Kind.ERROR, "Cannot write class to file: " + e.getMessage());
-      } catch (Exception e) {
-        messager.printMessage(Diagnostic.Kind.ERROR, "Unexpected error: " + e.toString());
-      }
+      processInterfaceAnnotation(annotatedElement, JSTPReceiver.class);
+    }
+    for (Element annotatedElement : roundEnvironment.getElementsAnnotatedWith(JSTPHandler.class)) {
+      processInterfaceAnnotation(annotatedElement, JSTPHandler.class);
     }
     return true;
+  }
+
+  public void processInterfaceAnnotation(Element annotatedElement,
+      Class<?> annotation) {
+    try {
+      if (annotatedElement.getKind() != ElementKind.INTERFACE) {
+        error(annotatedElement, "Only interfaces can be annotated with @%s",
+            annotation.getSimpleName());
+        return;
+      }
+
+      TypeElement typeElement = (TypeElement) annotatedElement;
+      JSTPAnnotatedInterface jstpReceiver = new JSTPAnnotatedInterface(annotation,
+          typeElement, elementUtils, typeUtils);
+
+      jstpReceiver.generateCode(filer);
+    } catch (PropertyFormatException e) {
+      messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+    } catch (ExceptionHandlerInvokeException e) {
+      messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+    } catch (ClassCastException e) {
+      messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+    } catch (IOException e) {
+      messager.printMessage(
+          Diagnostic.Kind.ERROR, "Cannot write class to file: " + e.getMessage());
+    } catch (Exception e) {
+      messager.printMessage(
+          Diagnostic.Kind.ERROR, "Unexpected error: " + e.toString());
+    }
   }
 
 
