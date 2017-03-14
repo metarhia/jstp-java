@@ -73,8 +73,8 @@ public class JSParserBenchmark {
     }
 
     @Benchmark
-//    @BenchmarkMode({Mode.Throughput, Mode.SingleShotTime})
-    @BenchmarkMode({Mode.SingleShotTime})
+    @BenchmarkMode({Mode.Throughput, Mode.SingleShotTime})
+//    @BenchmarkMode({Mode.SingleShotTime})
     @Warmup(iterations = 10)
     @OutputTimeUnit(TimeUnit.MICROSECONDS)
     @Fork(1)
