@@ -32,14 +32,17 @@ package com.metarhia.jstp.benchmarks;
 
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSParsingException;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
-
 import java.util.concurrent.TimeUnit;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
 
 @State(Scope.Benchmark)
 public class JSParserBenchmark {
@@ -53,80 +56,7 @@ public class JSParserBenchmark {
     @Setup
     public void setup(final Blackhole bh) {
         packerParser = new Worker() {
-            String inputData = "{\n" +
-                "    login: {\n" +
-                "      control: 'screen',\n" +
-                "      controls: {\n" +
-                "        login: {\n" +
-                "          control: 'edit',\n" +
-                "          filter: 'login',\n" +
-                "          top: 10, left: 10, right: 10,\n" +
-                "          height: 10,\n" +
-                "          label: 'login'\n" +
-                "        },\n" +
-                "        password: {\n" +
-                "          control: 'edit',\n" +
-                "          mode: 'password',\n" +
-                "          top: 25, left: 10, right: 10,\n" +
-                "          height: 10,\n" +
-                "          label: 'password'\n" +
-                "        },\n" +
-                "        cancel: {\n" +
-                "          control: 'button',\n" +
-                "          top: 40, right: 70,\n" +
-                "          width: 25, height: 10,\n" +
-                "          text: 'Cancel'\n" +
-                "        },\n" +
-                "        signin: {\n" +
-                "          control: 'button',\n" +
-                "          top: 40, right: 10,\n" +
-                "          width: 25, height: 10,\n" +
-                "          text: 'Sign in'\n" +
-                "        },\n" +
-                "        social: {\n" +
-                "          control: 'panel',\n" +
-                "          top: 55, botton: 10, left: 10, right: 10,\n" +
-                "          controls: {\n" +
-                "            googlePlus: {\n" +
-                "              control: 'button',\n" +
-                "              top: 0, left: 0,\n" +
-                "              height: 10, width: 10,\n" +
-                "              image: 'googlePlus'\n" +
-                "            },\n" +
-                "            facebook: {\n" +
-                "              control: 'button',\n" +
-                "              top: 0, left: 10,\n" +
-                "              height: 10, width: 10,\n" +
-                "              image: 'facebook'\n" +
-                "            },\n" +
-                "            vk: {\n" +
-                "              control: 'button',\n" +
-                "              top: 0, left: 10,\n" +
-                "              height: 10, width: 10,\n" +
-                "              image: 'vk'\n" +
-                "            },\n" +
-                "            twitter: {\n" +
-                "              control: 'button',\n" +
-                "              top: 0, left: 20,\n" +
-                "              height: 10, width: 10,\n" +
-                "              image: 'twitter'\n" +
-                "            }\n" +
-                "          }\n" +
-                "        }\n" +
-                "      }\n" +
-                "    },\n" +
-                "    main: {\n" +
-                "      control: 'screen',\n" +
-                "      controls: {\n" +
-                "        message: {\n" +
-                "          control: 'label',\n" +
-                "          top: 10, left: 10, right: 10,\n" +
-                "          height: 10,\n" +
-                "          text: 'You are logged in'\n" +
-                "        }\n" +
-                "    }\n" +
-                "   }\n" +
-                "}";
+            String inputData = Data.jstpConsoleLayout;
 
             JSParser parser = new JSParser();
 
@@ -143,12 +73,12 @@ public class JSParserBenchmark {
     }
 
     @Benchmark
-    @BenchmarkMode({Mode.Throughput, Mode.AverageTime})
-    @Warmup(iterations = 5)
+//    @BenchmarkMode({Mode.Throughput, Mode.SingleShotTime})
+    @BenchmarkMode({Mode.SingleShotTime})
+    @Warmup(iterations = 10)
     @OutputTimeUnit(TimeUnit.MICROSECONDS)
-    @Fork(3)
+    @Fork(1)
     public void testPacket() {
         packerParser.work();
     }
-
 }
