@@ -62,65 +62,100 @@ public final class Utils {
     }
   }
 
-  public static String unescapeString(String input) throws ParseException {
-    StringBuilder result = new StringBuilder(input.length());
-    int backslash = 0;
-    int index = input.indexOf('\\');
+  public static String unescapeString(char[] input, int fromIndex, int maxIndex)
+      throws ParseException {
+    StringBuilder result = new StringBuilder(maxIndex - fromIndex);
+    int backslash = fromIndex;
+    int index = indexOf(input, '\\', backslash, maxIndex);
     while (index >= 0) {
       index++;
-      result.append(input.substring(backslash, index - 1));
-      final ControlChar controlChar = getControlChar(input, index);
-      result.append(controlChar.chars);
-      backslash = index + controlChar.size;
-      index = input.indexOf('\\', backslash);
+      result.append(input, backslash, index - backslash - 1);
+      backslash = index + addControlChar(input, index, result);
+      index = indexOf(input, '\\', backslash, maxIndex);
     }
-    if (backslash < input.length()) {
-      result.append(input.substring(backslash, input.length()));
+    if (backslash < maxIndex) {
+      result.append(input, backslash, maxIndex - backslash);
     }
     return result.toString();
   }
 
-  public static ControlChar getControlChar(String input, int start) throws ParseException {
+  public static int addControlChar(char[] input, int start, StringBuilder dst)
+      throws ParseException {
     int codePoint;
-    switch (input.charAt(start)) {
+    switch (input[start]) {
       case '"':
-        return new ControlChar(new char[]{'"'}, 1);
+        dst.append('"');
+        return 1;
       case '\'':
-        return new ControlChar(new char[]{'\''}, 1);
+        dst.append('\'');
+        return 1;
       case 'b':
-        return new ControlChar(new char[]{'\b'}, 1);
+        dst.append('\b');
+        return 1;
       case 'f':
-        return new ControlChar(new char[]{'\f'}, 1);
+        dst.append('\f');
+        return 1;
       case 'n':
-        return new ControlChar(new char[]{'\n'}, 1);
+        dst.append('\n');
+        return 1;
       case 'r':
-        return new ControlChar(new char[]{'\r'}, 1);
+        dst.append('\r');
+        return 1;
       case 't':
-        return new ControlChar(new char[]{'\t'}, 1);
+        dst.append('\t');
+        return 1;
       case '0':
-        return new ControlChar(new char[]{'\0'}, 1);
+        dst.append('\0');
+        return 1;
       case 'x':
-        codePoint = Integer.parseInt(input.substring(start + 1, start + 3), 16);
-        return new ControlChar(Character.toChars(codePoint), 3);
+        codePoint = Integer.parseInt(new String(input, start + 1, 2), 16);
+        dst.append(Character.toChars(codePoint));
+        return 3;
       case 'u':
         start++;
-        final char character = input.charAt(start);
+        final char character = input[start];
         if (isHex(character)) {
-          codePoint = Integer.parseInt(input.substring(start, start + 4), 16);
-          return new ControlChar(Character.toChars(codePoint), 5);
+          codePoint = Integer.parseInt(new String(input, start, 4), 16);
+          dst.append(Character.toChars(codePoint));
+          return 5;
         } else if (character == '{') {
           int i = ++start;
-          while (isHex(input.charAt(i))) {
+          while (isHex(input[i])) {
             i++;
           }
-          codePoint = Integer.parseInt(input.substring(start, i), 16);
-          return new ControlChar(Character.toChars(codePoint), i - start + 3);
+          i -= start;
+          codePoint = Integer.parseInt(new String(input, start, i), 16);
+          dst.append(Character.toChars(codePoint));
+          return i + 3;
         } else {
           throw new ParseException("Invalid Unicode escape sequence", start + 1);
         }
       default:
-        return new ControlChar(new char[]{input.charAt(start)}, 1);
+        dst.append(input[start]);
+        return 1;
     }
+  }
+
+  public static int charArrayToInt(char[] data, int start, int end) throws NumberFormatException {
+    int result = 0;
+    for (int i = start; i < end; i++) {
+      int digit = (int) data[i] - (int) '0';
+      if ((digit < 0) || (digit > 9)) {
+        throw new NumberFormatException();
+      }
+      result *= 10;
+      result += digit;
+    }
+    return result;
+  }
+
+  public static int indexOf(char[] input, char ch, int from, int max) {
+    for (int i = from; i < max; i++) {
+      if (input[i] == ch) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   private static boolean isHex(char character) {
