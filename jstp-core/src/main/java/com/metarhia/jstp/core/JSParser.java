@@ -15,6 +15,7 @@ import java.io.Serializable;
 public class JSParser implements Serializable {
 
   public static final boolean VERBOSE_CHECKING = true;
+
   private Tokenizer tokenizer;
 
   public JSParser() {
