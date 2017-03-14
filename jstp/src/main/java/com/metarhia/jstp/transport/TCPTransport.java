@@ -368,16 +368,12 @@ public class TCPTransport extends AbstractSocket {
 
   @Override
   public boolean isConnected() {
-    synchronized (TCPTransport.this) {
-      return !connecting && !closing && socket != null && socket.isConnected();
-    }
+    return !connecting && !closing && socket != null && socket.isConnected();
   }
 
   @Override
   public boolean isClosed() {
-    synchronized (TCPTransport.this) {
-      return closing || socket == null || socket.isClosed();
-    }
+    return closing || socket == null || socket.isClosed();
   }
 
   @Override
