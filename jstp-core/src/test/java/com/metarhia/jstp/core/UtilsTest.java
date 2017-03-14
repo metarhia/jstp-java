@@ -16,22 +16,22 @@ public class UtilsTest {
   };
 
   private static final TestUtils.TestData[] escapeTestData = new TestUtils.TestData[]{
-      new TestUtils.TestData(";sdlfkgj\nsdflkgj\u0000,''\u6666",
-          ";sdlfkgj\\nsdflkgj\\u0000,''\u6666")
+      new TestUtils.TestData(";sdlfkgj\ns\"dfl\"kgj\u0000,''\u6666",
+          ";sdlfkgj\\ns\"dfl\"kgj\\u0000,\\'\\'\u6666")
   };
 
   @Test
   public void escapeString() throws Exception {
-    for (TestUtils.TestData td : unescapeTestData) {
-      String actual = Utils.unescapeString(td.input);
-      assertEquals(td.expected, actual);
+    for (TestUtils.TestData td : escapeTestData) {
+      String actual = Utils.escapeString(td.input);
+      assertEquals("Input: " + td.input, td.expected, actual);
     }
   }
 
   @Test
   public void unescapeString() throws Exception {
     for (TestUtils.TestData td : unescapeTestData) {
-      String actual = Utils.unescapeString(td.input);
+      String actual = Utils.unescapeString(td.input.toCharArray(), 0, td.input.length());
       assertEquals(td.expected, actual);
     }
   }
