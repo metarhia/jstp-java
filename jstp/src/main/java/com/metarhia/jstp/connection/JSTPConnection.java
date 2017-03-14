@@ -645,6 +645,7 @@ public class JSTPConnection implements
           sessionData.getAppName(), sessionData.getSessionID());
     } else {
       handshake(sessionData.getAppName(), null);
+      sendQueue.clear();
     }
     // todo add calls and fields for username\password auth
   }

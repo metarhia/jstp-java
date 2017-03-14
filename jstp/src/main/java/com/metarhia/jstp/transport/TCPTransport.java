@@ -38,6 +38,7 @@ public class TCPTransport extends AbstractSocket {
   private int port;
   private boolean sslEnabled;
   private boolean running;
+  private boolean connecting;
   private boolean closing;
   private Thread receiverThread;
   private Thread senderThread;
@@ -88,6 +89,7 @@ public class TCPTransport extends AbstractSocket {
       return false;
     }
 
+    connecting = true;
     new Thread(new Runnable() {
       @Override
       public void run() {
@@ -250,6 +252,7 @@ public class TCPTransport extends AbstractSocket {
         in = new BufferedInputStream(socket.getInputStream());
       }
     }
+    connecting = false;
     if (connected) {
       if (socketListener != null) {
         socketListener.onConnected();
@@ -383,7 +386,7 @@ public class TCPTransport extends AbstractSocket {
   @Override
   public boolean isConnected() {
     synchronized (socketLock) {
-      return !closing && socket != null && socket.isConnected();
+      return !connecting && !closing && socket != null && socket.isConnected();
     }
   }
 

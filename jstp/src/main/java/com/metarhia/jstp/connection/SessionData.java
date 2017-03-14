@@ -122,7 +122,8 @@ public class SessionData implements Serializable {
   }
 
   public void setNumSentPackets(long numSentPackets) {
-    this.numSentPackets = numSentPackets;
+    if (numSentPackets < 0) this.numSentPackets = 0;
+    else this.numSentPackets = numSentPackets;
   }
 
   public long getNumReceivedPackets() {
