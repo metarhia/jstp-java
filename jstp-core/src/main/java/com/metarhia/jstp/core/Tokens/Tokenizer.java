@@ -173,7 +173,11 @@ public class Tokenizer implements Serializable {
   public void setInput(String input) {
     reset();
     try {
-      this.input = (char[]) valueReflection.get(input);
+      if (valueReflection != null) {
+        this.input = (char[]) valueReflection.get(input);
+      } else {
+        this.input = input.toCharArray();
+      }
       this.length = input.length();
     } catch (IllegalAccessException e) {
       e.printStackTrace();
