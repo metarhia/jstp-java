@@ -168,8 +168,9 @@ public class TCPTransport extends AbstractSocket {
               }
             }
           }
-        } catch (InterruptedException | ClosedByInterruptException e) {
+        } catch (InterruptedException | ClosedByInterruptException | NullPointerException e) {
           // all ok - manually closing
+          // npe - 'in' was null, means we are closing transport right now
         } catch (IOException e) {
           logger.info("Receiver thread failed", e);
           closeInternal();
@@ -199,13 +200,8 @@ public class TCPTransport extends AbstractSocket {
 
   void processMessage() throws IOException {
     int b;
-    synchronized (TCPTransport.this) {
-      if (in == null) {
-        return;
-      }
-      while ((b = in.read()) > 0) {
-        packetBuilder.write(b);
-      }
+    while ((b = in.read()) > 0) {
+      packetBuilder.write(b);
     }
     if (packetBuilder.size() != 0 && socketListener != null) {
       packetBuilder.write('\0');
