@@ -20,7 +20,7 @@ publishing {
             groupId 'com.metarhia.jstp'
             artifactId packetName
             version jstpVersion
-            mavenDependency(pom, "org.slf4j", "slf4j-api", "1.7.24")
+            mavenDependency(pom, "org.slf4j", "slf4j-api", "1.7.25")
         }
     }
 }
@@ -46,8 +46,12 @@ bintray {
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: ':lib')
-    testCompile 'junit:junit:4.12'
-    testCompile "org.mockito:mockito-core:2.3.4"
+
+    compile group: 'com.squareup', name: 'javapoet', version: '1.8.0'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+
+    testCompile group: 'junit', name: 'junit', version: ' 4.12'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.3.4'
 
     compile project(':jstp-core')
 }
