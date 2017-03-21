@@ -2,43 +2,35 @@ package com.metarhia.jstp.connection;
 
 import com.metarhia.jstp.core.JSTypes.JSObject;
 
-public abstract class AbstractSocket {
-
-  protected AbstractSocketListener socketListener;
-
-  public AbstractSocket(AbstractSocketListener listener) {
-    this.socketListener = listener;
-  }
+public interface AbstractSocket {
 
   /**
    * @return true if connect task was committed (it doesn't mean that connection was established)
    * else returns false if error occurred
    */
-  public abstract boolean connect();
+  boolean connect();
 
-  public abstract void send(String message);
+  void send(String message);
 
-  public abstract void pause();
+  void pause();
 
-  public abstract void resume();
+  void resume();
 
-  public abstract void close(boolean forced);
+  void close(boolean forced);
 
-  public abstract void clearQueue();
+  void clearQueue();
 
-  public abstract int getQueueSize();
+  int getQueueSize();
 
-  public void setSocketListener(AbstractSocketListener listener) {
-    this.socketListener = listener;
-  }
+  void setSocketListener(AbstractSocketListener listener);
 
-  public abstract boolean isConnected();
+  boolean isConnected();
 
-  public abstract boolean isClosed();
+  boolean isClosed();
 
-  public abstract boolean isRunning();
+  boolean isRunning();
 
-  public interface AbstractSocketListener {
+  interface AbstractSocketListener {
 
     void onConnected();
 

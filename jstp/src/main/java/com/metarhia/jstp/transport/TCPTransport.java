@@ -20,7 +20,7 @@ import javax.net.ssl.SSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TCPTransport extends AbstractSocket {
+public class TCPTransport implements AbstractSocket {
 
   public static final long DEFAULT_CLOSING_TICK = 1000;
   public static final long DEFAULT_CLOSING_TIMEOUT = 5000;
@@ -51,6 +51,8 @@ public class TCPTransport extends AbstractSocket {
   private long closingTick;
   private long closingTimeout;
 
+  private AbstractSocketListener socketListener;
+
   public TCPTransport(String host, int port) {
     this(host, port, null);
   }
@@ -65,8 +67,6 @@ public class TCPTransport extends AbstractSocket {
 
   public TCPTransport(String host, int port, boolean sslEnabled,
       AbstractSocket.AbstractSocketListener listener) {
-    super(listener);
-
     closingTick = DEFAULT_CLOSING_TICK;
     closingTimeout = DEFAULT_CLOSING_TIMEOUT;
 
@@ -411,6 +411,11 @@ public class TCPTransport extends AbstractSocket {
 
   public long getClosingTimeout() {
     return closingTimeout;
+  }
+
+  @Override
+  public void setSocketListener(AbstractSocketListener listener) {
+    socketListener = listener;
   }
 
   public void setClosingTimeout(long closingTimeout) {
