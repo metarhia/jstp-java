@@ -24,7 +24,10 @@ public class Tokenizer implements Serializable {
 
   private final FloatMatchRange floatMatchRange = new FloatMatchRange();
 
+  private final int[] cachedArray = new int[1];
+
   private static Field valueReflection = null;
+
   static {
     try {
       valueReflection = String.class.getDeclaredField("value");
@@ -35,7 +38,7 @@ public class Tokenizer implements Serializable {
   }
 
   private int length;
-  private Double number;
+  private double number;
   private String str;
   private char[] input;
   private int index;
@@ -63,7 +66,6 @@ public class Tokenizer implements Serializable {
       index = indexOf('\n', index) + 1;
       ch = input[index];
     }
-//        if (index >= input.length()) return lastToken = Token.NONE;
 
     switch (ch) {
       case '[':
@@ -119,11 +121,16 @@ public class Tokenizer implements Serializable {
       }
       return lastToken = Token.KEY;
     } else if (isFloatingNumber(ch)) {
-      floatMatchRange.reset();
-      int lastIndex = getPastLastIndex(input, index, floatMatchRange);
-      str = new String(input, index - 1, lastIndex - index + 1);
-      number = Double.valueOf(str);
-      index = lastIndex;
+//      int lastIndex = getPastLastIndex(input, index, floatMatchRange);
+//      str = new String(input, index - 1, lastIndex - index + 1);
+//      number = Double.parseDouble(str);
+      try {
+        str = null;
+        number = Utils.charArrayToDouble(input, index - 1, length, cachedArray);
+      } catch (NumberFormatException e) {
+        throw new JSParsingException(index - 1, e);
+      }
+      index = cachedArray[0];
       return lastToken = Token.NUMBER;
     }
 
@@ -155,6 +162,9 @@ public class Tokenizer implements Serializable {
   }
 
   public String getStr() {
+    if (str == null && lastToken == Token.NUMBER) {
+      str = String.valueOf(number);
+    }
     return str;
   }
 
@@ -180,12 +190,12 @@ public class Tokenizer implements Serializable {
       }
       this.length = input.length();
     } catch (IllegalAccessException e) {
-      e.printStackTrace();
+      // impossible situation
     }
   }
 
   private void reset() {
-    number = null;
+    number = 0;
     str = null;
     input = null;
     index = 0;
@@ -204,19 +214,14 @@ public class Tokenizer implements Serializable {
 
   private static class FloatMatchRange implements MatchRange {
 
-    private boolean dotSeen;
-
     @Override
     public boolean matches(char ch) {
-      return isNumber(ch) || !dotSeen && (dotSeen = ch == '.');
-    }
-
-    public void reset() {
-      dotSeen = false;
+      return isNumber(ch) || ch == '.';
     }
   }
 
   public interface MatchRange {
+
     boolean matches(char ch);
   }
 }

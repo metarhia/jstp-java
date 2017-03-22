@@ -5,12 +5,12 @@ package com.metarhia.jstp.core;
  */
 public class TestUtils {
 
-  public static class TestData {
+  public static class TestData <T, F> {
 
-    String input;
-    String expected;
+    T input;
+    F expected;
 
-    public TestData(String input, String expected) {
+    public TestData(T input, F expected) {
       this.input = input;
       this.expected = expected;
     }
