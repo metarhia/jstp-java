@@ -64,9 +64,12 @@ public final class Utils {
 
   public static String unescapeString(char[] input, int fromIndex, int maxIndex)
       throws ParseException {
-    StringBuilder result = new StringBuilder(maxIndex - fromIndex);
     int backslash = fromIndex;
     int index = indexOf(input, '\\', backslash, maxIndex);
+    if (index < 0) {
+      return new String(input, fromIndex, maxIndex - fromIndex);
+    }
+    StringBuilder result = new StringBuilder(maxIndex - fromIndex);
     while (index >= 0) {
       index++;
       result.append(input, backslash, index - backslash - 1);
@@ -136,17 +139,62 @@ public final class Utils {
     }
   }
 
-  public static int charArrayToInt(char[] data, int start, int end) throws NumberFormatException {
-    int result = 0;
-    for (int i = start; i < end; i++) {
-      int digit = (int) data[i] - (int) '0';
-      if ((digit < 0) || (digit > 9)) {
-        throw new NumberFormatException();
-      }
-      result *= 10;
-      result += digit;
+  public static double charArrayToDouble(char[] data, int start, int length, int[] end) {
+    boolean neg = false;
+    if (data[start] == '-') {
+      neg = true;
+      start++;
+    } else if (data[start] == '+') {
+      start++;
     }
-    return result;
+
+    long value = 0;
+    int i;
+    int dotIndex = -1;
+    int powerMod = 0;
+    for (i = start; i < length; i++) {
+      final char ch = data[i];
+      if (ch == '.' && dotIndex < 0) {
+        dotIndex = i;
+      } else if (ch >= '0' && ch <= '9') {
+        powerMod++;
+        value = value * 10 + (ch - '0');
+      } else if (ch == 'e' || ch == 'E') {
+        powerMod -= charArrayToInt(data, i + 1, length, end);
+        break;
+      } else {
+        break;
+      }
+    }
+    end[0] = i;
+    if (dotIndex < 0) {
+      dotIndex = i;
+    }
+    powerMod -= dotIndex - start;
+    double result = value / Math.pow(10, powerMod);
+    return neg ? -result : result;
+  }
+
+  public static int charArrayToInt(char[] data, int start, int length, int[] end)
+      throws NumberFormatException {
+    boolean neg = false;
+    if (data[start] == '-') {
+      neg = true;
+      start++;
+    } else if (data[start] == '+') {
+      start++;
+    }
+    int result = 0;
+    int i;
+    for (i = start; i < length; i++) {
+      int digit = data[i] - '0';
+      if (digit < 0 || digit > 9) {
+        return result;
+      }
+      result = result * 10 + digit;
+    }
+    end[0] = i;
+    return neg ? -result : result;
   }
 
   public static int indexOf(char[] input, char ch, int from, int max) {
@@ -162,17 +210,6 @@ public final class Utils {
     return (character >= '0' && character <= '9')
         || (character >= 'A' && character <= 'F')
         || (character >= 'a' && character <= 'f');
-  }
-
-  private static class ControlChar {
-
-    char[] chars;
-    int size;
-
-    public ControlChar(char[] chars, int size) {
-      this.chars = chars;
-      this.size = size;
-    }
   }
 }
 

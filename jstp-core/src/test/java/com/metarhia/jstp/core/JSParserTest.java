@@ -11,6 +11,7 @@ import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSString;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import com.metarhia.jstp.core.JSTypes.JSValue;
+import com.metarhia.jstp.core.TestUtils.TestData;
 import java.util.Arrays;
 import java.util.Collections;
 import org.junit.Test;
@@ -18,24 +19,24 @@ import org.junit.Test;
 public class JSParserTest {
 
   private static final TestUtils.TestData[] escapeTestData = new TestUtils.TestData[]{
-      new TestUtils.TestData("{}", "'{}'"),
-      new TestUtils.TestData("имя, оно самоеё~:)", "'имя, оно самоеё~:)'"),
-      new TestUtils.TestData("fff\u0000\u1111g\u0020gg\u007f",
+      new TestUtils.TestData<>("{}", "'{}'"),
+      new TestUtils.TestData<>("имя, оно самоеё~:)", "'имя, оно самоеё~:)'"),
+      new TestUtils.TestData<>("fff\u0000\u1111g\u0020gg\u007f",
           "'fff\\u0000\u1111g\u0020gg\\u007F'")
   };
 
   private static final TestUtils.TestData[] parseUnescapeTestData = new TestUtils.TestData[]{
-      new TestUtils.TestData("'abc\\n\\tf\\0ff\\u4455ggg\\u0011'",
+      new TestUtils.TestData<>("'abc\\n\\tf\\0ff\\u4455ggg\\u0011'",
           "abc\n\tf\0ff\u4455ggg\u0011")
   };
 
   private static final TestUtils.TestData[] stringifyTestData = new TestUtils.TestData[]{
-      new TestUtils.TestData("{}", "{}"),
-      new TestUtils.TestData("'abv\\\"gggg\\\"dd'", "'abv\"gggg\"dd'"),
-      new TestUtils.TestData("'abv\"gggg\"dd'", "'abv\"gggg\"dd'"),
-      new TestUtils.TestData("['outer', ['inner']]", "[\'outer\',[\'inner\']]"),
-      new TestUtils.TestData("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
-      new TestUtils.TestData("'\\x20'", "' '")
+      new TestUtils.TestData<>("{}", "{}"),
+      new TestUtils.TestData<>("'abv\\\"gggg\\\"dd'", "'abv\"gggg\"dd'"),
+      new TestUtils.TestData<>("'abv\"gggg\"dd'", "'abv\"gggg\"dd'"),
+      new TestUtils.TestData<>("['outer', ['inner']]", "[\'outer\',[\'inner\']]"),
+      new TestUtils.TestData<>("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
+      new TestUtils.TestData<>("'\\x20'", "' '")
   };
 
   @Test
@@ -69,7 +70,7 @@ public class JSParserTest {
 
     JSObject.Entry[] expecteds = {
         new JSObject.Entry("a", 4),
-        new JSObject.Entry("55",
+        new JSObject.Entry("55.0",
             new JSArray(Collections.<Object>singletonList("abc")))
     };
 
@@ -271,7 +272,7 @@ public class JSParserTest {
 
   @Test
   public void stringify() throws Exception {
-    for (TestUtils.TestData td : escapeTestData) {
+    for (TestData<String, String> td : escapeTestData) {
       JSString jsString = new JSString(td.input);
       assertEquals(td.expected, jsString.toString());
     }
@@ -279,7 +280,7 @@ public class JSParserTest {
 
   @Test
   public void parseUnescape() throws Exception {
-    for (TestUtils.TestData td : parseUnescapeTestData) {
+    for (TestUtils.TestData<String, String> td : parseUnescapeTestData) {
       JSValue actual = new JSParser(td.input).parse();
       assertEquals(td.expected, actual.getGeneralizedValue());
     }
@@ -287,7 +288,7 @@ public class JSParserTest {
 
   @Test
   public void stringifyTestData() throws Exception {
-    for (TestUtils.TestData td : stringifyTestData) {
+    for (TestData<String, String> td : stringifyTestData) {
       JSValue actual = new JSParser(td.input).parse();
       assertEquals(td.expected, actual.toString());
     }
