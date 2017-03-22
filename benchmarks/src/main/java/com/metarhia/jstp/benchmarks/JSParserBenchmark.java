@@ -43,42 +43,57 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 @State(Scope.Benchmark)
 public class JSParserBenchmark {
 
-    public interface Worker {
-        void work();
-    }
+  public static void main(String[] args) throws RunnerException {
+    Options opt = new OptionsBuilder()
+        .include(JSParserBenchmark.class.getSimpleName())
+//        .addProfiler(StackProfiler.class)
+//                    .addProfiler(GCProfiler.class)
+        .build();
 
-    Worker packerParser;
+    new Runner(opt).run();
+  }
 
-    @Setup
-    public void setup(final Blackhole bh) {
-        packerParser = new Worker() {
-            String inputData = Data.jstpConsoleLayout;
+  public interface Worker {
 
-            JSParser parser = new JSParser();
+    void work();
+  }
 
-            @Override
-            public void work() {
-                parser.setInput(inputData);
-                try {
-                    bh.consume(parser.parse());
-                } catch (JSParsingException e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-    }
+  Worker packerParser;
 
-    @Benchmark
-    @BenchmarkMode({Mode.Throughput, Mode.SingleShotTime})
-//    @BenchmarkMode({Mode.SingleShotTime})
-    @Warmup(iterations = 10)
-    @OutputTimeUnit(TimeUnit.MICROSECONDS)
-    @Fork(1)
-    public void testPacket() {
-        packerParser.work();
-    }
+  @Setup
+  public void setup(final Blackhole bh) {
+    packerParser = new Worker() {
+      String inputData = Data.jstpConsoleLayout;
+
+      JSParser parser = new JSParser();
+
+      @Override
+      public void work() {
+        parser.setInput(inputData);
+        try {
+          bh.consume(parser.parse());
+        } catch (JSParsingException e) {
+          e.printStackTrace();
+        }
+      }
+    };
+  }
+
+  @Benchmark
+//  @BenchmarkMode({Mode.Throughput, Mode.SingleShotTime})
+  @BenchmarkMode({Mode.AverageTime})
+  @Warmup(iterations = 10)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  @Fork(1)
+  public void testPacket() {
+    packerParser.work();
+  }
 }
