@@ -65,6 +65,7 @@ public class JSTPAnnotatedInterface {
   private MethodSpec.Builder mainInvokeBuilder;
   private TypeSpec.Builder jstpClassBuilder;
   private TypeUtils typeUtils;
+  private String handlersName;
 
   public JSTPAnnotatedInterface(Class<?> annotation, TypeElement typeElement, Elements elements,
       Types types) {
@@ -73,6 +74,11 @@ public class JSTPAnnotatedInterface {
     typeUtils = new TypeUtils(types, elements);
     errorHandlers = new LinkedList<>();
     packetHandlers = new LinkedList<>();
+
+    handlersName = null;
+    if (annotation == JSTPReceiver.class) {
+      handlersName = "handlers";
+    }
 
     mainInvokeBuilder = MethodSpec.methodBuilder(INVOKE_PREFIX)
         .addAnnotation(Override.class)
@@ -86,11 +92,6 @@ public class JSTPAnnotatedInterface {
       IOException, PropertyFormatException {
     String implementationClassName = PREFIX + annotatedInterface.getSimpleName();
     final TypeName interfaceTypeName = TypeName.get(annotatedInterface.asType());
-
-    String handlersName = null;
-    if (annotation == JSTPReceiver.class) {
-      handlersName = "handlers";
-    }
 
     if (handlersName == null) {
       jstpClassBuilder = TypeSpec.classBuilder(implementationClassName)
@@ -135,12 +136,18 @@ public class JSTPAnnotatedInterface {
     }
 
     // generate main invocation function
-    mainInvokeBuilder.beginControlFlow("try ");
+    if (errorHandlers.size() > 0) {
+      mainInvokeBuilder.beginControlFlow("try ");
+    }
     for (MethodSpec ms : packetHandlers) {
       mainInvokeBuilder.addStatement("$L($L)", ms.name, PACKET_PARAMETER_NAME);
       jstpClassBuilder.addMethod(ms);
     }
-    composeCatchClauses(mainInvokeBuilder, errorHandlers);
+
+    if (errorHandlers.size() > 0) {
+      composeCatchClauses(mainInvokeBuilder, errorHandlers, handlersName);
+    }
+
     jstpClassBuilder.addMethod(mainInvokeBuilder.build());
 
     // save to file
@@ -329,7 +336,8 @@ public class JSTPAnnotatedInterface {
   }
 
   private void composeCatchClauses(MethodSpec.Builder builder,
-      List<ExecutableElement> errorHandlers) throws ExceptionHandlerInvokeException {
+      List<ExecutableElement> errorHandlers, String handlersName)
+      throws ExceptionHandlerInvokeException {
     Map<TypeMirror, List<ExecutableElement>> exceptionHandlers = new TreeMap<>(
         new Comparator<TypeMirror>() {
           @Override
@@ -370,32 +378,40 @@ public class JSTPAnnotatedInterface {
     boolean addedGeneralClause = false;
 
     for (Map.Entry<TypeMirror, List<ExecutableElement>> me : exceptionHandlers.entrySet()) {
-      addCatchClause(builder, me.getKey(), me.getValue());
+      addCatchClause(builder, me.getKey(), me.getValue(), handlersName);
       if (typeUtils.isAssignable(me.getKey(), exceptionMirror)) {
         addedGeneralClause = true;
       }
     }
 
     if (!addedGeneralClause) {
-      addCatchClause(builder, exceptionMirror, new LinkedList<ExecutableElement>());
+      addCatchClause(builder, exceptionMirror, new LinkedList<ExecutableElement>(), handlersName);
     }
 
     builder.endControlFlow();
   }
 
   private void addCatchClause(MethodSpec.Builder builder, TypeMirror type,
-      List<ExecutableElement> funcs) throws ExceptionHandlerInvokeException {
+      List<ExecutableElement> funcs, String handlersName)
+      throws ExceptionHandlerInvokeException {
     builder.nextControlFlow("catch ($T e)", ClassName.get(type));
     for (ExecutableElement func : funcs) {
       if (!checkFirstCast(func.getParameters(), type)) {
         throw new ExceptionHandlerInvokeException(
             func.getSimpleName() + " cannot be called with " + type.toString());
       }
-      builder.beginControlFlow("for ($T h : handlers)", ClassName.get(annotatedInterface.asType()))
-          .addStatement("h.$L(e)", func.getSimpleName().toString())
-          .endControlFlow();
+      final TypeName interfaceTypeName = ClassName.get(annotatedInterface.asType());
+      if (handlersName != null) {
+        final String handlersForLoop = String.format("for ($T h : %s)", interfaceTypeName);
+        builder.beginControlFlow(handlersForLoop, handlersName)
+            .addStatement("h.$L(e)", func.getSimpleName().toString())
+            .endControlFlow();
+      } else {
+        builder.addStatement(func.getSimpleName().toString() + "(e)");
+      }
     }
   }
+
 
   private boolean checkFirstCast(List<? extends VariableElement> parameters, TypeMirror type) {
     return parameters.size() == 1
