@@ -1,7 +1,8 @@
 package com.metarhia.jstp.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSBool;
@@ -14,7 +15,8 @@ import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.core.TestUtils.TestData;
 import java.util.Arrays;
 import java.util.Collections;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 public class JSParserTest {
 
@@ -103,22 +105,22 @@ public class JSParserTest {
     JSParser parser = new JSParser(input);
     try {
       JSValue value = parser.parse();
-      assertEquals("Parsing 'true' failed", new JSBool(true), value);
+      assertEquals(new JSBool(true), value, "Parsing 'true' failed");
 
       value = parser.parse();
-      assertEquals("Parsing 'false' failed", new JSBool(false), value);
+      assertEquals(new JSBool(false), value, "Parsing 'false' failed");
 
       value = parser.parse();
-      assertEquals("Parsing decimal failed", new JSNumber(10), value);
+      assertEquals(new JSNumber(10), value, "Parsing decimal failed");
 
       value = parser.parse();
-      assertEquals("Parsing double failed", new JSNumber(63.52), value);
+      assertEquals(new JSNumber(63.52), value, "Parsing double failed");
 
       value = parser.parse();
-      assertEquals("Parsing 'undefined' failed", JSUndefined.get(), value);
+      assertEquals(JSUndefined.get(), value, "Parsing 'undefined' failed");
 
       value = parser.parse();
-      assertEquals("Parsing 'null' failed", JSNull.get(), value);
+      assertEquals(JSNull.get(), value, "Parsing 'null' failed");
 
       //test array
       input = "[ 'abs', 'smth else', \" or like this \", ['inside', 'elsein']]";
@@ -134,8 +136,8 @@ public class JSParserTest {
 
       parser.setInput(input);
       value = parser.parse();
-      assertTrue("Parsing array failed", value instanceof JSArray);
-      assertEquals("Parsing array failed", expected, value);
+      assertTrue(value instanceof JSArray, "Parsing array failed");
+      assertEquals(expected, value, "Parsing array failed");
     } catch (JSParsingException e) {
       e.printStackTrace();
     }
@@ -207,7 +209,7 @@ public class JSParserTest {
       result = true;
     }
 
-    assertTrue("must throw exception", result);
+    assertTrue(result, "must throw exception");
   }
 
   @Test
@@ -294,14 +296,24 @@ public class JSParserTest {
     }
   }
 
-  @Test(expected = JSParsingException.class)
+  @Test()
   public void throwOnUnmatchedQuote1() throws Exception {
-    new JSParser("'ssssss").parse();
+    assertThrows(JSParsingException.class, new Executable() {
+      @Override
+      public void execute() throws Throwable {
+        new JSParser("'ssssss").parse();
+      }
+    });
   }
 
-  @Test(expected = JSParsingException.class)
+  @Test()
   public void throwOnUnmatchedQuote2() throws Exception {
-    new JSParser("{'ssssss : }").parse();
+    assertThrows(JSParsingException.class, new Executable() {
+      @Override
+      public void execute() throws Throwable {
+        new JSParser("{'ssssss : }").parse();
+      }
+    });
   }
 
   @Test

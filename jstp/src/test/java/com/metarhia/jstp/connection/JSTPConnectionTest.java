@@ -1,8 +1,8 @@
 package com.metarhia.jstp.connection;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -29,9 +29,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
@@ -77,13 +76,15 @@ public class JSTPConnectionTest {
     ));
   }
 
+  private static JSTPConnectionTest instance;
+
   @Spy
   private JSTPConnection connection;
 
   private AbstractSocket transport;
 
-  @Before
-  public void setUp() {
+  public JSTPConnectionTest() {
+    instance = this;
     transport = mock(AbstractSocket.class);
     connection = spy(new JSTPConnection(transport));
     doAnswer(new HandshakeAnswer(connection)).when(connection)
@@ -94,11 +95,11 @@ public class JSTPConnectionTest {
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
   }
 
-  @After
-  public void tearDown() {
-    if (connection != null) {
-      connection.close();
-      connection = null;
+  @AfterAll
+  public static void tearDown() {
+    if (instance != null && instance.connection != null) {
+      instance.connection.close();
+      instance.connection = null;
     }
   }
 
@@ -315,8 +316,8 @@ public class JSTPConnectionTest {
       JSTPConnectionTest.this.wait(2000);
     }
 
-    assertTrue("Without session restoration 'restore' must not be called",
-        success[0] && !success[1]);
+    assertTrue(success[0] && !success[1],
+        "Without session restoration 'restore' must not be called");
     success[0] = false;
     connection.onConnectionClosed(0);
 
@@ -329,8 +330,8 @@ public class JSTPConnectionTest {
       JSTPConnectionTest.this.wait(2000);
     }
 
-    assertTrue("With session restoration both methods of Restoration policy must be called",
-        success[0] && success[1]);
+    assertTrue(success[0] && success[1],
+        "With session restoration both methods of Restoration policy must be called");
   }
 
   @Test
