@@ -1,13 +1,14 @@
 package com.metarhia.jstp.core.JSTypes;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.metarhia.jstp.core.JSParser;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Created by lundibundi on 8/24/16.
@@ -15,7 +16,7 @@ import org.junit.Test;
 public class JSTypesUtilTest {
 
   @Test
-  public void JSToJavaNumber() throws Exception {
+  public void jsToJavaNumber() throws Exception {
     double value = 4.66;
     double actual = (double) JSTypesUtil.jsToJava(new JSNumber(value));
 
@@ -23,7 +24,7 @@ public class JSTypesUtilTest {
   }
 
   @Test
-  public void JSToJavaInt() throws Exception {
+  public void jsToJavaInt() throws Exception {
     double value = 4;
     double actual = (double) JSTypesUtil.jsToJava(new JSNumber(value));
 
@@ -31,14 +32,14 @@ public class JSTypesUtilTest {
   }
 
   @Test
-  public void JSToJavaNull() throws Exception {
+  public void jsToJavaNull() throws Exception {
     Object actual = JSTypesUtil.jsToJava(JSNull.get());
 
     assertEquals(null, actual);
   }
 
   @Test
-  public void JSToJavaArray() throws Exception {
+  public void jsToJavaArray() throws Exception {
     JSArray array = (JSArray) new JSParser("['dd', 'ff', 'ddddd']").parse();
     List<String> actual = (List<String>) JSTypesUtil.jsToJava(array);
     List<String> expected = new ArrayList<>(Arrays.asList("dd", "ff", "ddddd"));
@@ -46,7 +47,7 @@ public class JSTypesUtilTest {
   }
 
   @Test
-  public void JSToJavaArrayMess() throws Exception {
+  public void jsToJavaArrayMess() throws Exception {
     JSArray array = (JSArray) new JSParser("[44, 'dd', 'ff', 'ddddd']").parse();
     List<Object> actual = (List<Object>) JSTypesUtil.jsToJava(array, true);
     List<Object> expected = new ArrayList<Object>(Arrays.asList(44, "dd", "ff", "ddddd"));
@@ -81,6 +82,13 @@ public class JSTypesUtilTest {
     JSValue actual = JSTypesUtil.javaToJS(values);
 
     assertEquals(expected, actual);
+  }
+
+  @Test
+  public void jsNullToInts() throws Exception {
+    final JSValue value = JSParser.parse("null");
+    Integer actual = (Integer) JSTypesUtil.jsToJava(value, true);
+    assertNull(actual);
   }
 
   @Test

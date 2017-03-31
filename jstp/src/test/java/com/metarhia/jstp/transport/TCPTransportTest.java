@@ -1,6 +1,6 @@
 package com.metarhia.jstp.transport;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
@@ -15,8 +15,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.Spy;
 
@@ -30,8 +29,7 @@ public class TCPTransportTest {
   @Spy
   private JSTPConnection connection;
 
-  @Before
-  public void setUp() {
+  public TCPTransportTest() {
     tcpTransport = new TCPTransport("", 0);
     connection = spy(new JSTPConnection(tcpTransport));
     doAnswer(new HandshakeAnswer(connection)).when(connection)

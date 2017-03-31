@@ -1,9 +1,9 @@
 package com.metarhia.jstp.core;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.metarhia.jstp.core.TestUtils.TestData;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Created by lundibundi on 12/27/16.
@@ -41,7 +41,7 @@ public class UtilsTest {
   public void escapeString() throws Exception {
     for (TestData<String, String> td : escapeTestData) {
       String actual = Utils.escapeString(td.input);
-      assertEquals("Input: " + td.input, td.expected, actual);
+      assertEquals(td.expected, actual, "Input: " + td.input);
     }
   }
 

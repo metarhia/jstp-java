@@ -1,15 +1,13 @@
 package com.metarhia.jstp.core.JSTypes;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class JSArrayTest {
 
@@ -23,15 +21,9 @@ public class JSArrayTest {
 
   private JSArray jsArray;
 
-  @Before
-  public void setUp() {
+  public JSArrayTest() {
     random = new Random();
     jsArray = new JSArray(ARRAY_SIZE);
-  }
-
-  @After
-  public void tearDown() {
-    jsArray.clear();
   }
 
   @Test
@@ -97,16 +89,16 @@ public class JSArrayTest {
   @Test
   public void equalsNullAndItself() throws Exception {
     assertFalse(jsArray.equals(null));
-    assertTrue("equals itself", jsArray.equals(jsArray));
+    assertTrue(jsArray.equals(jsArray), "equals itself");
   }
 
   @Test
   public void equalsArr() throws Exception {
     JSArray arr = new JSArray();
     jsArray.add(false);
-    assertFalse("basic equals", jsArray.equals(arr));
+    assertFalse(jsArray.equals(arr), "basic equals");
     jsArray.clear();
-    assertTrue("basic equals", jsArray.equals(arr));
+    assertTrue(jsArray.equals(arr), "basic equals");
   }
 
 
