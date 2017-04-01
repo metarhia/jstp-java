@@ -67,14 +67,14 @@ public class JSParser implements Serializable {
         && tokenizer.next() != Token.SQ_CLOSE) {
       if (tokenizer.getLastToken() == Token.COMMA) {
         jsArray.add(JSUndefined.get());
-        continue;
       } else {
         jsArray.add(parse(false));
-      }
-      // skip comma
-      if (tokenizer.next() != Token.COMMA && tokenizer.getLastToken() != Token.SQ_CLOSE) {
-        throw new JSParsingException(tokenizer.getPrevIndex(),
-            "Expected ',' as separator of array elements");
+        // skip comma
+        if (tokenizer.next() != Token.COMMA
+            && tokenizer.getLastToken() != Token.SQ_CLOSE) {
+          throw new JSParsingException(tokenizer.getPrevIndex(),
+              "Expected ',' as separator of array elements");
+        }
       }
     }
     return jsArray;
