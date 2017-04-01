@@ -91,7 +91,7 @@ public class Tokenizer implements Serializable {
         lastIndex = indexOf(ch, lastIndex + 1);
       }
       if (lastIndex == -1) {
-        throw new JSParsingException(index - 1, "No closing quote '" + ch + "'");
+        throw new JSParsingException(index - 1, "Unmatched quote");
       }
 
       try {
