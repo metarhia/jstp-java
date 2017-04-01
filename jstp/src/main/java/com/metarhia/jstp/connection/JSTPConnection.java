@@ -10,7 +10,6 @@ import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.handlers.StateHandler;
 import com.metarhia.jstp.storage.StorageInterface;
-import com.metarhia.jstp.transport.TCPTransport;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -121,23 +120,6 @@ public class JSTPConnection implements
 
   private NoConnBufferingPolicy noConnBufferingPolicy;
 
-  @Deprecated
-  public JSTPConnection(String host, int port) {
-    this(host, port, true);
-  }
-
-  /**
-   * Creates new JSTP connection
-   *
-   * @param host of the server
-   * @param port of the server
-   * @param sslEnabled determines whether connection will use SSL or not
-   */
-  @Deprecated
-  public JSTPConnection(String host, int port, boolean sslEnabled) {
-    this(new TCPTransport(host, port, sslEnabled));
-  }
-
   public JSTPConnection(AbstractSocket transport) {
     this(transport, new SessionRestorationPolicy());
   }
@@ -170,11 +152,6 @@ public class JSTPConnection implements
     this.transport = transport;
     this.transport.setSocketListener(this);
     state = ConnectionState.STATE_AWAITING_HANDSHAKE;
-  }
-
-  @Deprecated
-  public void createNewConnection(String host, int port, boolean sslEnabled) {
-    useTransport(new TCPTransport(host, port, sslEnabled, this));
   }
 
   private boolean restoreSession(long numServerReceivedPackets) {
@@ -501,11 +478,6 @@ public class JSTPConnection implements
 
   private void pongPacketHandler(JSObject packet) {
     callbackPacketHandler(packet);
-  }
-
-  @Deprecated
-  public void addCallHandler(String methodName, ManualHandler callHandler) {
-    setCallHandler(methodName, callHandler);
   }
 
   public void setCallHandler(String methodName, ManualHandler callHandler) {
