@@ -180,24 +180,6 @@ public class TCPTransport implements AbstractSocket {
     this.receiverThread.start();
   }
 
-//    private void processMessage() throws IOException {
-//        for (int i = 0; i < 1024; ++i) packetData[i] = -1;
-//        length[0] = in.read(packetData, length[0], packetData.length - length[0]) + length[0];
-//        if (in.available() >= 0) {
-//            packetData[length[0]] = (byte) in.read();
-//            length[0] += 1;
-//        }
-//        if (length[0] == -1) close();
-//        else if (socketListener != null) {
-//            try {
-//                List<JSObject> packets = JSNetworkParser.parse(packetData, length);
-//                for (JSObject packet : packets) socketListener.onPacketReceived(packet);
-//            } catch (JSParsingException e) {
-//                socketListener.onMessageRejected(null);
-//            }
-//        }
-//    }
-
   void processMessage() throws IOException {
     int b;
     while ((b = in.read()) > 0) {
