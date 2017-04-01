@@ -1,7 +1,7 @@
 package com.metarhia.jstp.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.metarhia.jstp.core.JSTypes.JSArray;
@@ -13,77 +13,167 @@ import com.metarhia.jstp.core.JSTypes.JSString;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.core.TestUtils.TestData;
-import java.util.Arrays;
-import java.util.Collections;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 public class JSParserTest {
 
-  private static final TestUtils.TestData[] escapeTestData = new TestUtils.TestData[]{
-      new TestUtils.TestData<>("{}", "'{}'"),
-      new TestUtils.TestData<>("имя, оно самоеё~:)", "'имя, оно самоеё~:)'"),
-      new TestUtils.TestData<>("fff\u0000\u1111g\u0020gg\u007f",
+  private static final TestData[] escapeTestData = new TestData[]{
+      new TestData<>("{}", "'{}'"),
+      new TestData<>("имя, оно самоеё~:)", "'имя, оно самоеё~:)'"),
+      new TestData<>("fff\u0000\u1111g\u0020gg\u007f",
           "'fff\\u0000\u1111g\u0020gg\\u007F'")
   };
 
-  private static final TestUtils.TestData[] parseUnescapeTestData = new TestUtils.TestData[]{
-      new TestUtils.TestData<>("'abc\\n\\tf\\0ff\\u4455ggg\\u0011'",
+  private static final TestData[] parseUnescapeTestData = new TestData[]{
+      new TestData<>("'abc\\n\\tf\\0ff\\u4455ggg\\u0011'",
           "abc\n\tf\0ff\u4455ggg\u0011")
   };
 
-  private static final TestUtils.TestData[] stringifyTestData = new TestUtils.TestData[]{
-      new TestUtils.TestData<>("{}", "{}"),
-      new TestUtils.TestData<>("'abv\\\"gggg\\\"dd'", "'abv\"gggg\"dd'"),
-      new TestUtils.TestData<>("'abv\"gggg\"dd'", "'abv\"gggg\"dd'"),
-      new TestUtils.TestData<>("['outer', ['inner']]", "[\'outer\',[\'inner\']]"),
-      new TestUtils.TestData<>("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
-      new TestUtils.TestData<>("'\\x20'", "' '")
+  private static final TestData[] stringifyTestData = new TestData[]{
+      new TestData<>("{}", "{}"),
+      new TestData<>("'abv\\\"gggg\\\"dd'", "'abv\"gggg\"dd'"),
+      new TestData<>("'abv\"gggg\"dd'", "'abv\"gggg\"dd'"),
+      new TestData<>("['outer', ['inner']]", "[\'outer\',[\'inner\']]"),
+      new TestData<>("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
+      new TestData<>("'\\x20'", "' '")
+  };
+
+  private static final TestData[] parseTestData = new TestData[]{
+      new TestData<>("[1, 2, '5555']", new JSArray(1, 2, "5555")),
+      new TestData<>("{a: 1, b: 2.0, c: '5555'}", new JSObject(
+          TestUtils.mapOf(
+              "a", new JSNumber(1),
+              "b", new JSNumber(2.0),
+              "c", new JSString("5555")
+          )
+      )),
+      new TestData<>("true", new JSBool(true)),
+      new TestData<>("false", new JSBool(false)),
+      new TestData<>("10", new JSNumber(10)),
+      new TestData<>("63.52", new JSNumber(63.52)),
+      new TestData<>("undefined", JSUndefined.get()),
+      new TestData<>("null", JSNull.get()),
+      new TestData<>("[ 'abs', 'smth else', \" or like this \", ['inside', 'elsein']]",
+          new JSArray("abs", "smth else", " or like this ",
+              new JSArray("inside", "elsein"))),
+      new TestData<>("[1,,300]", new JSArray(1.0, JSUndefined.get(), 300.0)),
+      new TestData<>("{birth: -2051225940000}", new JSObject(
+          TestUtils.mapOf("birth", new JSNumber(-2051225940000L)))),
+      new TestData<>("[,,0]", new JSArray(
+          JSUndefined.get(), JSUndefined.get(), new JSNumber(0))),
+      new TestData<>("", JSUndefined.get())
+  };
+
+  private static final TestData[] parseKeyValuePairTestData = new TestData[]{
+      new TestData<>("a: 4", new JSObject.Entry("a", 4)),
+      new TestData<>("55 : ['abc']", new JSObject.Entry("55.0", new JSArray("abc")))
+  };
+
+  private static final TestData[] parseThrowTestData = new TestData[]{
+      new TestData<>("{he : llo : 123}", new JSParsingException(
+          "Index: 9, Message: Expected ',' as key-value pairs separator")),
+      new TestData<>("{he : llo : 123}", new JSParsingException(
+          "Index: 9, Message: Expected ',' as key-value pairs separator")),
+      new TestData<>("{'ssssss : }", new JSParsingException(
+          "Index: 1, Message: Unmatched quote")),
+      new TestData<>("'ssssss", new JSParsingException(
+          "Index: 0, Message: Unmatched quote"))
   };
 
   @Test
-  public void parseArray() throws Exception {
-    String input = "[1, 2, '5555']";
-    JSArray expected = new JSArray(Arrays.<Object>asList(1, 2, "5555"));
-
-    JSParser parser = new JSParser(input);
-    JSArray actual = parser.parseArray();
-
-    assertEquals(expected, actual);
-  }
-
-  @Test
-  public void parseObject() throws Exception {
-    String input = "{a: 1, b: 2.0, c: '5555'}";
-    JSObject expected = new JSObject();
-    expected.put("a", new JSNumber(1));
-    expected.put("b", new JSNumber(2.0));
-    expected.put("c", new JSString("5555"));
-
-    JSParser parser = new JSParser(input);
-    JSObject actual = parser.parseObject();
-
-    assertEquals(expected, actual);
+  public void parseTest() throws Exception {
+    JSParser parser = new JSParser();
+    for (TestData<String, Object> td : parseTestData) {
+      parser.setInput(td.input);
+      JSValue actual = parser.parse();
+      assertEquals(td.expected, actual);
+    }
   }
 
   @Test
   public void parseKeyValuePair() throws Exception {
-    String[] inputs = {"a: 4", "55 : ['abc']"};
-
-    JSObject.Entry[] expecteds = {
-        new JSObject.Entry("a", 4),
-        new JSObject.Entry("55.0",
-            new JSArray(Collections.<Object>singletonList("abc")))
-    };
-
     JSParser parser = new JSParser();
-    for (int i = 0; i < inputs.length; i++) {
-      parser.setInput(inputs[i]);
+    for (TestData<String, JSObject.Entry> td : parseKeyValuePairTestData) {
+      parser.setInput(td.input);
+      JSObject.Entry actual = parser.parseKeyValuePair();
+      assertEquals(td.expected.key, actual.key);
+      assertEquals(td.expected.value, actual.value);
+    }
+  }
 
-      final JSObject.Entry expected = expecteds[i];
-      final JSObject.Entry actual = parser.parseKeyValuePair();
+  @Test
+  public void parseThrow() throws Exception {
+    JSParser parser = new JSParser();
+    for (TestData<String, JSParsingException> td : parseThrowTestData) {
+      Exception exception = null;
+      try {
+        parser.setInput(td.input);
+        parser.parse();
+      } catch (JSParsingException e) {
+        exception = e;
+      }
+      assertNotNull(exception);
+      assertEquals(td.expected.getMessage(), exception.getMessage());
+    }
+  }
 
-      assertEquals(expected.toString(), actual.toString());
+  @Test
+  public void testInvalidObject() throws Exception {
+    String input = "{he : llo : 123}";
+
+    boolean result = false;
+    try {
+      new JSParser(input).parse();
+    } catch (JSParsingException e) {
+      result = true;
+    }
+
+    assertTrue(result, "must throw exception");
+  }
+
+  @Test
+  public void parseWithEscapingDouble() throws Exception {
+    String input = "{nickname:\"\\n\\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],\"}";
+    JSObject actual = new JSParser(input).parseObject();
+
+    JSObject expected = new JSObject();
+    expected.put("nickname", "\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],");
+
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  public void parseWithEscapingSingle() throws Exception {
+    String input = "{nickname: '\\n\\tnyaaaaaa\\'aaa\\'[((:’ –( :-)) :-| :~ =:O)],'}";
+    JSObject actual = new JSParser(input).parseObject();
+
+    JSObject expected = new JSObject();
+    expected.put("nickname", "\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],");
+
+    assertEquals(expected, actual);
+  }
+
+  @Test
+  public void stringify() throws Exception {
+    for (TestData<String, String> td : escapeTestData) {
+      JSString jsString = new JSString(td.input);
+      assertEquals(td.expected, jsString.toString());
+    }
+  }
+
+  @Test
+  public void parseUnescape() throws Exception {
+    for (TestData<String, String> td : parseUnescapeTestData) {
+      JSValue actual = new JSParser(td.input).parse();
+      assertEquals(td.expected, actual.getGeneralizedValue());
+    }
+  }
+
+  @Test
+  public void stringifyTestData() throws Exception {
+    for (TestData<String, String> td : stringifyTestData) {
+      JSValue actual = new JSParser(td.input).parse();
+      assertEquals(td.expected, actual.toString());
     }
   }
 
@@ -97,50 +187,6 @@ public class JSParserTest {
     parser.setInput(anotherInput);
 
     assertEquals(parser.parse(), new JSBool(false));
-  }
-
-  @Test
-  public void parse() throws Exception {
-    String input = "true false 10 63.52 undefined null";
-    JSParser parser = new JSParser(input);
-    try {
-      JSValue value = parser.parse();
-      assertEquals(new JSBool(true), value, "Parsing 'true' failed");
-
-      value = parser.parse();
-      assertEquals(new JSBool(false), value, "Parsing 'false' failed");
-
-      value = parser.parse();
-      assertEquals(new JSNumber(10), value, "Parsing decimal failed");
-
-      value = parser.parse();
-      assertEquals(new JSNumber(63.52), value, "Parsing double failed");
-
-      value = parser.parse();
-      assertEquals(JSUndefined.get(), value, "Parsing 'undefined' failed");
-
-      value = parser.parse();
-      assertEquals(JSNull.get(), value, "Parsing 'null' failed");
-
-      //test array
-      input = "[ 'abs', 'smth else', \" or like this \", ['inside', 'elsein']]";
-      JSArray nestedArray = new JSArray();
-      nestedArray.add(new JSString("inside"));
-      nestedArray.add(new JSString("elsein"));
-
-      JSArray expected = new JSArray();
-      expected.add(new JSString("abs"));
-      expected.add(new JSString("smth else"));
-      expected.add(new JSString(" or like this "));
-      expected.add(nestedArray);
-
-      parser.setInput(input);
-      value = parser.parse();
-      assertTrue(value instanceof JSArray, "Parsing array failed");
-      assertEquals(expected, value, "Parsing array failed");
-    } catch (JSParsingException e) {
-      e.printStackTrace();
-    }
   }
 
   @Test
@@ -196,128 +242,5 @@ public class JSParserTest {
     JSObject actual = parser.parseObject();
 
     assertEquals(expected, actual);
-  }
-
-  @Test
-  public void testInvalidObject() throws Exception {
-    String input = "{he : llo : 123}";
-
-    boolean result = false;
-    try {
-      new JSParser(input).parse();
-    } catch (JSParsingException e) {
-      result = true;
-    }
-
-    assertTrue(result, "must throw exception");
-  }
-
-  @Test
-  public void arrayEmptyPlace() throws Exception {
-    String input = "[1,,300]";
-
-    JSArray expected = new JSArray();
-    expected.add(new JSNumber(1));
-    expected.add(JSUndefined.get());
-    expected.add(new JSNumber(300));
-
-    JSArray actual = (JSArray) new JSParser(input).parse();
-
-    assertEquals(expected, actual);
-  }
-
-  @Test
-  public void longParsing() throws Exception {
-    String input = "{birth: -2051225940000}";
-
-    String actual = ((JSObject) new JSParser(input).parse()).get("birth").toString();
-    String expected = String.valueOf(-2051225940000L);
-
-    assertEquals(expected, actual);
-  }
-
-  @Test
-  public void arrayEmptyPlaceFirst() throws Exception {
-    String input = "[,,0]";
-
-    JSArray expected = new JSArray();
-    expected.add(JSUndefined.get());
-    expected.add(JSUndefined.get());
-    expected.add(new JSNumber(0));
-
-    JSArray actual = (JSArray) new JSParser(input).parse();
-
-    assertEquals(expected, actual);
-  }
-
-  @Test
-  public void parseWithEscapingDouble() throws Exception {
-    String input = "{nickname:\"\\n\\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],\"}";
-    JSObject actual = new JSParser(input).parseObject();
-
-    JSObject expected = new JSObject();
-    expected.put("nickname", "\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],");
-
-    assertEquals(expected, actual);
-  }
-
-  @Test
-  public void parseWithEscapingSingle() throws Exception {
-    String input = "{nickname: '\\n\\tnyaaaaaa\\'aaa\\'[((:’ –( :-)) :-| :~ =:O)],'}";
-    JSObject actual = new JSParser(input).parseObject();
-
-    JSObject expected = new JSObject();
-    expected.put("nickname", "\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],");
-
-    assertEquals(expected, actual);
-  }
-
-  @Test
-  public void stringify() throws Exception {
-    for (TestData<String, String> td : escapeTestData) {
-      JSString jsString = new JSString(td.input);
-      assertEquals(td.expected, jsString.toString());
-    }
-  }
-
-  @Test
-  public void parseUnescape() throws Exception {
-    for (TestUtils.TestData<String, String> td : parseUnescapeTestData) {
-      JSValue actual = new JSParser(td.input).parse();
-      assertEquals(td.expected, actual.getGeneralizedValue());
-    }
-  }
-
-  @Test
-  public void stringifyTestData() throws Exception {
-    for (TestData<String, String> td : stringifyTestData) {
-      JSValue actual = new JSParser(td.input).parse();
-      assertEquals(td.expected, actual.toString());
-    }
-  }
-
-  @Test()
-  public void throwOnUnmatchedQuote1() throws Exception {
-    assertThrows(JSParsingException.class, new Executable() {
-      @Override
-      public void execute() throws Throwable {
-        new JSParser("'ssssss").parse();
-      }
-    });
-  }
-
-  @Test()
-  public void throwOnUnmatchedQuote2() throws Exception {
-    assertThrows(JSParsingException.class, new Executable() {
-      @Override
-      public void execute() throws Throwable {
-        new JSParser("{'ssssss : }").parse();
-      }
-    });
-  }
-
-  @Test
-  public void noneTest() throws Exception {
-    assertEquals(JSUndefined.get(), new JSParser().parse());
   }
 }

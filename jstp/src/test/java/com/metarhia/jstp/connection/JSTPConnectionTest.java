@@ -322,7 +322,6 @@ public class JSTPConnectionTest {
     connection.onConnectionClosed(0);
 
     doAnswer(new HandshakeAnswer(connection, TestConstants.MOCK_HANDSHAKE_RESTORE, false))
-//        .when(transport).send(TestConstants.MOCK_HANDSHAKE_REQUEST_RESTORE);
         .when(transport).send(anyString());
     connection.onConnected();
 
