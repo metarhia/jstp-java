@@ -2,7 +2,6 @@ package com.metarhia.jstp.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSBool;
@@ -13,56 +12,61 @@ import com.metarhia.jstp.core.JSTypes.JSString;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.core.TestUtils.TestData;
+import java.util.ArrayList;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 public class JSParserTest {
 
-  private static final TestData[] escapeTestData = new TestData[]{
-      new TestData<>("{}", "'{}'"),
-      new TestData<>("имя, оно самоеё~:)", "'имя, оно самоеё~:)'"),
-      new TestData<>("fff\u0000\u1111g\u0020gg\u007f",
-          "'fff\\u0000\u1111g\u0020gg\\u007F'")
-  };
-
-  private static final TestData[] parseUnescapeTestData = new TestData[]{
-      new TestData<>("'abc\\n\\tf\\0ff\\u4455ggg\\u0011'",
-          "abc\n\tf\0ff\u4455ggg\u0011")
-  };
-
-  private static final TestData[] stringifyTestData = new TestData[]{
-      new TestData<>("{}", "{}"),
-      new TestData<>("'abv\\\"gggg\\\"dd'", "'abv\"gggg\"dd'"),
-      new TestData<>("'abv\"gggg\"dd'", "'abv\"gggg\"dd'"),
-      new TestData<>("['outer', ['inner']]", "[\'outer\',[\'inner\']]"),
-      new TestData<>("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
-      new TestData<>("'\\x20'", "' '")
-  };
-
   private static final TestData[] parseTestData = new TestData[]{
-      new TestData<>("[1, 2, '5555']", new JSArray(1, 2, "5555")),
-      new TestData<>("{a: 1, b: 2.0, c: '5555'}", new JSObject(
+      new TestData<>("[ 'abs', 'smth else', \" or like this \", ['inside', 'elsein']]",
+          new JSArray("abs", "smth else", " or like this ",
+              new JSArray("inside", "elsein"))),
+      new TestData<>("[1,,300]", new JSArray(1.0, JSUndefined.get(), 300.0)),
+      new TestData<>("{a:1,b: 2.0,c:'5555'}", new JSObject(
           TestUtils.mapOf(
               "a", new JSNumber(1),
               "b", new JSNumber(2.0),
               "c", new JSString("5555")
           )
       )),
+      new TestData<>("[,,0]", new JSArray(
+          JSUndefined.get(), JSUndefined.get(), new JSNumber(0))),
+      new TestData<>("", JSUndefined.get()),
+      new TestData<>("{nickname:'\\n\\tnyaaaaaa\\'aaa\\'[((:’ –( :-)) :-| :~ =:O)],'}",
+          new JSObject(TestUtils.mapOf(
+              "nickname",
+              new JSString("\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],")))),
+      new TestData<>("{nickname:\"\\n\\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],\"}",
+          new JSObject(TestUtils.mapOf(
+              "nickname",
+              new JSString("\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],")))),
+
+      new TestData<>("[1,2,'5555']", new JSArray(1, 2, "5555")),
       new TestData<>("true", new JSBool(true)),
       new TestData<>("false", new JSBool(false)),
       new TestData<>("10", new JSNumber(10)),
       new TestData<>("63.52", new JSNumber(63.52)),
       new TestData<>("undefined", JSUndefined.get()),
       new TestData<>("null", JSNull.get()),
-      new TestData<>("[ 'abs', 'smth else', \" or like this \", ['inside', 'elsein']]",
-          new JSArray("abs", "smth else", " or like this ",
-              new JSArray("inside", "elsein"))),
-      new TestData<>("[1,,300]", new JSArray(1.0, JSUndefined.get(), 300.0)),
-      new TestData<>("{birth: -2051225940000}", new JSObject(
-          TestUtils.mapOf("birth", new JSNumber(-2051225940000L)))),
-      new TestData<>("[,,0]", new JSArray(
-          JSUndefined.get(), JSUndefined.get(), new JSNumber(0))),
-      new TestData<>("", JSUndefined.get())
+      new TestData<>("{birth:-2051225940000}", new JSObject(
+          TestUtils.mapOf("birth", new JSNumber(-2051225940000L))))
   };
+
+  private static final ArrayList<TestData<String, String>> stringifyTestData =
+      new ArrayList<>(Arrays.asList(
+          new TestData<>("{}", "{}"),
+          new TestData<>("'abv\\\"gggg\\\"dd'", "'abv\"gggg\"dd'"),
+          new TestData<>("'abv\"gggg\"dd'", "'abv\"gggg\"dd'"),
+          new TestData<>("['outer', ['inner']]", "[\'outer\',[\'inner\']]"),
+          new TestData<>("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
+          new TestData<>("'\\x20'", "' '")));
+  static {
+    for (int i = 7; i < parseTestData.length; i++) {
+      String input = (String) parseTestData[i].input;
+      stringifyTestData.add(new TestData<>(input, input));
+    }
+  }
 
   private static final TestData[] parseKeyValuePairTestData = new TestData[]{
       new TestData<>("a: 4", new JSObject.Entry("a", 4)),
@@ -114,58 +118,6 @@ public class JSParserTest {
       }
       assertNotNull(exception);
       assertEquals(td.expected.getMessage(), exception.getMessage());
-    }
-  }
-
-  @Test
-  public void testInvalidObject() throws Exception {
-    String input = "{he : llo : 123}";
-
-    boolean result = false;
-    try {
-      new JSParser(input).parse();
-    } catch (JSParsingException e) {
-      result = true;
-    }
-
-    assertTrue(result, "must throw exception");
-  }
-
-  @Test
-  public void parseWithEscapingDouble() throws Exception {
-    String input = "{nickname:\"\\n\\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],\"}";
-    JSObject actual = new JSParser(input).parseObject();
-
-    JSObject expected = new JSObject();
-    expected.put("nickname", "\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],");
-
-    assertEquals(expected, actual);
-  }
-
-  @Test
-  public void parseWithEscapingSingle() throws Exception {
-    String input = "{nickname: '\\n\\tnyaaaaaa\\'aaa\\'[((:’ –( :-)) :-| :~ =:O)],'}";
-    JSObject actual = new JSParser(input).parseObject();
-
-    JSObject expected = new JSObject();
-    expected.put("nickname", "\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],");
-
-    assertEquals(expected, actual);
-  }
-
-  @Test
-  public void stringify() throws Exception {
-    for (TestData<String, String> td : escapeTestData) {
-      JSString jsString = new JSString(td.input);
-      assertEquals(td.expected, jsString.toString());
-    }
-  }
-
-  @Test
-  public void parseUnescape() throws Exception {
-    for (TestData<String, String> td : parseUnescapeTestData) {
-      JSValue actual = new JSParser(td.input).parse();
-      assertEquals(td.expected, actual.getGeneralizedValue());
     }
   }
 

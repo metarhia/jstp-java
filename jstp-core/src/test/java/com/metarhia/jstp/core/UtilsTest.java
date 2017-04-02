@@ -13,12 +13,22 @@ public class UtilsTest {
   private static final TestUtils.TestData[] unescapeTestData = new TestUtils.TestData[]{
       new TestUtils.TestData<>("abc\\nhh\\tfff", "abc\nhh\tfff"),
       new TestUtils.TestData<>("abc\\n\\tf\\0ff\\u4455ggg\\u0011",
-          "abc\n\tf\0ff\u4455ggg\u0011")
+          "abc\n\tf\0ff\u4455ggg\u0011"),
+      new TestData<>("{}", "{}"),
+      new TestData<>("'abv\\\"gggg\\\"dd'", "'abv\"gggg\"dd'"),
+      new TestData<>("'abv\"gggg\"dd'", "'abv\"gggg\"dd'"),
+      new TestData<>("['outer', ['inner']]", "[\'outer\', [\'inner\']]"),
+      new TestData<>("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
+      new TestData<>("'\\x20'", "' '")
   };
 
   private static final TestUtils.TestData[] escapeTestData = new TestUtils.TestData[]{
       new TestUtils.TestData<>(";sdlfkgj\ns\"dfl\"kgj\u0000,''\u6666",
-          ";sdlfkgj\\ns\"dfl\"kgj\\u0000,\\'\\'\u6666")
+          ";sdlfkgj\\ns\"dfl\"kgj\\u0000,\\'\\'\u6666"),
+      new TestData<>("{}", "{}"),
+      new TestData<>("имя, оно самоеё~:)", "имя, оно самоеё~:)"),
+      new TestData<>("fff\u0000\u1111g\u0020gg\u007f",
+          "fff\\u0000\u1111g\u0020gg\\u007F")
   };
 
   private static final TestUtils.TestData[] doubleTestData = new TestUtils.TestData[]{
