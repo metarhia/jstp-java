@@ -528,7 +528,6 @@ public class JSTPConnection implements
   private void reset(String appName, long packetCounter) {
     sessionData = new SessionData(appName, packetCounter);
     handlers = new ConcurrentHashMap<>();
-    callHandlers = new ConcurrentHashMap<>();
     sendQueue.clear();
   }
 
