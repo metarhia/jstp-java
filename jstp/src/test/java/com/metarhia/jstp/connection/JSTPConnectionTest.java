@@ -259,15 +259,37 @@ public class JSTPConnectionTest {
   }
 
   @Test
-  public void callbackHandler() throws Exception {
+  public void callbackHandlerDefault() throws Exception {
     long packetNum = 42;
     String methodName = "method";
+    String interfaceName = "interfaceName";
     final JSArray recvArgs = new JSArray(JSNull.get());
     final JSArray responseArgs = new JSArray(24, "whatever");
 
-    final String input = String.format("{call:[%d], %s:%s}", packetNum, methodName, recvArgs);
+    final String input = String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
     JSObject callback = new JSParser(input).parseObject();
     connection.setCallHandler("method", new CallHandler() {
+      @Override
+      public void handleCallback(JSArray data) {
+        assertTrue(data.equals(recvArgs));
+        callback(connection, JSCallback.OK, responseArgs);
+      }
+    });
+    connection.onPacketReceived(callback);
+    verify(connection, times(1)).callback(JSCallback.OK, responseArgs, packetNum);
+  }
+
+  @Test
+  public void callbackHandler() throws Exception {
+    long packetNum = 42;
+    String methodName = "method";
+    String interfaceName = "interfaceName";
+    final JSArray recvArgs = new JSArray(JSNull.get());
+    final JSArray responseArgs = new JSArray(24, "whatever");
+
+    final String input = String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
+    JSObject callback = new JSParser(input).parseObject();
+    connection.setCallHandler(interfaceName, "method", new CallHandler() {
       @Override
       public void handleCallback(JSArray data) {
         assertTrue(data.equals(recvArgs));
