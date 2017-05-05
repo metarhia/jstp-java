@@ -10,6 +10,7 @@ import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.handlers.StateHandler;
 import com.metarhia.jstp.storage.StorageInterface;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +45,9 @@ public class JSTPConnection implements
   private static final String INSPECT = "inspect";
   private static final String PING = "ping";
   private static final String PONG = "pong";
+
+  // TODO remove default call interfaceName
+  private static final String DEFAULT_CALL = "default";
 
   private static final Map<String, Method> METHOD_HANDLERS = new HashMap<>(10);
 
@@ -85,7 +90,7 @@ public class JSTPConnection implements
   /**
    * Call handlers table. Handlers are associated with names of methods they handle
    */
-  private Map<String, ManualHandler> callHandlers;
+  private Map<String, Map<String, ManualHandler>> callHandlers;
 
   /**
    * Event handlers table. Handlers are associated with names of interfaces they handle
@@ -149,6 +154,7 @@ public class JSTPConnection implements
       this.transport.setSocketListener(null);
       this.transport.close(true);
     }
+
     this.transport = transport;
     this.transport.setSocketListener(this);
     state = ConnectionState.STATE_AWAITING_HANDSHAKE;
@@ -225,11 +231,11 @@ public class JSTPConnection implements
   /**
    * Sends handshake message with authorization
    *
-   * @param appName application name to denote application on server
+   * @param appName  application name to denote application on server
    * @param username login for authorization on server
    * @param password password for authorization on server
-   * @param handler optional handler that will be called when response handshake message comes from
-   * the server
+   * @param handler  optional handler that will be called when response handshake message comes from
+   *                 the server
    */
   public void handshake(String appName, String username, String password, ManualHandler handler) {
     sessionData.setAppName(appName);
@@ -250,9 +256,9 @@ public class JSTPConnection implements
   }
 
   public void call(String interfaceName,
-      String methodName,
-      JSArray args,
-      ManualHandler handler) {
+                   String methodName,
+                   JSArray args,
+                   ManualHandler handler) {
     long packageCounter = sessionData.getAndIncrementPacketCounter();
     JSTPMessage callMessage = new JSTPMessage(packageCounter, CALL, methodName, args);
     callMessage.addProtocolArg(interfaceName);
@@ -423,8 +429,16 @@ public class JSTPConnection implements
   }
 
   private void callPacketHandler(JSObject packet) {
+    String interfaceName = ((JSString) ((JSArray) packet.get(0)).get(1)).getValue();
     String methodName = packet.getOrderedKeys().get(1);
-    ManualHandler handler = callHandlers.get(methodName);
+
+    // TODO remove default interface handling
+    ManualHandler handler = null;
+    if (callHandlers.containsKey(interfaceName) && callHandlers.get(interfaceName).containsKey(methodName)) {
+      handler = callHandlers.get(interfaceName).get(methodName);
+    } else if (callHandlers.containsKey(DEFAULT_CALL) && callHandlers.get(DEFAULT_CALL).containsKey(methodName)) {
+      handler = callHandlers.get(DEFAULT_CALL).get(methodName);
+    }
     if (handler != null) {
       handler.invoke(packet);
     }
@@ -480,8 +494,18 @@ public class JSTPConnection implements
     callbackPacketHandler(packet);
   }
 
+  @Deprecated
   public void setCallHandler(String methodName, ManualHandler callHandler) {
-    callHandlers.put(methodName, callHandler);
+    setCallHandler(DEFAULT_CALL, methodName, callHandler);
+  }
+
+  public void setCallHandler(String interfaceName, String methodName, ManualHandler callHandler) {
+    Map<String, ManualHandler> interfaceHandlers = callHandlers.get(interfaceName);
+    if (interfaceHandlers == null) {
+      callHandlers.put(interfaceName, new HashMap<String, ManualHandler>());
+      interfaceHandlers = callHandlers.get(interfaceName);
+    }
+    interfaceHandlers.put(methodName, callHandler);
   }
 
   public void removeCallHandler(String methodName) {
