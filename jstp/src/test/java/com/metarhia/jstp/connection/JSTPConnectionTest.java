@@ -352,7 +352,7 @@ public class JSTPConnectionTest {
     connection.connect("superIn");
 
     synchronized (this) {
-      wait(3000);
+      wait(5000);
     }
 
     assertTrue(valid[0]);
