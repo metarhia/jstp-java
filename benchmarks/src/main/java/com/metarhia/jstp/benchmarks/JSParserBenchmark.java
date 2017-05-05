@@ -88,11 +88,11 @@ public class JSParserBenchmark {
   }
 
   @Benchmark
-//  @BenchmarkMode({Mode.Throughput, Mode.SingleShotTime})
-  @BenchmarkMode({Mode.AverageTime})
-  @Warmup(iterations = 10)
+  @BenchmarkMode({Mode.Throughput, Mode.SingleShotTime})
+//  @BenchmarkMode({Mode.AverageTime})
+  @Warmup(iterations = 25)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  @Fork(1)
+  @Fork(2)
   public void testPacket() {
     packerParser.work();
   }
