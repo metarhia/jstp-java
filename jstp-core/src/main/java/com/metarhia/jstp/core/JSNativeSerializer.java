@@ -1,8 +1,9 @@
 package com.metarhia.jstp.core;
 
-import java.util.LinkedHashMap;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 /**
  * Created by lundibundi on 4/2/17.
@@ -15,19 +16,21 @@ public class JSNativeSerializer {
 
   public static StringBuilder stringify(Object input, StringBuilder builder) {
     if (input instanceof Map) {
-      return stringifyObject((LinkedHashMap<String, ?>) input, builder);
-    } else if (input instanceof List) {
-      return stringifyArray((List) input, builder);
+      return stringifyObject((Map<String, ?>) input, builder);
+    } else if (input instanceof List || input instanceof Queue) {
+      return stringifyArray((Collection) input, builder);
     } else if (input instanceof String) {
       return builder.append("'")
           .append(Utils.escapeString((String) input))
           .append("'");
     } else if (input instanceof Number) {
       return stringifyNumber((Number) input, builder);
+    } else if (input instanceof Boolean) {
+      return stringifyBool((Boolean) input, builder);
     } else if (input == null) {
       return builder.append("null");
     }
-    return builder.append(input);
+    return builder.append("undefined");
   }
 
   public static StringBuilder stringifyNumber(Number value, StringBuilder builder) {
@@ -38,7 +41,7 @@ public class JSNativeSerializer {
     }
   }
 
-  public static StringBuilder stringifyArray(List input, StringBuilder builder) {
+  public static StringBuilder stringifyArray(Collection input, StringBuilder builder) {
     builder.append('[');
     if (input.size() != 0) {
       for (Object value : input) {
@@ -52,7 +55,11 @@ public class JSNativeSerializer {
     return builder;
   }
 
-  public static StringBuilder stringifyObject(LinkedHashMap<String, ?> object,
+  public static StringBuilder stringifyBool(Boolean value, StringBuilder builder) {
+    return builder.append(value);
+  }
+
+  public static StringBuilder stringifyObject(Map<String, ?> object,
       StringBuilder builder) {
     builder.append('{');
     if (object.size() != 0) {
