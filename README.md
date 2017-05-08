@@ -45,8 +45,7 @@ To serialize objects you can use `JSNativeSerializer`
 List<Number> arr = (List<Number>) new JSNativeParser("[1, 2, 3]").parse();
 JSNativeSerializer.stringify(arr); // returns "[1,2,3]"
 ```
-If it doesn't know how to serialize input it'll call `toString()` on it and add to the result
-(TODO: with recent PR it'll replace it with `undefined`)
+If it doesn't know how to serialize input it'll be serialized as `undefined`
 
 2) To simple js mirrored hierarchy in java with `JSParser` (hierarchy has `JSValue` as superclass)
 
