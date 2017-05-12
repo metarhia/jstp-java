@@ -131,10 +131,9 @@ JSTPConnection connection = new JSTPConnection(transport);
 
 You can change used transport by calling `useTransport()` method.
 This will close previous transport if available and set provided one
-as current transport. If transport has already been connected at that
-time you will have to send `handshake` manually. Otherwise appropriate
-method of restoration policy will be called when transport reports
-that it's connected.
+as current transport. It will try to connect and upon connection
+appropriate method of restoration policy will be called when transport
+reports that it's connected.
 
 To react to connection events, you can use `JSTPConnectionListener`:
 
