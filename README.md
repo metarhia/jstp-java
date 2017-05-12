@@ -295,3 +295,147 @@ JSArray args = new JSArray();
 // ...
 connection.event("interfaceName", "methodName", args);
 ```
+
+### JSTP compiler
+
+JSTP compiler is a nice feature for better handling of JSTP packets. You can declare interfaces comfortable for concrete handling purposes and use them instead of `ManualHandler`.
+
+#### Installation
+
+[Check for the latest version](https://bintray.com/metarhia/maven/jstp-compiler)
+
+Gradle:
+```
+dependencies {
+  compile 'com.metarhia.jstp:jstp-compiler:0.1.12'
+}
+```
+
+Maven:
+
+```
+<dependency>
+  <groupId>com.metarhia.jstp</groupId>
+  <artifactId>jstp-compiler</artifactId>
+  <version>0.1.12</version>
+  <type>pom</type>
+</dependency>
+```
+
+#### Handlers usage
+
+You can create your own `JSTPHandler` like this:
+
+```java
+@JSTPHandler
+public interface ExampleHandler {
+  // ...
+}
+```
+You can declare your own methods that will be called in `onInvoke()` method of basic ManualHandler.
+
+##### Named
+
+Gets the field of the received packet by specified name. Can be multi-level.
+
+```java
+@JSTPHandler
+public interface ExampleHandler {
+  // ...
+  @NotNull
+  @Named("ok")
+  void onOK(JSArray args);
+
+  @NotNull
+  @Named("error")
+  void onError(JSArray args);
+
+  // gets value by key "neededValue" in object got by "ok"
+  @Named(value = {"ok", "neededValue"})
+  void onNeededValueGot(String value);
+  // ...
+}
+```
+
+##### NotNull
+
+Checks if the needed value is not null before calling the handler method.
+
+```java
+@JSTPHandler
+public interface ExampleHandler {
+  // ...
+  @NotNull
+  void onExampleValue(JSArray args);
+  // ...
+}
+```
+
+##### Indexed
+
+Can be used for getting concrete argument from the received arguments. Can be multi-level
+
+```java
+@JSTPHandler
+public interface ExampleHandler {
+  // ...
+  void onFirstIndex(@Indexed(1) JSString arg);
+
+  // gets packet[1][2]
+   void onValueBySecondIndex(@Indexed(value = {1,2}) JSArray args);
+  // ...
+}
+```
+
+##### Custom-named
+
+It is a sort of combination of `Named` and `Indexed` annotations. You can get needed value by index or by key. Can be multi-level
+
+```java
+@JSTPHandler
+public interface ExampleHandler {
+  // ...
+
+  @CustomNamed("ok")
+  void onNeededValue(JSValue args);
+
+  @CustomNamed("{1}")
+  void onNeededValue(JSValue args);
+
+  // gets packet["ok"][1][2]
+  @CustomNamed(value = {"ok", "[1]", "{2}"})
+  void onNeededValue(JSValue args);
+  // ...
+}
+```
+
+After compilation class `JSTPExampleHandler` will be generated and you will be able to use it in packets processing.
+
+```java
+connection.call("interfaceName", "methodName", args, new JSTPExampleHandler() {
+    // ...
+});
+```
+#### JSTP receiver
+You can process received values not only via single handler, but by several ones. They can be added or removed to certain `JSTP receiver`, generated similarly to `JSTPHandler`. To generate receiver, you need to do the following:
+
+```java
+@JSTPReceiver
+public interface ExampleReceiver {
+  // ...
+}
+```
+You can declare required methods similarly to `JSTPHandler`. After compilation class `JSTPExampleReceiver` will be generated and you will be able to use it in packets processing.
+
+You can use custom receiver like this:
+```java
+
+JSTPExampleReceiver receiver = new JSTPExampleReceiver();
+receiver.addHandler(new ExampleReceiver() {
+    // ...
+});
+receiver.addHandler(new ExampleReceiver() {
+    // ...
+});
+connection.call("interfaceName", "methodName", args, receiver);
+```
