@@ -136,7 +136,9 @@ public class JSTPConnection implements
     this.sendBufferCapacity = DEFAULT_SEND_BUFFER_CAPACITY;
     this.sendQueue = new ConcurrentLinkedQueue<>();
 
-    useTransport(transport);
+    this.transport = transport;
+    this.transport.setSocketListener(this);
+    state = ConnectionState.STATE_AWAITING_HANDSHAKE;
 
     this.restorationPolicy = restorationPolicy;
 
@@ -158,6 +160,7 @@ public class JSTPConnection implements
     this.transport = transport;
     this.transport.setSocketListener(this);
     state = ConnectionState.STATE_AWAITING_HANDSHAKE;
+    connect();
   }
 
   private boolean restoreSession(long numServerReceivedPackets) {
