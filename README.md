@@ -10,7 +10,7 @@ Gradle:
 Add this to your build.gradle (check for the latest version):
 ```
 dependencies {
-  compile 'com.metarhia.jstp:jstp:0.7.0'
+  compile group: 'com.metarhia.jstp', name: 'jstp', version: '0.7.0'
 }
 ```
 
@@ -33,7 +33,8 @@ Native parser gives you java Objects directly, which is more convenient.
 
 Few simple examples
 ```java
-Map<String, Number> a = (Map<String, Number>) new JSNativeParser("{a: 3}").parse();
+Map<String, Number> a =
+    (Map<String, Number>) new JSNativeParser("{a: 3}").parse();
 a.get("a"); // returns 3.0
 
 List<Number> arr = (List<Number>) new JSNativeParser("[1, 2, 3]").parse();
@@ -47,7 +48,8 @@ JSNativeSerializer.stringify(arr); // returns "[1,2,3]"
 ```
 If it doesn't know how to serialize input it'll be serialized as `undefined`
 
-2) To simple js mirrored hierarchy in java with `JSParser` (hierarchy has `JSValue` as superclass)
+2) To simple js mirrored hierarchy in java with `JSParser` (hierarchy has
+  `JSValue` as superclass)
 
 In current JSTP SDK implementation, you can use:
 * JSObject
@@ -100,8 +102,10 @@ try {
 }
 ```
 
-To convert values from js java hierarchy to js use `.toString()` method or `JSTP.stringify`.
-They can be parsed in js with a simple eval statement or [js parser](https://github.com/metarhia/JSTP)
+To convert values from js java hierarchy to js use `.toString()` method or
+`JSTP.stringify`.
+They can be parsed in js with a simple eval statement or
+[js parser](https://github.com/metarhia/JSTP)
 ```java
 JSValue value;
 //...
@@ -198,7 +202,7 @@ connection.handshake("applicationName", "sessionId", new ManualHandler() {
 });
 
 // handshake message with authorization
-connection.handshake("applicationName", "username", "password", new ManualHandler() {
+connection.handshake("applicationName", "name", "pass", new ManualHandler() {
   @Override
   public void invoke(JSValue packet) {
     // ...
@@ -294,4 +298,174 @@ Sending `event` packet:
 JSArray args = new JSArray();
 // ...
 connection.event("interfaceName", "methodName", args);
+```
+
+### JSTP compiler
+
+JSTP compiler is a nice feature to ease handling of JSTP packets. You can
+declare interfaces that correspond to specific API or simple call to avoid
+writing all boilerplate code to get the arguments out of the packet. JSTP
+compiler will parse those at compile time and generate implementations.
+
+#### Installation
+
+[Check for the latest version](https://bintray.com/metarhia/maven/jstp-compiler)
+
+Gradle:
+```
+dependencies {
+  compile group: 'com.metarhia.jstp', name: 'jstp-compiler', version: '0.1.12'
+}
+```
+
+Maven:
+
+```
+<dependency>
+  <groupId>com.metarhia.jstp</groupId>
+  <artifactId>jstp-compiler</artifactId>
+  <version>0.1.12</version>
+  <type>pom</type>
+</dependency>
+```
+
+#### Handlers usage
+
+JSTP handlers are used to process data from incoming JSTP packets, just like
+usual `ManualHandler`s do.  Unlike `ManualHandler`, you are able to customize
+JSTP handlers as you wish, declaring methods with annotations described below.
+To create your own handler, just add the  `@JSTPHandler` annotation to the
+required interface.
+
+```java
+@JSTPHandler
+public interface ExampleHandler {
+  // ...
+}
+```
+
+##### NotNull
+
+Annotates that the method should only be called if all of its arguments are not
+null (in case of method-wide annotation) or only specific parameters are not
+null (in case of argument-wide annotations)
+
+```java
+@JSTPHandler
+public interface ExampleHandler {
+  // ...
+  @NotNull
+  void onExampleValue(JSArray args);
+  // ...
+}
+```
+
+##### Named
+
+Gets the field of the received packet by specified name. It also allows getting
+elements from nested objects, the value will be retrieved in the order of keys
+specified.
+
+```java
+@JSTPHandler
+public interface OkErrorHandler {
+  // ...
+  @NotNull
+  @Named("ok")
+  void onOK(JSArray args);
+
+  @NotNull
+  @Named("error")
+  void onError(JSArray args);
+
+  // gets value by key "neededValue" in object got by "ok"
+  @Named(value = {"ok", "neededValue"})
+  void onNeededValueRetrieved(String value);
+  // ...
+}
+```
+
+##### Indexed
+
+Can be used to get the specific value from JSTP message. It also allows
+getting elements from nested arrays, the value will be retrieved in the order
+of indexes specified.
+
+```java
+@JSTPHandler
+public interface ExampleHandler {
+  // ...
+  void onFirstIndex(@Indexed(1) JSString arg);
+
+  // gets packet[1][2]
+   void onValueBySecondIndex(@Indexed(value = {1,2}) JSArray args);
+  // ...
+}
+```
+
+##### Custom-named
+
+It is a sort of combination of `Named` and `Indexed` annotations. You can get
+needed value by index or by key. It also allows getting elements from nested
+objects and arrays, the value will be retrieved in the order of keys and
+indexes specified. To get a value by key, you should just declare the required
+key like in `@Named` annotation, for example `"some key"`. To get value from
+array by index, you can declare it as `"[index]"`. To get an object value by
+index (according to keys order) you should declare it as `"{key index}"`.
+
+```java
+@JSTPHandler
+public interface ExampleHandler {
+  // ...
+
+  @CustomNamed("ok")
+  void onNeededNamedValue(JSValue args);
+
+  @CustomNamed("{1}")
+  void onKeyByIndexValue(JSValue args);
+
+  // gets packet["ok"][1][2]
+  @CustomNamed(value = {"ok", "[1]", "{2}"})
+  void onNeededMixValue(JSValue args);
+  // ...
+}
+```
+
+After compilation class named like `JSTP + (YourHandlerName)` (for this example
+it will be `JSTPExampleHandler`) will be generated and you will be able to use
+it in packet processing.
+
+```java
+connection.call("interfaceName", "methodName", args, new JSTPExampleHandler() {
+    // ...
+});
+```
+#### JSTP receiver
+You can process received values not only via single handler, but by several
+ones. They can be added or removed from `JSTP receiver` via `addHandler()` and
+`removeHandler() methods. JSTP receiver is generated similarly to `JSTPHandler`.
+To generate receiver, you need to do the following:
+
+```java
+@JSTPReceiver
+public interface ExampleReceiver {
+  // ...
+}
+```
+The syntax of declaring methods is the same as in `JSTPHandler`. After
+compilation class named like `JSTP + (Your receiver name)` (for this example it
+will be `JSTPExampleReceiver`) will be generated and you will be able to use it
+in packet processing.
+
+You can use custom receiver like this:
+```java
+
+JSTPExampleReceiver receiver = new JSTPExampleReceiver();
+receiver.addHandler(new ExampleReceiver() {
+    // ...
+});
+receiver.addHandler(new ExampleReceiver() {
+    // ...
+});
+connection.call("interfaceName", "methodName", args, receiver);
 ```
