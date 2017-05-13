@@ -33,7 +33,8 @@ Native parser gives you java Objects directly, which is more convenient.
 
 Few simple examples
 ```java
-Map<String, Number> a = (Map<String, Number>) new JSNativeParser("{a: 3}").parse();
+Map<String, Number> a =
+    (Map<String, Number>) new JSNativeParser("{a: 3}").parse();
 a.get("a"); // returns 3.0
 
 List<Number> arr = (List<Number>) new JSNativeParser("[1, 2, 3]").parse();
@@ -201,7 +202,7 @@ connection.handshake("applicationName", "sessionId", new ManualHandler() {
 });
 
 // handshake message with authorization
-connection.handshake("applicationName", "username", "password", new ManualHandler() {
+connection.handshake("applicationName", "name", "pass", new ManualHandler() {
   @Override
   public void invoke(JSValue packet) {
     // ...
@@ -387,8 +388,8 @@ public interface OkErrorHandler {
 ##### Indexed
 
 Can be used to get the specific value from JSTP message. It also allows
-getting elements from nested arrays, the value will be retrieved in the order the
-indexes specified.
+getting elements from nested arrays, the value will be retrieved in the order
+the indexes specified.
 
 ```java
 @JSTPHandler
@@ -406,11 +407,11 @@ public interface ExampleHandler {
 
 It is a sort of combination of `Named` and `Indexed` annotations. You can get
 needed value by index or by key. It also allows getting elements from nested
-objects and arrays, the value will be retrieved in the order the keys and indexes
- specified. To get a value by key, you should just declare the required key
-like in `@Named` annotation, for example `"some key"`. To get value from array
-by index, you can declare it as `"[index]"`. To get an object value by index
-(according to keys order) you should declare it as `"{key index}"`.
+objects and arrays, the value will be retrieved in the order the keys and
+indexes specified. To get a value by key, you should just declare the required
+key like in `@Named` annotation, for example `"some key"`. To get value from
+array by index, you can declare it as `"[index]"`. To get an object value by
+index (according to keys order) you should declare it as `"{key index}"`.
 
 ```java
 @JSTPHandler
