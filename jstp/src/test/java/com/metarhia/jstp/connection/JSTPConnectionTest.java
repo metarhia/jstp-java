@@ -182,10 +182,10 @@ public class JSTPConnectionTest {
 
   @Test
   public void checkCallback() throws Exception {
-    final JSArray args = new JSArray(new Object[]{"data"});
+    final JSArray args = new JSArray("data");
     long packageNumber = 13;
-    String message = String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR,
-        packageNumber, args);
+    String message =
+        String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR, packageNumber, args);
 
     connection.callback(JSCallback.OK, args, packageNumber);
 
@@ -195,8 +195,8 @@ public class JSTPConnectionTest {
   @Test
   public void checkInspectCall() throws Exception {
     String interfaceName = "interfaceName";
-    String message = String.format("\\{inspect:\\[\\d+,'%s'\\]\\}" + JSTPConnection.TERMINATOR,
-        interfaceName);
+    String message =
+        String.format("\\{inspect:\\[\\d+,'%s'\\]\\}" + JSTPConnection.TERMINATOR, interfaceName);
 
     connection.inspect(interfaceName, null);
 
@@ -208,8 +208,8 @@ public class JSTPConnectionTest {
     String interfaceName = "interfaceName";
     connection.setClientMethodNames(interfaceName, "method1", "method2");
     String methods = "'method1','method2'";
-    String message = String
-        .format("\\{callback:\\[\\d+\\],ok:\\[%s\\]\\}" + JSTPConnection.TERMINATOR, methods);
+    String message =
+        String.format("\\{callback:\\[\\d+\\],ok:\\[%s\\]\\}" + JSTPConnection.TERMINATOR, methods);
 
     String inspectMessage = String.format("{inspect:[12, %s]}", new JSString(interfaceName));
     JSObject inspectPacket = new JSParser(inspectMessage).parseObject();
@@ -266,7 +266,8 @@ public class JSTPConnectionTest {
     final JSArray recvArgs = new JSArray(JSNull.get());
     final JSArray responseArgs = new JSArray(24, "whatever");
 
-    final String input = String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
+    final String input =
+        String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
     JSObject callback = new JSParser(input).parseObject();
     connection.setCallHandler("method", new CallHandler() {
       @Override
@@ -276,7 +277,8 @@ public class JSTPConnectionTest {
       }
     });
     connection.onPacketReceived(callback);
-    verify(connection, times(1)).callback(JSCallback.OK, responseArgs, packetNum);
+    verify(connection, times(1))
+        .callback(JSCallback.OK, responseArgs, packetNum);
   }
 
   @Test
@@ -287,7 +289,8 @@ public class JSTPConnectionTest {
     final JSArray recvArgs = new JSArray(JSNull.get());
     final JSArray responseArgs = new JSArray(24, "whatever");
 
-    final String input = String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
+    final String input =
+        String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
     JSObject callback = new JSParser(input).parseObject();
     connection.setCallHandler(interfaceName, "method", new CallHandler() {
       @Override
@@ -297,7 +300,8 @@ public class JSTPConnectionTest {
       }
     });
     connection.onPacketReceived(callback);
-    verify(connection, times(1)).callback(JSCallback.OK, responseArgs, packetNum);
+    verify(connection, times(1))
+        .callback(JSCallback.OK, responseArgs, packetNum);
   }
 
   @Test
@@ -378,13 +382,11 @@ public class JSTPConnectionTest {
     doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        JSObject errPacket = new JSParser(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR)
-            .parseObject();
+        JSObject errPacket = new JSParser(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR).parseObject();
         connection.onPacketReceived(errPacket);
         return null;
       }
-    }).when(connection)
-        .handshake(anyString(), Mockito.<ManualHandler>isNull());
+    }).when(connection).handshake(anyString(), Mockito.<ManualHandler>isNull());
 
     JSTPConnectionListener listener = mock(JSTPConnectionListener.class);
     connection.addSocketListener(listener);
