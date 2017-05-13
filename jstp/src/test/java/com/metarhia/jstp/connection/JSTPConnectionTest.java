@@ -182,7 +182,7 @@ public class JSTPConnectionTest {
 
   @Test
   public void checkCallback() throws Exception {
-    final JSArray args = new JSArray(new Object[]{"data"});
+    final JSArray args = new JSArray("data");
     long packageNumber = 13;
     String message = String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR,
         packageNumber, args);
@@ -266,7 +266,8 @@ public class JSTPConnectionTest {
     final JSArray recvArgs = new JSArray(JSNull.get());
     final JSArray responseArgs = new JSArray(24, "whatever");
 
-    final String input = String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
+    final String input =
+        String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
     JSObject callback = new JSParser(input).parseObject();
     connection.setCallHandler("method", new CallHandler() {
       @Override
@@ -276,7 +277,8 @@ public class JSTPConnectionTest {
       }
     });
     connection.onPacketReceived(callback);
-    verify(connection, times(1)).callback(JSCallback.OK, responseArgs, packetNum);
+    verify(connection, times(1))
+        .callback(JSCallback.OK, responseArgs, packetNum);
   }
 
   @Test
@@ -287,7 +289,8 @@ public class JSTPConnectionTest {
     final JSArray recvArgs = new JSArray(JSNull.get());
     final JSArray responseArgs = new JSArray(24, "whatever");
 
-    final String input = String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
+    final String input =
+        String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
     JSObject callback = new JSParser(input).parseObject();
     connection.setCallHandler(interfaceName, "method", new CallHandler() {
       @Override
@@ -297,7 +300,8 @@ public class JSTPConnectionTest {
       }
     });
     connection.onPacketReceived(callback);
-    verify(connection, times(1)).callback(JSCallback.OK, responseArgs, packetNum);
+    verify(connection, times(1))
+        .callback(JSCallback.OK, responseArgs, packetNum);
   }
 
   @Test
@@ -390,13 +394,15 @@ public class JSTPConnectionTest {
       @Override
       public void onConnected(boolean restored) {
         connection
-            .call("auth", "authorize", new JSArray(new Object[]{"+380962415331", "hellokitty1337"}),
+            .call("auth", "authorize",
+                new JSArray("+380962415331", "hellokitty1337"),
                 new ManualHandler() {
                   @Override
                   public void invoke(JSValue packet) {
                     JSObject userData = new JSObject();
                     userData.put("nickname", "\n\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],");
-                    connection.call("profile", "update", new JSArray(new Object[]{userData}),
+                    connection.call("profile", "update",
+                        new JSArray(userData),
                         new ManualHandler() {
                           @Override
                           public void invoke(JSValue packet) {
@@ -447,8 +453,7 @@ public class JSTPConnectionTest {
         connection.onPacketReceived(errPacket);
         return null;
       }
-    }).when(connection)
-        .handshake(anyString(), Mockito.<ManualHandler>isNull());
+    }).when(connection).handshake(anyString(), Mockito.<ManualHandler>isNull());
 
     JSTPConnectionListener listener = mock(JSTPConnectionListener.class);
     connection.addSocketListener(listener);
@@ -469,12 +474,13 @@ public class JSTPConnectionTest {
     connection.addSocketListener(new SimpleJSTPConnectionListener() {
       @Override
       public void onConnected(boolean restored) {
-        connection
-            .call("auth", "authorize", new JSArray(new Object[]{"+380962415331", "hellokitty1337"}),
-                new ManualHandler() {
-                  @Override
-                  public void invoke(JSValue packet) {
-                    connection.call("profile", "get", new JSArray(), new ManualHandler() {
+        connection.call("auth", "authorize",
+            new JSArray("+380962415331", "hellokitty1337"),
+            new ManualHandler() {
+              @Override
+              public void invoke(JSValue packet) {
+                connection.call("profile", "get", new JSArray(),
+                    new ManualHandler() {
                       @Override
                       public void invoke(JSValue packet) {
                         test[0] = true;
@@ -483,8 +489,8 @@ public class JSTPConnectionTest {
                         }
                       }
                     });
-                  }
-                });
+              }
+            });
       }
     });
     connection.connect("superIn");
@@ -495,5 +501,4 @@ public class JSTPConnectionTest {
 
     assertTrue(test[0]);
   }
-
 }
