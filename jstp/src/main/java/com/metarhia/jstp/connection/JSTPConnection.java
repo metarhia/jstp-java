@@ -10,7 +10,6 @@ import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.handlers.StateHandler;
 import com.metarhia.jstp.storage.StorageInterface;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -21,7 +20,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +72,7 @@ public class JSTPConnection implements
       METHOD_HANDLERS.put(PONG,
           JSTPConnection.class.getDeclaredMethod("pongPacketHandler", JSObject.class));
     } catch (NoSuchMethodException e) {
-      e.printStackTrace();
+      throw new RuntimeException("Cannot create method handlers", e);
     }
   }
 

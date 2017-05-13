@@ -33,7 +33,7 @@ public class Tokenizer implements Serializable {
       valueReflection = String.class.getDeclaredField("value");
       valueReflection.setAccessible(true);
     } catch (NoSuchFieldException e) {
-      e.printStackTrace();
+      valueReflection = null;
     }
   }
 
@@ -190,7 +190,7 @@ public class Tokenizer implements Serializable {
       }
       this.length = input.length();
     } catch (IllegalAccessException e) {
-      // impossible situation
+      throw new RuntimeException("Cannot access string internal array", e);
     }
   }
 
