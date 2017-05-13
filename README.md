@@ -330,7 +330,11 @@ Maven:
 
 #### Handlers usage
 
-You can create your own `JSTPHandler` like this:
+JSTP handlers are used to process data from incoming JSTP packets, just like
+usual `ManualHandler`s do.  Unlike `ManualHandler`, you are able to customize
+JSTP handlers as you wish, declaring methods with annotations described below.
+To create your own handler, just add the  `@JSTPHandler` annotation to the
+required interface.
 
 ```java
 @JSTPHandler
@@ -338,13 +342,12 @@ public interface ExampleHandler {
   // ...
 }
 ```
-You can declare your own methods that will be called in `onInvoke()` method of
-basic ManualHandler.
 
 ##### NotNull
 
-Checks if the needed value is not null before calling the handler method
-(in case the value is null the method will be not called).
+Annotates that the method should only be called if all of its arguments are not
+null (in case of method-wide annotation) or only specific parameters are not
+null (in case of argument-wide annotations)
 
 ```java
 @JSTPHandler
@@ -359,7 +362,7 @@ public interface ExampleHandler {
 ##### Named
 
 Gets the field of the received packet by specified name. It also allows getting
-elements from nested objects, the value will be got in the order the keys are
+elements from nested objects, the value will be retrieved in the order the keys
 specified.
 
 ```java
@@ -376,16 +379,16 @@ public interface OkErrorHandler {
 
   // gets value by key "neededValue" in object got by "ok"
   @Named(value = {"ok", "neededValue"})
-  void onNeededValueGot(String value);
+  void onNeededValueRetrieved(String value);
   // ...
 }
 ```
 
 ##### Indexed
 
-Can be used to get concrete argument from the received ones. It also allows
-getting elements from nested arrays, the value will be got in the order the
-indexes are specified.
+Can be used to get the specific value from JSTP message. It also allows
+getting elements from nested arrays, the value will be retrieved in the order the
+indexes specified.
 
 ```java
 @JSTPHandler
@@ -403,10 +406,11 @@ public interface ExampleHandler {
 
 It is a sort of combination of `Named` and `Indexed` annotations. You can get
 needed value by index or by key. It also allows getting elements from nested
-objects and arrays, the value will be got in the order the keys and indexes
-are specified. To get a value by key, you should just declare the required key
-like in `@Named` annotation. To get an array by index, you can declare it as
-`[index]`, in such a way you can get values from this array like `{inner index}`.
+objects and arrays, the value will be retrieved in the order the keys and indexes
+ specified. To get a value by key, you should just declare the required key
+like in `@Named` annotation, for example `"some key"`. To get value from array
+by index, you can declare it as `"[index]"`. To get an object value by index
+(according to keys order) you should declare it as `"{key index}"`.
 
 ```java
 @JSTPHandler
@@ -417,7 +421,7 @@ public interface ExampleHandler {
   void onNeededNamedValue(JSValue args);
 
   @CustomNamed("{1}")
-  void onNeededIndexValue(JSValue args);
+  void onKeyByIndexValue(JSValue args);
 
   // gets packet["ok"][1][2]
   @CustomNamed(value = {"ok", "[1]", "{2}"})
@@ -437,8 +441,9 @@ connection.call("interfaceName", "methodName", args, new JSTPExampleHandler() {
 ```
 #### JSTP receiver
 You can process received values not only via single handler, but by several
-ones. They can be added or removed to certain `JSTP receiver`, generated
-similarly to `JSTPHandler`. To generate receiver, you need to do the following:
+ones. They can be added or removed from `JSTP receiver` via `addHandler()` and
+`removeHandler() methods. JSTP receiver is generated similarly to `JSTPHandler`.
+To generate receiver, you need to do the following:
 
 ```java
 @JSTPReceiver
@@ -446,10 +451,10 @@ public interface ExampleReceiver {
   // ...
 }
 ```
-The syntax of declaring methods is the same to `JSTPHandler`. After compilation
-class named like `JSTP + (Your receiver name)` (for this example it will be
-`JSTPExampleReceiver`) will be generated and you will be able to use it in
-packet processing.
+The syntax of declaring methods is the same as in `JSTPHandler`. After
+compilation class named like `JSTP + (Your receiver name)` (for this example it
+will be `JSTPExampleReceiver`) will be generated and you will be able to use it
+in packet processing.
 
 You can use custom receiver like this:
 ```java
