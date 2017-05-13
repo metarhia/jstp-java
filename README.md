@@ -10,7 +10,7 @@ Gradle:
 Add this to your build.gradle (check for the latest version):
 ```
 dependencies {
-  compile 'com.metarhia.jstp:jstp:0.7.0'
+  compile group: 'com.metarhia.jstp', name: 'jstp', version: '0.7.0'
 }
 ```
 
@@ -47,7 +47,8 @@ JSNativeSerializer.stringify(arr); // returns "[1,2,3]"
 ```
 If it doesn't know how to serialize input it'll be serialized as `undefined`
 
-2) To simple js mirrored hierarchy in java with `JSParser` (hierarchy has `JSValue` as superclass)
+2) To simple js mirrored hierarchy in java with `JSParser` (hierarchy has
+  `JSValue` as superclass)
 
 In current JSTP SDK implementation, you can use:
 * JSObject
@@ -100,8 +101,10 @@ try {
 }
 ```
 
-To convert values from js java hierarchy to js use `.toString()` method or `JSTP.stringify`.
-They can be parsed in js with a simple eval statement or [js parser](https://github.com/metarhia/JSTP)
+To convert values from js java hierarchy to js use `.toString()` method or
+`JSTP.stringify`.
+They can be parsed in js with a simple eval statement or
+[js parser](https://github.com/metarhia/JSTP)
 ```java
 JSValue value;
 //...
@@ -298,7 +301,10 @@ connection.event("interfaceName", "methodName", args);
 
 ### JSTP compiler
 
-JSTP compiler is a nice feature for better handling of JSTP packets. You can declare interfaces comfortable for concrete handling purposes and use them instead of `ManualHandler`.
+JSTP compiler is a nice feature to ease handling of JSTP packets. You can
+declare interfaces that correspond to specific API or simple call to avoid
+writing all boilerplate code to get the arguments out of the packet. JSTP
+compiler will parse those at compile time and generate implementations.
 
 #### Installation
 
@@ -307,7 +313,7 @@ JSTP compiler is a nice feature for better handling of JSTP packets. You can dec
 Gradle:
 ```
 dependencies {
-  compile 'com.metarhia.jstp:jstp-compiler:0.1.12'
+  compile group: 'com.metarhia.jstp', name: 'jstp-compiler', version: '0.1.12'
 }
 ```
 
@@ -332,15 +338,33 @@ public interface ExampleHandler {
   // ...
 }
 ```
-You can declare your own methods that will be called in `onInvoke()` method of basic ManualHandler.
+You can declare your own methods that will be called in `onInvoke()` method of
+basic ManualHandler.
 
-##### Named
+##### NotNull
 
-Gets the field of the received packet by specified name. Can be multi-level.
+Checks if the needed value is not null before calling the handler method
+(in case the value is null the method will be not called).
 
 ```java
 @JSTPHandler
 public interface ExampleHandler {
+  // ...
+  @NotNull
+  void onExampleValue(JSArray args);
+  // ...
+}
+```
+
+##### Named
+
+Gets the field of the received packet by specified name. It also allows getting
+elements from nested objects, the value will be got in the order the keys are
+specified.
+
+```java
+@JSTPHandler
+public interface OkErrorHandler {
   // ...
   @NotNull
   @Named("ok")
@@ -357,23 +381,11 @@ public interface ExampleHandler {
 }
 ```
 
-##### NotNull
-
-Checks if the needed value is not null before calling the handler method.
-
-```java
-@JSTPHandler
-public interface ExampleHandler {
-  // ...
-  @NotNull
-  void onExampleValue(JSArray args);
-  // ...
-}
-```
-
 ##### Indexed
 
-Can be used for getting concrete argument from the received arguments. Can be multi-level
+Can be used to get concrete argument from the received ones. It also allows
+getting elements from nested arrays, the value will be got in the order the
+indexes are specified.
 
 ```java
 @JSTPHandler
@@ -389,7 +401,12 @@ public interface ExampleHandler {
 
 ##### Custom-named
 
-It is a sort of combination of `Named` and `Indexed` annotations. You can get needed value by index or by key. Can be multi-level
+It is a sort of combination of `Named` and `Indexed` annotations. You can get
+needed value by index or by key. It also allows getting elements from nested
+objects and arrays, the value will be got in the order the keys and indexes
+are specified. To get a value by key, you should just declare the required key
+like in `@Named` annotation. To get an array by index, you can declare it as
+`[index]`, in such a way you can get values from this array like `{inner index}`.
 
 ```java
 @JSTPHandler
@@ -397,19 +414,21 @@ public interface ExampleHandler {
   // ...
 
   @CustomNamed("ok")
-  void onNeededValue(JSValue args);
+  void onNeededNamedValue(JSValue args);
 
   @CustomNamed("{1}")
-  void onNeededValue(JSValue args);
+  void onNeededIndexValue(JSValue args);
 
   // gets packet["ok"][1][2]
   @CustomNamed(value = {"ok", "[1]", "{2}"})
-  void onNeededValue(JSValue args);
+  void onNeededMixValue(JSValue args);
   // ...
 }
 ```
 
-After compilation class `JSTPExampleHandler` will be generated and you will be able to use it in packets processing.
+After compilation class named like `JSTP + (YourHandlerName)` (for this example
+it will be `JSTPExampleHandler`) will be generated and you will be able to use
+it in packet processing.
 
 ```java
 connection.call("interfaceName", "methodName", args, new JSTPExampleHandler() {
@@ -417,7 +436,9 @@ connection.call("interfaceName", "methodName", args, new JSTPExampleHandler() {
 });
 ```
 #### JSTP receiver
-You can process received values not only via single handler, but by several ones. They can be added or removed to certain `JSTP receiver`, generated similarly to `JSTPHandler`. To generate receiver, you need to do the following:
+You can process received values not only via single handler, but by several
+ones. They can be added or removed to certain `JSTP receiver`, generated
+similarly to `JSTPHandler`. To generate receiver, you need to do the following:
 
 ```java
 @JSTPReceiver
@@ -425,7 +446,10 @@ public interface ExampleReceiver {
   // ...
 }
 ```
-You can declare required methods similarly to `JSTPHandler`. After compilation class `JSTPExampleReceiver` will be generated and you will be able to use it in packets processing.
+The syntax of declaring methods is the same to `JSTPHandler`. After compilation
+class named like `JSTP + (Your receiver name)` (for this example it will be
+`JSTPExampleReceiver`) will be generated and you will be able to use it in
+packet processing.
 
 You can use custom receiver like this:
 ```java
