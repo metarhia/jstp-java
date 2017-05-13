@@ -320,7 +320,7 @@ public class JSTPConnectionTest {
       @Override
       public void onTransportAvailable(JSTPConnection connection, String appName,
           String sessionID) {
-        connection.handshake("appName", new ManualHandler() {
+        connection.handshake(appName, new ManualHandler() {
           @Override
           public void invoke(JSValue packet) {
             success[0] = true;
@@ -332,7 +332,7 @@ public class JSTPConnectionTest {
     doAnswer(new HandshakeAnswer(connection, TestConstants.MOCK_HANDSHAKE_RESPONSE, false))
 //        .when(transport).send(TestConstants.MOCK_HANDSHAKE_REQUEST);
         .when(transport).send(anyString());
-    connection.onConnected();
+    connection.connect("appName");
 
     synchronized (JSTPConnectionTest.this) {
       JSTPConnectionTest.this.wait(2000);
