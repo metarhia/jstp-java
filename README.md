@@ -363,7 +363,7 @@ public interface ExampleHandler {
 ##### Named
 
 Gets the field of the received packet by specified name. It also allows getting
-elements from nested objects, the value will be retrieved in the order the keys
+elements from nested objects, the value will be retrieved in the order of keys
 specified.
 
 ```java
@@ -389,7 +389,7 @@ public interface OkErrorHandler {
 
 Can be used to get the specific value from JSTP message. It also allows
 getting elements from nested arrays, the value will be retrieved in the order
-the indexes specified.
+of indexes specified.
 
 ```java
 @JSTPHandler
@@ -407,7 +407,7 @@ public interface ExampleHandler {
 
 It is a sort of combination of `Named` and `Indexed` annotations. You can get
 needed value by index or by key. It also allows getting elements from nested
-objects and arrays, the value will be retrieved in the order the keys and
+objects and arrays, the value will be retrieved in the order of keys and
 indexes specified. To get a value by key, you should just declare the required
 key like in `@Named` annotation, for example `"some key"`. To get value from
 array by index, you can declare it as `"[index]"`. To get an object value by
