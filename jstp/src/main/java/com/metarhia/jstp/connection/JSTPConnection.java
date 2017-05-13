@@ -158,7 +158,10 @@ public class JSTPConnection implements
     this.transport = transport;
     this.transport.setSocketListener(this);
     state = ConnectionState.STATE_AWAITING_HANDSHAKE;
-    connect();
+
+    if (sessionData.getAppName() != null) {
+      connect(sessionData.getAppName());
+    }
   }
 
   private boolean restoreSession(long numServerReceivedPackets) {
@@ -172,18 +175,26 @@ public class JSTPConnection implements
     return restorationPolicy != null && restorationPolicy.restore(this, sendQueue);
   }
 
-  public void connect() {
-    connect(null);
-  }
-
+  /**
+   * Calls {@link #connect(String, String)} with {@param appName}
+   * and null for sessionID
+   */
   public void connect(String appName) {
     connect(appName, null);
   }
 
+  /**
+   * Checks if transport is connected, if it is not calls {@link AbstractSocket#connect()}
+   * else initiates a handshake
+   *
+   * @param appName name of the application to use during handshake (must not be null)
+   * @param sessionID optional id to restore session
+   */
   public void connect(String appName, String sessionID) {
-    if (appName != null) {
-      sessionData.setAppName(appName);
+    if (appName == null) {
+      throw new RuntimeException("Application name must not be null");
     }
+    sessionData.setAppName(appName);
     if (sessionID != null) {
       sessionData.setSessionID(sessionID);
     }
@@ -214,6 +225,9 @@ public class JSTPConnection implements
    * the server
    */
   public void handshake(String appName, String sessionID, ManualHandler handler) {
+    if (appName == null) {
+      throw new RuntimeException("Application name must not be null");
+    }
     sessionData.setAppName(appName);
     sessionData.setSessionID(sessionID);
     long packageCounter = 0;
@@ -239,6 +253,9 @@ public class JSTPConnection implements
    *                 the server
    */
   public void handshake(String appName, String username, String password, ManualHandler handler) {
+    if (appName == null) {
+      throw new RuntimeException("Application name must not be null");
+    }
     sessionData.setAppName(appName);
     long packageCounter = 0;
     if (handler != null) {
@@ -396,7 +413,9 @@ public class JSTPConnection implements
       boolean restored = false;
       if (payload instanceof JSNumber) {
         restored = processHandshakeRestoreResponse(packet);
-        if (!restored) reset(sessionData.getAppName(), 1);
+        if (!restored) {
+          reset(sessionData.getAppName(), 1);
+        }
       } else if (payload instanceof JSString) {
         processHandshakeResponse(packet);
       }
@@ -637,7 +656,8 @@ public class JSTPConnection implements
 
   @Override
   public void onConnected() {
-    if (state != ConnectionState.STATE_AWAITING_RECONNECT
+    if (sessionData.getAppName() == null
+        || state != ConnectionState.STATE_AWAITING_RECONNECT
         && state != ConnectionState.STATE_AWAITING_HANDSHAKE) {
       return;
     }
@@ -655,13 +675,12 @@ public class JSTPConnection implements
   public void onConnectionClosed() {
     if (state == ConnectionState.STATE_CLOSING) {
       state = ConnectionState.STATE_CLOSED;
+      reportClosed();
     } else if (sessionData.getAppName() != null) {
       state = ConnectionState.STATE_AWAITING_RECONNECT;
+      reportClosed();
     } else {
       state = ConnectionState.STATE_AWAITING_HANDSHAKE;
-    }
-    for (JSTPConnectionListener listener : connectionListeners) {
-      listener.onConnectionClosed();
     }
   }
 
@@ -677,6 +696,12 @@ public class JSTPConnection implements
   public void restoreSession(StorageInterface storageInterface) {
     sessionData = (SessionData) storageInterface
         .getSerializable(Constants.KEY_SESSION_DATA, sessionData);
+  }
+
+  private void reportClosed() {
+    for (JSTPConnectionListener listener : connectionListeners) {
+      listener.onConnectionClosed();
+    }
   }
 
   private void reportConnected(boolean restored) {
