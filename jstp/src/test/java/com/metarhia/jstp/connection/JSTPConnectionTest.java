@@ -341,7 +341,7 @@ public class JSTPConnectionTest {
     assertTrue(success[0] && !success[1],
         "Without session restoration 'restore' must not be called");
     success[0] = false;
-    connection.onConnectionClosed(0);
+    connection.onConnectionClosed();
 
     doAnswer(new HandshakeAnswer(connection, TestConstants.MOCK_HANDSHAKE_RESTORE, false))
         .when(transport).send(anyString());
