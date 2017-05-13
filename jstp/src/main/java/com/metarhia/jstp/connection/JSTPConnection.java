@@ -163,7 +163,7 @@ public class JSTPConnection implements
 
   private boolean restoreSession(long numServerReceivedPackets) {
     long redundantPackets =
-        sendQueue.size() - sessionData.getNumSentPackets() - numServerReceivedPackets;
+        sendQueue.size() - (sessionData.getNumSentPackets() - numServerReceivedPackets);
     sessionData.setNumSentPackets(numServerReceivedPackets);
     while (redundantPackets-- > 0) {
       sendQueue.poll();
@@ -330,11 +330,16 @@ public class JSTPConnection implements
     }
   }
 
-  public void send(String message) {
-    send(message, true);
-  }
-
-  private void send(String message, boolean count) {
+  /**
+   * Should usually only be called in {@link RestorationPolicy}
+   *
+   * Sends message directly to the transport and increases number
+   * of sent messages if {@param count} is true
+   *
+   * @param message string to be passed to the transport
+   * @param count if true increases number of sent messages by one
+   */
+  public void send(String message, boolean count) {
     if (count) {
       sessionData.incrementNumSentPackets();
     }
@@ -647,7 +652,7 @@ public class JSTPConnection implements
   }
 
   @Override
-  public void onConnectionClosed(int remainingMessages) {
+  public void onConnectionClosed() {
     if (state == ConnectionState.STATE_CLOSING) {
       state = ConnectionState.STATE_CLOSED;
     } else if (sessionData.getAppName() != null) {
@@ -655,7 +660,6 @@ public class JSTPConnection implements
     } else {
       state = ConnectionState.STATE_AWAITING_HANDSHAKE;
     }
-    sessionData.setNumSentPackets(sessionData.getNumSentPackets() - remainingMessages);
     for (JSTPConnectionListener listener : connectionListeners) {
       listener.onConnectionClosed();
     }

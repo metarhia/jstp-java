@@ -337,7 +337,7 @@ public class TCPTransport implements AbstractSocket {
         closing = false;
       }
       if (notify && socketListener != null) {
-        socketListener.onConnectionClosed(remainingMessages);
+        socketListener.onConnectionClosed();
       }
     } catch (IOException e) {
       logger.info("Socket close fail", e);
