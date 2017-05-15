@@ -184,8 +184,8 @@ public class JSTPConnectionTest {
   public void checkCallback() throws Exception {
     final JSArray args = new JSArray("data");
     long packageNumber = 13;
-    String message = String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR,
-        packageNumber, args);
+    String message =
+        String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR, packageNumber, args);
 
     connection.callback(JSCallback.OK, args, packageNumber);
 
@@ -195,8 +195,8 @@ public class JSTPConnectionTest {
   @Test
   public void checkInspectCall() throws Exception {
     String interfaceName = "interfaceName";
-    String message = String.format("\\{inspect:\\[\\d+,'%s'\\]\\}" + JSTPConnection.TERMINATOR,
-        interfaceName);
+    String message =
+        String.format("\\{inspect:\\[\\d+,'%s'\\]\\}" + JSTPConnection.TERMINATOR, interfaceName);
 
     connection.inspect(interfaceName, null);
 
@@ -208,8 +208,8 @@ public class JSTPConnectionTest {
     String interfaceName = "interfaceName";
     connection.setClientMethodNames(interfaceName, "method1", "method2");
     String methods = "'method1','method2'";
-    String message = String
-        .format("\\{callback:\\[\\d+\\],ok:\\[%s\\]\\}" + JSTPConnection.TERMINATOR, methods);
+    String message =
+        String.format("\\{callback:\\[\\d+\\],ok:\\[%s\\]\\}" + JSTPConnection.TERMINATOR, methods);
 
     String inspectMessage = String.format("{inspect:[12, %s]}", new JSString(interfaceName));
     JSObject inspectPacket = new JSParser(inspectMessage).parseObject();
@@ -393,27 +393,27 @@ public class JSTPConnectionTest {
     connection.addSocketListener(new SimpleJSTPConnectionListener() {
       @Override
       public void onConnected(boolean restored) {
-        connection
-            .call("auth", "authorize",
-                new JSArray("+380962415331", "hellokitty1337"),
-                new ManualHandler() {
-                  @Override
-                  public void invoke(JSValue packet) {
-                    JSObject userData = new JSObject();
-                    userData.put("nickname", "\n\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],");
-                    connection.call("profile", "update",
-                        new JSArray(userData),
-                        new ManualHandler() {
-                          @Override
-                          public void invoke(JSValue packet) {
-                            synchronized (connection) {
-                              test[0] = true;
-                              connection.notify();
-                            }
-                          }
-                        });
-                  }
-                });
+        connection.call(
+            "auth",
+            "authorize",
+            new JSArray("+380962415331", "hellokitty1337"),
+            new ManualHandler() {
+              @Override
+              public void invoke(JSValue packet) {
+                JSObject userData = new JSObject();
+                userData.put("nickname", "\n\tnyaaaaaa'aaa'[((:’ –( :-)) :-| :~ =:O)],");
+                connection.call("profile", "update", new JSArray(userData),
+                    new ManualHandler() {
+                      @Override
+                      public void invoke(JSValue packet) {
+                        synchronized (connection) {
+                          test[0] = true;
+                          connection.notify();
+                        }
+                      }
+                    });
+              }
+            });
       }
     });
     connection.connect("superIn");
@@ -448,8 +448,7 @@ public class JSTPConnectionTest {
     doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        JSObject errPacket = new JSParser(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR)
-            .parseObject();
+        JSObject errPacket = new JSParser(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR).parseObject();
         connection.onPacketReceived(errPacket);
         return null;
       }
@@ -474,7 +473,9 @@ public class JSTPConnectionTest {
     connection.addSocketListener(new SimpleJSTPConnectionListener() {
       @Override
       public void onConnected(boolean restored) {
-        connection.call("auth", "authorize",
+        connection.call(
+            "auth",
+            "authorize",
             new JSArray("+380962415331", "hellokitty1337"),
             new ManualHandler() {
               @Override
