@@ -387,10 +387,9 @@ public class JSTPConnection implements
       if (!handshake) {
         sessionData.incrementNumReceivedPackets();
       }
-    } catch (IllegalAccessException | InvocationTargetException e) {
-      // should not happen at all
-      logger.error("Cannot find or access packet handler method", e);
-    } catch (ClassCastException | NullPointerException e) {
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException("Cannot find or access packet handler method", e);
+    } catch (ClassCastException | NullPointerException | InvocationTargetException e) {
       // means packet was ill formed
       rejectPacket(packet);
     }
