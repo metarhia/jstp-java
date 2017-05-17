@@ -51,8 +51,6 @@ public class Tokenizer implements Serializable {
   }
 
   public Token next() throws JSParsingException {
-    prevIndex = index;
-
     if (index >= length) {
       return lastToken = Token.NONE;
     }
@@ -61,6 +59,8 @@ public class Tokenizer implements Serializable {
       ch = input[index];
     } while (++index < length
         && (ch == 0x20 || ch == 0x0a || ch == 0x09)); // space and \n and \t
+
+    prevIndex = index - 1;
 
     if (ch == '/' && input[index] == '/') {
       index = indexOf('\n', index) + 1;
