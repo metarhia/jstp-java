@@ -32,7 +32,6 @@ public class JSParserTest {
       )),
       new TestData<>("[,,0]", new JSArray(
           JSUndefined.get(), JSUndefined.get(), new JSNumber(0))),
-      new TestData<>("", JSUndefined.get()),
       new TestData<>("{nickname:'\\n\\tnyaaaaaa\\'aaa\\'[((:’ –( :-)) :-| :~ =:O)],'}",
           new JSObject(TestUtils.mapOf(
               "nickname",
@@ -61,6 +60,7 @@ public class JSParserTest {
           new TestData<>("['outer', ['inner']]", "[\'outer\',[\'inner\']]"),
           new TestData<>("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
           new TestData<>("'\\x20'", "' '")));
+
   static {
     for (int i = 7; i < parseTestData.length; i++) {
       String input = (String) parseTestData[i].input;
@@ -74,14 +74,20 @@ public class JSParserTest {
   };
 
   private static final TestData[] parseThrowTestData = new TestData[]{
+      new TestData<>("", new JSParsingException(
+          "Index: 0, Message: Cannot parse")),
       new TestData<>("{he : llo : 123}", new JSParsingException(
-          "Index: 9, Message: Expected ',' as key-value pairs separator")),
-      new TestData<>("{he : llo : 123}", new JSParsingException(
-          "Index: 9, Message: Expected ',' as key-value pairs separator")),
+          "Index: 6, Message: llo is not defined")),
+      new TestData<>("{he : 'llo'  : 123}", new JSParsingException(
+          "Index: 13, Message: Expected ',' as key-value pairs separator")),
       new TestData<>("{'ssssss : }", new JSParsingException(
           "Index: 1, Message: Unmatched quote")),
       new TestData<>("'ssssss", new JSParsingException(
-          "Index: 0, Message: Unmatched quote"))
+          "Index: 0, Message: Unmatched quote")),
+      new TestData<>("{a:", new JSParsingException(
+          "Index: 2, Message: Expected value after ':' in object")),
+      new TestData<>("{a:}", new JSParsingException(
+          "Index: 3, Message: Expected value after ':' in object"))
   };
 
   @Test
@@ -90,7 +96,7 @@ public class JSParserTest {
     for (TestData<String, Object> td : parseTestData) {
       parser.setInput(td.input);
       JSValue actual = parser.parse();
-      assertEquals(td.expected, actual);
+      assertEquals(td.expected, actual, "Failed parsing: " + td.input);
     }
   }
 
@@ -100,8 +106,8 @@ public class JSParserTest {
     for (TestData<String, JSObject.Entry> td : parseKeyValuePairTestData) {
       parser.setInput(td.input);
       JSObject.Entry actual = parser.parseKeyValuePair();
-      assertEquals(td.expected.key, actual.key);
-      assertEquals(td.expected.value, actual.value);
+      assertEquals(td.expected.key, actual.key, "Failed parsing(key): " + td.input);
+      assertEquals(td.expected.value, actual.value, "Failed parsing(value): " + td.input);
     }
   }
 
@@ -117,7 +123,8 @@ public class JSParserTest {
         exception = e;
       }
       assertNotNull(exception);
-      assertEquals(td.expected.getMessage(), exception.getMessage());
+      assertEquals(td.expected.getMessage(), exception.getMessage(),
+          "Failed parsing(throw): " + td.input);
     }
   }
 

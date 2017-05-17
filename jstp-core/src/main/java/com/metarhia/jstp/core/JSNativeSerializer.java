@@ -1,5 +1,6 @@
 package com.metarhia.jstp.core;
 
+import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,8 @@ public class JSNativeSerializer {
     } else if (input == null) {
       return builder.append("null");
     }
-    return builder.append("undefined");
+//  } else if (input instanceof JSUndefined) {
+    return builder.append(JSUndefined.get().toString());
   }
 
   public static StringBuilder stringifyNumber(Number value, StringBuilder builder) {

@@ -16,6 +16,8 @@ public class JSParser implements Serializable {
 
   public static final boolean VERBOSE_CHECKING = true;
 
+  public final String DEFAULT_PARSE_ERROR_MSG = "Cannot parse";
+
   private Tokenizer tokenizer;
 
   public JSParser() {
@@ -54,8 +56,13 @@ public class JSParser implements Serializable {
         return new JSNumber(tokenizer.getNumber());
       case NULL:
         return JSNull.get();
-      default:
+      case UNDEFINED:
         return JSUndefined.get();
+      case KEY:
+        throw new JSParsingException(tokenizer.getPrevIndex(),
+            tokenizer.getStr() + " is not defined");
+      default:
+        throw new JSParsingException(tokenizer.getPrevIndex(), DEFAULT_PARSE_ERROR_MSG);
     }
   }
 
@@ -106,7 +113,17 @@ public class JSParser implements Serializable {
           "Expected ':' as separator of Key and Value");
     }
 
-    JSValue value = parse(true);
+    JSValue value;
+    try {
+      value = parse(true);
+    } catch (JSParsingException e) {
+      if (!e.getErrMessage().equals(DEFAULT_PARSE_ERROR_MSG)) {
+        // just rethrow when this in not a default error
+        throw e;
+      }
+      throw new JSParsingException(tokenizer.getPrevIndex(),
+          "Expected value after ':' in object");
+    }
 
     return new JSObject.Entry(key, value);
   }
