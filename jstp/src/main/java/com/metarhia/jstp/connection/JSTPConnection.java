@@ -453,14 +453,19 @@ public class JSTPConnection implements
   }
 
   private void callPacketHandler(JSObject packet) {
-    String interfaceName = ((JSString) ((JSArray) packet.get(0)).get(1)).getValue();
+    String interfaceName = getInterfaceName(packet);
+    if (!isSecondArray(packet)) {
+      rejectPacket(packet);
+      return;
+    }
     String methodName = packet.getOrderedKeys().get(1);
 
     // TODO remove default interface handling
     ManualHandler handler = null;
     if (callHandlers.containsKey(interfaceName) && callHandlers.get(interfaceName).containsKey(methodName)) {
       handler = callHandlers.get(interfaceName).get(methodName);
-    } else if (callHandlers.containsKey(DEFAULT_CALL) && callHandlers.get(DEFAULT_CALL).containsKey(methodName)) {
+    } else if (callHandlers.containsKey(DEFAULT_CALL) && callHandlers.get(DEFAULT_CALL)
+        .containsKey(methodName)) {
       handler = callHandlers.get(DEFAULT_CALL).get(methodName);
     }
     if (handler != null) {
@@ -470,6 +475,10 @@ public class JSTPConnection implements
 
   private void callbackPacketHandler(JSObject packet) {
     long receiverIndex = getPacketNumber(packet);
+    if (!isSecondArray(packet)) {
+      rejectPacket(packet);
+      return;
+    }
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
     if (callbackHandler != null) {
       callbackHandler.invoke(packet);
@@ -478,12 +487,18 @@ public class JSTPConnection implements
 
   private void eventPacketHandler(JSObject packet) {
     String interfaceName = getInterfaceName(packet);
+
+    if (!isSecondArray(packet)) {
+      rejectPacket(packet);
+      return;
+    }
+
     Map<String, List<ManualHandler>> interfaceHandlers = eventHandlers.get(interfaceName);
     if (interfaceHandlers == null) {
       return;
     }
 
-    String eventName = getEventName(packet);
+    String eventName = packet.getOrderedKeys().get(1);
     List<ManualHandler> eventHandlers = interfaceHandlers.get(eventName);
     if (eventHandlers == null) {
       return;
@@ -599,20 +614,20 @@ public class JSTPConnection implements
     transport.resume();
   }
 
-  private String getInterfaceName(JSObject messageObject) {
-    return (String) ((JSArray) messageObject.get(EVENT))
+  private String getInterfaceName(JSObject packet) {
+    return (String) ((JSArray) packet.get(0))
         .get(1)
         .getGeneralizedValue();
-  }
-
-  private String getEventName(JSObject messageObject) {
-    return messageObject.getOrderedKeys().get(1);
   }
 
   private long getPacketNumber(JSObject messageObject) {
     return (long) ((JSNumber) ((JSArray) messageObject.get(0))
         .get(0))
         .getValue();
+  }
+
+  private boolean isSecondArray(JSObject packet) {
+    return packet.get(1) instanceof JSArray;
   }
 
   public void setClientMethodNames(String interfaceName, String... names) {

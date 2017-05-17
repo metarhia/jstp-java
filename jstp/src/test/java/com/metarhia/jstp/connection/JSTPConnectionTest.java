@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSParser;
+import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.core.JSTypes.JSArray;
 import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSObject;
@@ -23,7 +24,6 @@ import com.metarhia.jstp.core.JSTypes.JSString;
 import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.handlers.CallHandler;
 import com.metarhia.jstp.storage.FileStorage;
-import com.metarhia.jstp.transport.TCPTransport;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -61,6 +61,7 @@ public class JSTPConnectionTest {
 //        "{handshake:[0,'example'],marcus:1111}",
 //        "{handshake:[0,'example'],marcus:'7b458e1a9dda67cb7a3e'}"
 //    ));
+
     illPackets.put("Handshake response packet", Arrays.asList(
         "{handshake:['xx'],ok:'9b71d224bd62bcdec043'}",
         "{handshake:[0],ok:333}"
@@ -70,6 +71,7 @@ public class JSTPConnectionTest {
         "{inspect:[aa,'interfaceName']}",
         "{inspect:[42]}"
     ));
+
     illPackets.put("inspect response packet", Arrays.asList(
         "{callback:[42]}",
         "{callback:[42],ok:{'method1':'method2'}}"
@@ -247,9 +249,18 @@ public class JSTPConnectionTest {
     for (Map.Entry<String, List<String>> illList : illPackets.entrySet()) {
       for (String packet : illList.getValue()) {
         expectedRejectedCalls++;
-        connection.handshake(TestConstants.MOCK_APP_NAME, null);
+        if (!connection.isConnected()) {
+          connection.handshake(TestConstants.MOCK_APP_NAME, null);
+        }
         parser.setInput(packet);
-        connection.onPacketReceived(parser.parseObject());
+        try {
+          final JSObject message = parser.parseObject();
+          connection.onPacketReceived(message);
+        } catch (JSParsingException e) {
+          // TODO: remove counter here and don't use onPacketReceived
+          // instead push messages directly to transport
+          actualRejectedCalls[0]++;
+        }
       }
     }
 
