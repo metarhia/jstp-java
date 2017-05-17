@@ -187,7 +187,7 @@ public class JSTPConnection implements
    * Checks if transport is connected, if it is not calls {@link AbstractSocket#connect()}
    * else initiates a handshake
    *
-   * @param appName name of the application to use during handshake (must not be null)
+   * @param appName   name of the application to use during handshake (must not be null)
    * @param sessionID optional id to restore session
    */
   public void connect(String appName, String sessionID) {
@@ -210,7 +210,7 @@ public class JSTPConnection implements
    *
    * @param appName application name to denote application on server
    * @param handler optional handler that will be called when response handshake message comes from
-   * the server
+   *                the server
    */
   public void handshake(String appName, ManualHandler handler) {
     handshake(appName, null, null, handler);
@@ -219,10 +219,10 @@ public class JSTPConnection implements
   /**
    * Tries to restores session with id {@param sessionID}
    *
-   * @param appName application name to denote application on server
+   * @param appName   application name to denote application on server
    * @param sessionID id of a session to restore
-   * @param handler optional handler that will be called when response handshake message comes from
-   * the server
+   * @param handler   optional handler that will be called when response handshake message comes
+   *                  from the server
    */
   public void handshake(String appName, String sessionID, ManualHandler handler) {
     if (appName == null) {
@@ -354,7 +354,7 @@ public class JSTPConnection implements
    * of sent messages if {@param count} is true
    *
    * @param message string to be passed to the transport
-   * @param count if true increases number of sent messages by one
+   * @param count   if true increases number of sent messages by one
    */
   public void send(String message, boolean count) {
     if (count) {
