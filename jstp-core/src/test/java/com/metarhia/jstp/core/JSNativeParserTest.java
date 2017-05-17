@@ -20,7 +20,6 @@ class JSNativeParserTest {
   public static final TestData[] parseTestData = new TestData[]{
       new TestData<>("[,,0]", Arrays.asList(
           JSUndefined.get(), JSUndefined.get(), 0.0)),
-      new TestData<>("", JSUndefined.get()),
       new TestData<>("{nickname: '\\n\\tnyaaaaaa\\'aaa\\'[((:’ –( :-)) :-| :~ =:O)],'}",
           TestUtils.mapOf(
               "nickname", "\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],")),
@@ -56,13 +55,17 @@ class JSNativeParserTest {
 
   private static final TestData[] parseThrowTestData = new TestData[]{
       new TestData<>("{he : llo : 123}", new JSParsingException(
-          "Index: 9, Message: Expected ',' as key-value pairs separator")),
-      new TestData<>("{he : llo : 123}", new JSParsingException(
-          "Index: 9, Message: Expected ',' as key-value pairs separator")),
+          "Index: 6, Message: llo is not defined")),
+      new TestData<>("{he : 'llo'  : 123}", new JSParsingException(
+          "Index: 13, Message: Expected ',' as key-value pairs separator")),
       new TestData<>("{'ssssss : }", new JSParsingException(
           "Index: 1, Message: Unmatched quote")),
       new TestData<>("'ssssss", new JSParsingException(
-          "Index: 0, Message: Unmatched quote"))
+          "Index: 0, Message: Unmatched quote")),
+      new TestData<>("{a:", new JSParsingException(
+          "Index: 2, Message: Expected value after ':' in object")),
+      new TestData<>("{a:}", new JSParsingException(
+          "Index: 3, Message: Expected value after ':' in object"))
   };
 
   private JSNativeParser parser;
@@ -76,7 +79,7 @@ class JSNativeParserTest {
     for (TestData<String, Object> td : parseTestData) {
       parser.setInput(td.input);
       Object actual = parser.parse();
-      assertEquals(td.expected, actual);
+      assertEquals(td.expected, actual, "Failed parsing: " + td.input);
     }
   }
 
@@ -85,8 +88,10 @@ class JSNativeParserTest {
     for (TestData<String, JSNativeParser.KeyValuePair> td : parseKeyValuePairTestData) {
       parser.setInput(td.input);
       JSNativeParser.KeyValuePair actual = parser.parseKeyValuePair();
-      assertEquals(td.expected.getKey(), actual.getKey());
-      assertEquals(td.expected.getValue(), actual.getValue());
+      assertEquals(td.expected.getKey(), actual.getKey(),
+          "Failed parsing(key): " + td.input);
+      assertEquals(td.expected.getValue(), actual.getValue(),
+          "Failed parsing(value): " + td.input);
     }
   }
 
@@ -101,7 +106,8 @@ class JSNativeParserTest {
         exception = e;
       }
       assertNotNull(exception);
-      assertEquals(td.expected.getMessage(), exception.getMessage());
+      assertEquals(td.expected.getMessage(), exception.getMessage(),
+          "Failed parsing(throw): " + td.input);
     }
   }
 
