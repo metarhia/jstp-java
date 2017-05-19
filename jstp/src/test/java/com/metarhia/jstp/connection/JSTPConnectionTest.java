@@ -125,7 +125,7 @@ public class JSTPConnectionTest {
     String packet = "{call:[17,'auth'], newAccount:['Payload data']}" + JSTPConnection.TERMINATOR;
 
     final Boolean[] success = {false};
-    connection.setCallHandler("newAccount", new ManualHandler() {
+    connection.setCallHandler("auth", "newAccount", new ManualHandler() {
       @Override
       public void invoke(JSValue packet) {
         success[0] = true;
@@ -267,29 +267,6 @@ public class JSTPConnectionTest {
     assertEquals(expectedRejectedCalls, actualRejectedCalls[0]);
 
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
-  }
-
-  @Test
-  public void callbackHandlerDefault() throws Exception {
-    long packetNum = 42;
-    String methodName = "method";
-    String interfaceName = "interfaceName";
-    final JSArray recvArgs = new JSArray(JSNull.get());
-    final JSArray responseArgs = new JSArray(24, "whatever");
-
-    final String input =
-        String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
-    JSObject callback = new JSParser(input).parseObject();
-    connection.setCallHandler("method", new CallHandler() {
-      @Override
-      public void handleCallback(JSArray data) {
-        assertTrue(data.equals(recvArgs));
-        callback(connection, JSCallback.OK, responseArgs);
-      }
-    });
-    connection.onPacketReceived(callback);
-    verify(connection, times(1))
-        .callback(JSCallback.OK, responseArgs, packetNum);
   }
 
   @Test

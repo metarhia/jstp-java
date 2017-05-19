@@ -44,9 +44,6 @@ public class JSTPConnection implements
   private static final String PING = "ping";
   private static final String PONG = "pong";
 
-  // TODO remove default call interfaceName
-  private static final String DEFAULT_CALL = "default";
-
   private static final Map<String, Method> METHOD_HANDLERS = new HashMap<>(10);
 
   private static final Logger logger = LoggerFactory.getLogger(JSTPConnection.class);
@@ -460,14 +457,11 @@ public class JSTPConnection implements
     }
     String methodName = packet.getOrderedKeys().get(1);
 
-    // TODO remove default interface handling
-    ManualHandler handler = null;
-    if (callHandlers.containsKey(interfaceName) && callHandlers.get(interfaceName).containsKey(methodName)) {
-      handler = callHandlers.get(interfaceName).get(methodName);
-    } else if (callHandlers.containsKey(DEFAULT_CALL) && callHandlers.get(DEFAULT_CALL)
-        .containsKey(methodName)) {
-      handler = callHandlers.get(DEFAULT_CALL).get(methodName);
+    final Map<String, ManualHandler> iface = callHandlers.get(interfaceName);
+    if (iface == null) {
+      return;
     }
+    ManualHandler handler = iface.get(methodName);
     if (handler != null) {
       handler.invoke(packet);
     }
@@ -531,11 +525,6 @@ public class JSTPConnection implements
 
   private void pongPacketHandler(JSObject packet) {
     callbackPacketHandler(packet);
-  }
-
-  @Deprecated
-  public void setCallHandler(String methodName, ManualHandler callHandler) {
-    setCallHandler(DEFAULT_CALL, methodName, callHandler);
   }
 
   public void setCallHandler(String interfaceName, String methodName, ManualHandler callHandler) {
