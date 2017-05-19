@@ -57,8 +57,7 @@ public class Tokenizer implements Serializable {
 
     do {
       ch = input[index];
-    } while (++index < length
-        && (ch == 0x20 || ch == 0x0a || ch == 0x09)); // space and \n and \t
+    } while (++index < length && Character.isWhitespace(ch));
 
     prevIndex = index - 1;
 
