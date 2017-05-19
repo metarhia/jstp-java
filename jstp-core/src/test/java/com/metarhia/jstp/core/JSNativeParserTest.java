@@ -54,20 +54,20 @@ class JSNativeParserTest {
   };
 
   private static final TestData[] parseThrowTestData = new TestData[]{
-      new TestData<>("{he : llo : 123}", new JSParsingException(
-          "Index: 6, Message: llo is not defined")),
-      new TestData<>("{he : 'llo'  : 123}", new JSParsingException(
-          "Index: 13, Message: Expected ',' as key-value pairs separator")),
-      new TestData<>("{'ssssss : }", new JSParsingException(
-          "Index: 1, Message: Unmatched quote")),
-      new TestData<>("'ssssss", new JSParsingException(
-          "Index: 0, Message: Unmatched quote")),
-      new TestData<>("{a:", new JSParsingException(
-          "Index: 2, Message: Expected value after ':' in object")),
-      new TestData<>("{a:}", new JSParsingException(
-          "Index: 3, Message: Expected value after ':' in object")),
-      new TestData<>("{:2}", new JSParsingException(
-          "Index: 1, Message: Expected valid key")),
+      new TestData<>("{he : llo : 123}",
+          new JSParsingException(6, "llo is not defined")),
+      new TestData<>("{he : 'llo'  : 123}",
+          new JSParsingException(13, "Expected ',' as key-value pairs separator")),
+      new TestData<>("{'ssssss : }",
+          new JSParsingException(1, "Unmatched quote")),
+      new TestData<>("'ssssss",
+          new JSParsingException(0, "Unmatched quote")),
+      new TestData<>("{a:",
+          new JSParsingException(2, "Expected value after ':' in object")),
+      new TestData<>("{a:}",
+          new JSParsingException(3, "Expected value after ':' in object")),
+      new TestData<>("{:2}",
+          new JSParsingException(1, "Expected valid key")),
   };
 
   private JSNativeParser parser;
