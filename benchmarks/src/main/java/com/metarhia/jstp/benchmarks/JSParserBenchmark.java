@@ -30,7 +30,7 @@
  */
 package com.metarhia.jstp.benchmarks;
 
-import com.metarhia.jstp.core.JSParser;
+import com.metarhia.jstp.core.JSNativeParser;
 import com.metarhia.jstp.core.JSParsingException;
 import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -62,7 +62,6 @@ public class JSParserBenchmark {
   }
 
   public interface Worker {
-
     void work();
   }
 
@@ -70,30 +69,40 @@ public class JSParserBenchmark {
 
   @Setup
   public void setup(final Blackhole bh) {
-    packerParser = new Worker() {
-      String inputData = Data.jstpConsoleLayout;
-
-      JSParser parser = new JSParser();
-
-      @Override
-      public void work() {
-        parser.setInput(inputData);
-        try {
-          bh.consume(parser.parse());
-        } catch (JSParsingException e) {
-          e.printStackTrace();
-        }
-      }
-    };
+    packerParser = new JSNativeParserWorker(bh);
   }
 
   @Benchmark
-  @BenchmarkMode({Mode.Throughput, Mode.SingleShotTime})
-//  @BenchmarkMode({Mode.AverageTime})
+  @BenchmarkMode({Mode.Throughput, Mode.AverageTime})
   @Warmup(iterations = 25)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @Fork(2)
   public void testPacket() {
     packerParser.work();
+  }
+
+  private static class JSNativeParserWorker implements Worker {
+
+    private final Blackhole bh;
+
+    private String inputData;
+
+    private JSNativeParser parser;
+
+    public JSNativeParserWorker(Blackhole bh) {
+      this.bh = bh;
+      inputData = Data.jstpConsoleLayout;
+      parser = new JSNativeParser();
+    }
+
+    @Override
+    public void work() {
+      parser.setInput(inputData);
+      try {
+        bh.consume(parser.<Object>parse());
+      } catch (JSParsingException e) {
+        e.printStackTrace();
+      }
+    }
   }
 }

@@ -19,7 +19,7 @@ public class SimpleAbstractSocketListener implements AbstractSocketListener {
   }
 
   @Override
-  public void onConnectionClosed(int i) {
+  public void onConnectionClosed() {
 
   }
 
