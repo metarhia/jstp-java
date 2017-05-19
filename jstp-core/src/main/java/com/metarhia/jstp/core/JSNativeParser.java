@@ -5,8 +5,8 @@ import com.metarhia.jstp.core.Tokens.Token;
 import com.metarhia.jstp.core.Tokens.Tokenizer;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class JSNativeParser implements Serializable {
 
@@ -16,6 +16,9 @@ public class JSNativeParser implements Serializable {
 
   private Tokenizer tokenizer;
 
+  private Class<? extends Map> jsObjectClass = IndexedHashMap.class;
+  private Class<? extends List> jsArrayClass = ArrayList.class;
+
   public JSNativeParser() {
     tokenizer = new Tokenizer("");
   }
@@ -24,34 +27,34 @@ public class JSNativeParser implements Serializable {
     tokenizer = new Tokenizer(input);
   }
 
-  public static Object parse(String input) throws JSParsingException {
+  public static <T extends Object> T parse(String input) throws JSParsingException {
     return new JSNativeParser(input).parse();
   }
 
-  public Object parse() throws JSParsingException {
+  public <T extends Object> T parse() throws JSParsingException {
     return parse(true);
   }
 
-  public Object parse(boolean skip) throws JSParsingException {
+  public <T extends Object> T parse(boolean skip) throws JSParsingException {
     if (skip) {
       tokenizer.next();
     }
 
     switch (tokenizer.getLastToken()) {
       case TRUE:
-        return true;
+        return (T) Boolean.TRUE;
       case FALSE:
-        return false;
+        return (T) Boolean.FALSE;
       case STRING:
-        return tokenizer.getStr();
+        return (T) tokenizer.getStr();
       case CURLY_OPEN:
-        return parseObject();
+        return (T) parseObject(false);
       case SQ_OPEN:
-        return parseArray();
+        return (T) parseArray(false);
       case NUMBER:
-        return tokenizer.getNumber();
+        return (T) tokenizer.getNumber();
       case UNDEFINED:
-        return JSUndefined.get();
+        return (T) JSUndefined.get();
       case NULL:
         return null;
       case KEY:
@@ -63,9 +66,22 @@ public class JSNativeParser implements Serializable {
   }
 
   public List<Object> parseArray() throws JSParsingException {
+    return parseArray(true);
+  }
+
+  private List<Object> parseArray(boolean skip) throws JSParsingException {
+    if (skip) {
+      tokenizer.next();
+    }
     assureToken("Error: expected '[' at the beginning of JSArray", Token.SQ_OPEN);
 
-    List<Object> array = new ArrayList<>();
+    List<Object> array;
+    try {
+      array = jsArrayClass.newInstance();
+    } catch (InstantiationException | IllegalAccessException e) {
+      throw new RuntimeException("Failed to create instance of JS Object", e);
+    }
+
     while (tokenizer.getLastToken() != Token.SQ_CLOSE
         && tokenizer.next() != Token.SQ_CLOSE) {
       if (tokenizer.getLastToken() == Token.COMMA) {
@@ -83,13 +99,26 @@ public class JSNativeParser implements Serializable {
     return array;
   }
 
-  public LinkedHashMap<String, Object> parseObject() throws JSParsingException {
+  public Map<String, Object> parseObject() throws JSParsingException {
+    return parseObject(true);
+  }
+
+  private Map<String, Object> parseObject(boolean skip) throws JSParsingException {
+    if (skip) {
+      tokenizer.next();
+    }
     assureToken("Expected '{' at the beginning of JSObject", Token.CURLY_OPEN);
 
-    LinkedHashMap<String, Object> hash = new LinkedHashMap<>();
+    Map<String, Object> hash;
+    try {
+      hash = jsObjectClass.newInstance();
+    } catch (InstantiationException | IllegalAccessException e) {
+      throw new RuntimeException("Failed to create instance of JS Object", e);
+    }
+
     while (tokenizer.getLastToken() != Token.CURLY_CLOSE
         && tokenizer.next() != Token.CURLY_CLOSE) {
-      final KeyValuePair<String, Object> keyValuePair = parseKeyValuePair();
+      final KeyValuePair<String, Object> keyValuePair = parseKeyValuePair(false);
       hash.put(keyValuePair.getKey(), keyValuePair.getValue());
       // skip comma
       if (tokenizer.next() != Token.COMMA && tokenizer.getLastToken() != Token.CURLY_CLOSE) {
@@ -101,6 +130,13 @@ public class JSNativeParser implements Serializable {
   }
 
   public KeyValuePair<String, Object> parseKeyValuePair() throws JSParsingException {
+    return parseKeyValuePair(true);
+  }
+
+  private KeyValuePair<String, Object> parseKeyValuePair(boolean skip) throws JSParsingException {
+    if (skip) {
+      tokenizer.next();
+    }
     assureToken("Expected valid key", Token.KEY, Token.NUMBER, Token.STRING);
 
     String key = tokenizer.getStr();
@@ -132,14 +168,11 @@ public class JSNativeParser implements Serializable {
 
     boolean assured = assure(tokenizer.getLastToken(), tokens);
     if (!assured) {
-      assured = assure(tokenizer.next(), tokens);
-      if (!assured) {
-        throw new JSParsingException(tokenizer.getPrevIndex(), errorMsg);
-      }
+      throw new JSParsingException(tokenizer.getPrevIndex(), errorMsg);
     }
   }
 
-  private boolean assure(Token tokenToAssure, Token[] array) {
+  private boolean assure(Token tokenToAssure, Token... array) {
     for (Token token : array) {
       if (token == tokenToAssure) {
         return true;
@@ -150,6 +183,22 @@ public class JSNativeParser implements Serializable {
 
   public void setInput(String input) {
     tokenizer.setInput(input);
+  }
+
+  public Class<? extends Map> getJsObjectClass() {
+    return jsObjectClass;
+  }
+
+  public void setJsObjectClass(Class<? extends Map> jsObjectClass) {
+    this.jsObjectClass = jsObjectClass;
+  }
+
+  public Class<? extends List> getJsArrayClass() {
+    return jsArrayClass;
+  }
+
+  public void setJsArrayClass(Class<? extends List> jsArrayClass) {
+    this.jsArrayClass = jsArrayClass;
   }
 
   public static class KeyValuePair<T, F> {

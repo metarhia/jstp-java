@@ -65,7 +65,9 @@ class JSNativeParserTest {
       new TestData<>("{a:", new JSParsingException(
           "Index: 2, Message: Expected value after ':' in object")),
       new TestData<>("{a:}", new JSParsingException(
-          "Index: 3, Message: Expected value after ':' in object"))
+          "Index: 3, Message: Expected value after ':' in object")),
+      new TestData<>("{:2}", new JSParsingException(
+          "Index: 1, Message: Expected valid key")),
   };
 
   private JSNativeParser parser;
