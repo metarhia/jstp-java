@@ -26,91 +26,54 @@ Maven:
 
 ## Parser usage
 
-There are 2 parsers available:
-1) To native java objects with `JSNativeParser`
-
-Native parser gives you java Objects directly, which is more convenient.
+`JSParser` will mostly convert to native java objects 
+(with a few exceptions where specific implementation was needed)
 
 Few simple examples
 ```java
-Map<String, Number> a =
-    (Map<String, Number>) new JSNativeParser("{a: 3}").parse();
+JSObject a = JSParser.parse("{a: 3, b: 2}");
+// Get field 'a' of object {a: 3, b: 2}
 a.get("a"); // returns 3.0
 
-List<Number> arr = (List<Number>) new JSNativeParser("[1, 2, 3]").parse();
+// Get second field of object {a: 3, b: 2}
+a.getByIndex(1); // returns 2.0
+
+// But you can easily use it as a Map
+Map<String, Number> map = (Map<String, Number>) a;
+// or
+Map<String, Number> a = JSParser.parse("{a: 3, b: 2}");
+
+
+List<Double> arr = JSParser.parse("[1, 2, 3]");
+// Get second element of array [1, 2, 3];
 arr.get(1); // returns 2.0
+
+
+String str = JSParser.parse("'abc'");
+// str now equals to 'abc'
+
+
+List<?> arr = JSParser.parse("[1,, 3]");
+// Get second element of array [1,, 3];
+arr.get(1); // returns JSUndefined
 ```
 
-To serialize objects you can use `JSNativeSerializer`
+To serialize objects you can use `JSSerializer`
 ```java
-List<Number> arr = (List<Number>) new JSNativeParser("[1, 2, 3]").parse();
-JSNativeSerializer.stringify(arr); // returns "[1,2,3]"
-```
-If it doesn't know how to serialize input it'll be serialized as `undefined`
+List<Number> arr = new JSNativeParser("[1, 2, 3]").parse();
+JSSerializer.stringify(arr); // returns "[1,2,3]"
 
-2) To simple js mirrored hierarchy in java with `JSParser` (hierarchy has
-  `JSValue` as superclass)
 
-In current JSTP SDK implementation, you can use:
-* JSObject
-* JSArray
-* JSNumber
-* JSString
-* JSBool
-* JSNull
-* JSUndefined
-
-To parse values, you can use JSParser directly:
-
-```java
-try {
-  JSParser parser = new JSParser();
-  JSValue value = parser.parse("ANY JS VALUE");
-  JSObject obj = parser.parseJSObject("YOUR OBJECT VALUE");
-  JSArray array = parser.parseJSArray("YOUR ARRAY VALUE");
-} catch (JSParsingException e) {
-  // error handling goes here
-}
+Map<String, Number> a = JSParser.parse("{a: 3, b: 2}");
+JSSerializer.stringify(a); // returns "{a:3,b:2}"
 ```
 
-You also can use it like that:
-```java
-try {
-  JSValue value = JSTP.parse("YOUR OBJECT VALUE");
-} catch (JSParsingException e) {
-  //...
-}
-```
+If it doesn't know how to serialize input it'll be serialized as `undefined`,
+also you can define how your objects will be serialized via `JSSerializable`
+interface.
 
-Get field 'a' of object `{a: 3}`;
-```java
-try {
-  JSObject obj = JSTP.parse("{a : 3}");
-  obj.get("a"); // returns 3
-} catch (JSParsingException e) {
-  // error handling goes here
-}
-```
-
-Get second element of array `[1, 2, 3]`;
-```java
-try {
-  JSArray arr = (JSArray) new JSParser("[1, 2, 3]").parse();
-  arr.get(1); // returns 2
-} catch (JSParsingException e) {
-  // error handling goes here
-}
-```
-
-To convert values from js java hierarchy to js use `.toString()` method or
-`JSTP.stringify`.
 They can be parsed in js with a simple eval statement or
 [js parser](https://github.com/metarhia/JSTP)
-```java
-JSValue value;
-//...
-String serializedValue = JSTP.stringify(value);
-```
 
 ## JSTPConnection
 
@@ -188,7 +151,7 @@ transport on active connection. You can send `handshake` packet as follows:
 // anonymous handshake message
 connection.handshake("applicationName", new ManualHandler() {
   @Override
-  public void invoke(JSValue packet) {
+  public void invoke(JSObject packet) {
     // ...
   }
 });
@@ -196,7 +159,7 @@ connection.handshake("applicationName", new ManualHandler() {
 // handshake with attempt to restore session
 connection.handshake("applicationName", "sessionId", new ManualHandler() {
   @Override
-  public void invoke(JSValue packet) {
+  public void invoke(JSObject packet) {
     // ...
   }
 });
@@ -204,7 +167,7 @@ connection.handshake("applicationName", "sessionId", new ManualHandler() {
 // handshake message with authorization
 connection.handshake("applicationName", "name", "pass", new ManualHandler() {
   @Override
-  public void invoke(JSValue packet) {
+  public void invoke(JSObject  packet) {
     // ...
   }
 });
@@ -216,11 +179,11 @@ connection.handshake("applicationName", "name", "pass", new ManualHandler() {
 To send `call` message:
 
 ```java
-JSArray args = new JSArray();
+List<?> args = new ArrayList();
 // ...
 connection.call("interfaceName", "methodName", args, new ManualHandler() {
   @Override
-  public void invoke(final JSValue value) {
+  public void invoke(final JSObject value) {
     // ...
   }
 );
@@ -237,8 +200,8 @@ While sending callback you should specify callback type (`JSCallback.OK` or
 ```java
 connection.setCallHandler("interfaceName", "methodName", new CallHandler() {
   @Override
-  public void handleCallback(JSArray data) {
-    JSArray args = new JSArray();
+  public void handleCallback(List<?> data) {
+    List<Object> args = new ArrayList<>();
     // ...
     callback(connection, JSCallback.OK, args);
   }
@@ -273,7 +236,7 @@ To send `inspect` packet:
 ```java
 connection.inspect("interfaceName", new ManualHandler() {
   @Override
-  public void invoke(JSValue packet) {
+  public void invoke(JSObject packet) {
     // ...
   }
 });
@@ -287,7 +250,7 @@ There can be multiple event handlers for each event.
 ```java
 connection.addEventHandler("interfaceName", "methodName", new ManualHandler() {
   @Override
-  public void invoke(JSValue packet) {
+  public void invoke(JSObject packet) {
     // ...
   }
 });
@@ -295,7 +258,7 @@ connection.addEventHandler("interfaceName", "methodName", new ManualHandler() {
 
 Sending `event` packet:
 ```java
-JSArray args = new JSArray();
+List<Object> args = new ArrayList<>();
 // ...
 connection.event("interfaceName", "methodName", args);
 ```
@@ -355,7 +318,7 @@ null (in case of argument-wide annotations)
 public interface ExampleHandler {
   // ...
   @NotNull
-  void onExampleValue(JSArray args);
+  void onExampleValue(List<?> args);
   // ...
 }
 ```
@@ -372,13 +335,13 @@ public interface OkErrorHandler {
   // ...
   @NotNull
   @Named("ok")
-  void onOK(JSArray args);
+  void onOK(List<?> args);
 
   @NotNull
   @Named("error")
-  void onError(JSArray args);
+  void onError(List<?> args);
 
-  // gets value by key "neededValue" in object got by "ok"
+  // gets String value by key "neededValue" in object got by "ok"
   @Named(value = {"ok", "neededValue"})
   void onNeededValueRetrieved(String value);
   // ...
@@ -395,10 +358,10 @@ of indexes specified.
 @JSTPHandler
 public interface ExampleHandler {
   // ...
-  void onFirstIndex(@Indexed(1) JSString arg);
+  void onFirstIndex(@Indexed(1) String arg);
 
-  // gets packet[1][2]
-   void onValueBySecondIndex(@Indexed(value = {1,2}) JSArray args);
+  // gets (List<?>) packet[1][2]
+   void onValueBySecondIndex(@Indexed({1, 2}) List<?> args);
   // ...
 }
 ```
@@ -419,14 +382,14 @@ public interface ExampleHandler {
   // ...
 
   @CustomNamed("ok")
-  void onNeededNamedValue(JSValue args);
+  void onNeededNamedValue(Object args);
 
   @CustomNamed("{1}")
-  void onKeyByIndexValue(JSValue args);
+  void onKeyByIndexValue(Object args);
 
   // gets packet["ok"][1][2]
   @CustomNamed(value = {"ok", "[1]", "{2}"})
-  void onNeededMixValue(JSValue args);
+  void onNeededMixValue(Object args);
   // ...
 }
 ```
