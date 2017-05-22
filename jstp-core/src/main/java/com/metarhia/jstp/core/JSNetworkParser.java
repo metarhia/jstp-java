@@ -19,7 +19,7 @@ public final class JSNetworkParser {
 
   public static List<JSObject> parse(byte[] msg, int[] length) throws JSParsingException {
     List<JSObject> packets = new ArrayList<>();
-    JSNativeParser parser = new JSNativeParser();
+    JSParser parser = new JSParser();
     int chunkStart = 0;
     int chunkLength = bytesUntil(msg, chunkStart, length[0], TERMINATOR);
     while (chunkLength != -1 && chunkStart < length[0]) {

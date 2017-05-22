@@ -14,12 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class JSNativeParser implements Serializable {
+public class JSParser implements Serializable {
 
   public final String DEFAULT_PARSE_ERROR_MSG = "Cannot parse";
 
   public static <T> T parse(String input) throws JSParsingException {
-    return new JSNativeParser(input).parse();
+    return new JSParser(input).parse();
   }
 
   private Tokenizer tokenizer;
@@ -28,11 +28,11 @@ public class JSNativeParser implements Serializable {
 
   private Class<? extends List> jsArrayClass = ArrayList.class;
 
-  public JSNativeParser() {
+  public JSParser() {
     tokenizer = new Tokenizer("");
   }
 
-  public JSNativeParser(String input) {
+  public JSParser(String input) {
     tokenizer = new Tokenizer(input);
   }
 

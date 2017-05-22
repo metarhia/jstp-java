@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Created by lundibundi on 4/1/17.
  */
-class JSNativeParserTest {
+class JSParserTest {
 
   public static final TestData[] parseTestData = new TestData[]{
       new TestData<>("[,,0]", Arrays.asList(
@@ -71,10 +71,10 @@ class JSNativeParserTest {
           new JSParsingException(1, "Expected valid key")),
   };
 
-  private JSNativeParser parser;
+  private JSParser parser;
 
-  public JSNativeParserTest() {
-    parser = new JSNativeParser();
+  public JSParserTest() {
+    parser = new JSParser();
   }
 
   @Test
