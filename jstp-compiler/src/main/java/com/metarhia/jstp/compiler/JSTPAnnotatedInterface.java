@@ -2,6 +2,7 @@ package com.metarhia.jstp.compiler;
 
 import com.metarhia.jstp.compiler.annotations.ErrorHandler;
 import com.metarhia.jstp.compiler.annotations.JSTPReceiver;
+import com.metarhia.jstp.compiler.annotations.NoDefaultGet;
 import com.metarhia.jstp.compiler.annotations.NotNull;
 import com.metarhia.jstp.compiler.annotations.Typed;
 import com.metarhia.jstp.core.Handlers.Handler;
@@ -172,17 +173,22 @@ public class JSTPAnnotatedInterface {
         .addModifiers(Modifier.PRIVATE)
         .addParameter(JSTP_VALUE_TYPENAME, PACKET_PARAMETER_NAME);
 
-    String payloadName = "internalPayload";
+
+    String payloadName = PACKET_PARAMETER_NAME;
 
     TypeMirror payloadType = getClassFromTyped(method, true);
     CodeBlock payloadData = PropertyGetterUtils
         .composeGetterFromAnnotations(PACKET_PARAMETER_NAME, method);
-    if (payloadData == null) {
-      // nothing changed so by default payload is second argument
+    if (payloadData == null && method.getAnnotation(NoDefaultGet.class) == null) {
+      // no method annotation and no explicit denial of default getter
+      // so by default payload is second argument
       payloadData = PropertyGetterUtils.composeCustomGetter(PACKET_PARAMETER_NAME, "{1}");
     }
 
-    methodBuilder.addStatement(VARIABLE_DEFINITION, payloadType, payloadName, payloadData);
+    if (payloadData != null) {
+      payloadName = "internalPayload";
+      methodBuilder.addStatement(VARIABLE_DEFINITION, payloadType, payloadName, payloadData);
+    }
 
     final List<? extends VariableElement> parameters = method.getParameters();
 
