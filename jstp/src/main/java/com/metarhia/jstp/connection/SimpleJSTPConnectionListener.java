@@ -1,6 +1,6 @@
 package com.metarhia.jstp.connection;
 
-import com.metarhia.jstp.core.JSTypes.JSObject;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 
 /**
  * Created by lundibundi on 2/22/17.

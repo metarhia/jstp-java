@@ -10,7 +10,7 @@ import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.connection.HandshakeAnswer;
 import com.metarhia.jstp.connection.JSTPConnection;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
-import com.metarhia.jstp.core.JSTypes.JSValue;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -66,7 +66,7 @@ public class TCPTransportTest {
 
     connection.addEventHandler("auth", "insert", new ManualHandler() {
       @Override
-      public void invoke(JSValue packet) {
+      public void invoke(JSObject packet) {
         success[0] = true;
         synchronized (readThread) {
           if (success[1]) {
@@ -79,7 +79,7 @@ public class TCPTransportTest {
 
     connection.addHandler(17, new ManualHandler() {
       @Override
-      public void invoke(JSValue packet) {
+      public void invoke(JSObject packet) {
         success[1] = true;
         synchronized (readThread) {
           if (success[0]) {

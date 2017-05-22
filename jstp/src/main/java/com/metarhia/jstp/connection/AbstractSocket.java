@@ -1,6 +1,6 @@
 package com.metarhia.jstp.connection;
 
-import com.metarhia.jstp.core.JSTypes.JSObject;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 
 public interface AbstractSocket {
 

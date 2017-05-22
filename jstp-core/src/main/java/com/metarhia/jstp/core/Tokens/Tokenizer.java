@@ -1,8 +1,6 @@
 package com.metarhia.jstp.core.Tokens;
 
 import com.metarhia.jstp.core.JSParsingException;
-import com.metarhia.jstp.core.JSTypes.JSBool;
-import com.metarhia.jstp.core.JSTypes.JSNull;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import com.metarhia.jstp.core.Utils;
 import java.io.Serializable;
@@ -11,10 +9,10 @@ import java.text.ParseException;
 
 public class Tokenizer implements Serializable {
 
-  private static final String BOOL_TRUE_STR = new JSBool(true).toString();
-  private static final String BOOL_FALSE_STR = new JSBool(false).toString();
+  private static final String BOOL_TRUE_STR = Boolean.TRUE.toString();
+  private static final String BOOL_FALSE_STR = Boolean.FALSE.toString();
   private static final String UNDEFINED_STR = JSUndefined.get().toString();
-  private static final String NULL_STR = JSNull.get().toString();
+  private static final String NULL_STR = "null";
 
   private static final CharRange NUMBER_RANGE = new CharRange(0x30, 0x39);
   private static final CharRange LETTER_UPPER_RANGE = new CharRange(0x41, 0x5a);
@@ -25,6 +23,8 @@ public class Tokenizer implements Serializable {
   private final FloatMatchRange floatMatchRange = new FloatMatchRange();
 
   private final int[] cachedArray = new int[1];
+
+  private final StringBuilder cachedBuilder = new StringBuilder(30);
 
   private static Field valueReflection = null;
 
@@ -94,7 +94,7 @@ public class Tokenizer implements Serializable {
       }
 
       try {
-        str = Utils.unescapeString(input, index, lastIndex);
+        str = Utils.unescapeString(input, index, lastIndex, cachedBuilder);
       } catch (ParseException e) {
         throw new JSParsingException(e);
       }
@@ -120,16 +120,17 @@ public class Tokenizer implements Serializable {
       }
       return lastToken = Token.KEY;
     } else if (isFloatingNumber(ch)) {
-//      int lastIndex = getPastLastIndex(input, index, floatMatchRange);
-//      str = new String(input, index - 1, lastIndex - index + 1);
-//      number = Double.parseDouble(str);
-      try {
-        str = null;
-        number = Utils.charArrayToDouble(input, index - 1, length, cachedArray);
-      } catch (NumberFormatException e) {
-        throw new JSParsingException(index - 1, e);
-      }
-      index = cachedArray[0];
+      int lastIndex = getPastLastIndex(input, index, floatMatchRange);
+      str = new String(input, index - 1, lastIndex - index + 1);
+      number = Double.parseDouble(str);
+      index = lastIndex;
+//      try {
+//        str = null;
+//        number = Utils.charArrayToDouble(input, index - 1, length, cachedArray);
+//      } catch (NumberFormatException e) {
+//        throw new JSParsingException(index - 1, e);
+//      }
+//      index = cachedArray[0];
       return lastToken = Token.NUMBER;
     }
 

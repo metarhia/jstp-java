@@ -2,17 +2,16 @@ package com.metarhia.jstp.connection;
 
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
-import com.metarhia.jstp.core.JSTypes.JSArray;
-import com.metarhia.jstp.core.JSTypes.JSNumber;
-import com.metarhia.jstp.core.JSTypes.JSObject;
-import com.metarhia.jstp.core.JSTypes.JSString;
+import com.metarhia.jstp.core.JSNativeSerializer;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
-import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.handlers.StateHandler;
 import com.metarhia.jstp.storage.StorageInterface;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,7 +105,7 @@ public class JSTPConnection implements
   /**
    * Client method names for incoming inspect packages by interface
    */
-  private Map<String, JSArray> clientMethodNames;
+  private Map<String, List<String>> clientMethodNames;
 
   private List<JSTPConnectionListener> connectionListeners;
 
@@ -233,8 +232,9 @@ public class JSTPConnection implements
     }
 
     JSTPMessage hm;
-    JSArray args = new JSArray(sessionID, sessionData.getNumReceivedPackets());
-    hm = new JSTPMessage(packageCounter, HANDSHAKE, "session", args);
+    List<?> args = Arrays.asList(sessionID, sessionData.getNumReceivedPackets());
+    hm = new JSTPMessage(packageCounter, HANDSHAKE)
+        .putArg("session", args);
     hm.addProtocolArg(appName);
 
     send(hm, false);
@@ -259,24 +259,23 @@ public class JSTPConnection implements
       handlers.put(packageCounter, handler);
     }
 
-    JSTPMessage hm;
-    if (username == null) {
-      hm = new JSTPMessage(packageCounter, HANDSHAKE);
-    } else {
-      hm = new JSTPMessage(packageCounter, HANDSHAKE, username, new JSString(password));
+    JSTPMessage hm = new JSTPMessage(packageCounter, HANDSHAKE)
+        .addProtocolArg(appName);
+    if (username != null && password != null) {
+      hm.putArg(username, password);
     }
-    hm.addProtocolArg(appName);
 
     send(hm, false);
   }
 
   public void call(String interfaceName,
                    String methodName,
-                   JSArray args,
+                   List<Object> args,
                    ManualHandler handler) {
     long packageCounter = sessionData.getAndIncrementPacketCounter();
-    JSTPMessage callMessage = new JSTPMessage(packageCounter, CALL, methodName, args);
-    callMessage.addProtocolArg(interfaceName);
+    JSTPMessage callMessage = new JSTPMessage(packageCounter, CALL)
+        .putArg(methodName, args)
+        .addProtocolArg(interfaceName);
 
     if (handler != null) {
       handlers.put(packageCounter, handler);
@@ -285,11 +284,11 @@ public class JSTPConnection implements
     send(callMessage);
   }
 
-  public void callback(JSCallback result, JSValue args) {
+  public void callback(JSCallback result, List<?> args) {
     callback(result, args, null);
   }
 
-  public void callback(JSCallback result, JSValue args, Long customPackageIndex) {
+  public void callback(JSCallback result, List<?> args, Long customPackageIndex) {
     long packageNumber;
     if (customPackageIndex == null) {
       packageNumber = sessionData.getAndIncrementPacketCounter();
@@ -297,15 +296,16 @@ public class JSTPConnection implements
       packageNumber = customPackageIndex;
     }
 
-    JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK, result.toString(), args);
+    JSTPMessage callbackMessage = new JSTPMessage(packageNumber, CALLBACK)
+        .putArg(result.toString(), args);
 
     send(callbackMessage);
   }
 
   public void inspect(String interfaceName, ManualHandler handler) {
     long packageCounter = sessionData.getAndIncrementPacketCounter();
-    JSTPMessage inspectMessage = new JSTPMessage(packageCounter, INSPECT);
-    inspectMessage.addProtocolArg(interfaceName);
+    JSTPMessage inspectMessage = new JSTPMessage(packageCounter, INSPECT)
+        .addProtocolArg(interfaceName);
 
     if (handler != null) {
       handlers.put(packageCounter, handler);
@@ -314,10 +314,11 @@ public class JSTPConnection implements
     send(inspectMessage);
   }
 
-  public void event(String interfaceName, String methodName, JSArray args) {
+  public void event(String interfaceName, String methodName, List<?> args) {
     long packageCounter = sessionData.getAndIncrementPacketCounter();
-    JSTPMessage eventMessage = new JSTPMessage(packageCounter, EVENT, methodName, args);
-    eventMessage.addProtocolArg(interfaceName);
+    JSTPMessage eventMessage = new JSTPMessage(packageCounter, EVENT)
+        .putArg(methodName, args)
+        .addProtocolArg(interfaceName);
 
     send(eventMessage);
   }
@@ -328,7 +329,9 @@ public class JSTPConnection implements
 
   private void send(JSTPMessage message, boolean buffer) {
     if (transport.isConnected() || noConnBufferingPolicy == NoConnBufferingPolicy.BUFFER) {
-      message.setStringRepresentation(message.getMessage() + TERMINATOR);
+      final String stringRepresentation =
+          JSNativeSerializer.stringify(message.getMessage()) + TERMINATOR;
+      message.setStringRepresentation(stringRepresentation);
       if (buffer) {
         // policy can only be applied to messages that actually can be buffered
         sendQueue.offer(message);
@@ -367,14 +370,13 @@ public class JSTPConnection implements
   @Override
   public void onPacketReceived(JSObject packet) {
     try {
-      List<String> keys = packet.getOrderedKeys();
       boolean handshake = false;
-      if (keys.size() == 0
-          || !(handshake = keys.get(0).equals(HANDSHAKE))
+      if (packet.size() == 0
+          || !(handshake = packet.getKey(0).equals(HANDSHAKE))
           && state != ConnectionState.STATE_CONNECTED) {
         rejectPacket(packet);
       } else {
-        final Method handler = METHOD_HANDLERS.get(keys.get(0));
+        final Method handler = METHOD_HANDLERS.get(packet.getKey(0));
         if (handler != null) {
           handler.invoke(this, packet);
         } else {
@@ -392,27 +394,27 @@ public class JSTPConnection implements
     }
   }
 
-  private void handshakePacketHandler(JSObject packet) {
+  private void handshakePacketHandler(JSObject<?> packet) {
     if (state == ConnectionState.STATE_CONNECTED) {
       rejectPacket(packet);
       return;
     }
 
-    final String payloadKey = packet.getOrderedKeys().get(1);
-    final JSValue payload = packet.get(payloadKey);
+    final String payloadKey = packet.getKey(1);
+    final Object payload = packet.get(payloadKey);
     if (payloadKey.equals("error")) {
-      int errorCode = (int) JSTypesUtil.jsToJava(((JSArray) payload).get(0), true);
+      int errorCode = JSTypesUtil.<Double>getMixed(payload, 0).intValue();
       reportError(errorCode);
       close(true);
     } else {
       state = ConnectionState.STATE_CONNECTED;
       boolean restored = false;
-      if (payload instanceof JSNumber) {
+      if (payload instanceof Double) {
         restored = processHandshakeRestoreResponse(packet);
         if (!restored) {
           reset(sessionData.getAppName(), 1);
         }
-      } else if (payload instanceof JSString) {
+      } else if (payload instanceof String) {
         processHandshakeResponse(packet);
       }
       reportConnected(restored);
@@ -423,7 +425,7 @@ public class JSTPConnection implements
     if (sessionData.getPacketCounter().get() == 0) {
       sessionData.getAndIncrementPacketCounter();
     }
-    long numServerReceivedPackets = (long) ((JSNumber) packet.get(1)).getValue();
+    long numServerReceivedPackets = ((Double) packet.getByIndex(1)).longValue();
     boolean restored = restoreSession(numServerReceivedPackets);
 
     long receiverIndex = 0;
@@ -436,7 +438,7 @@ public class JSTPConnection implements
   }
 
   private void processHandshakeResponse(JSObject packet) {
-    sessionData.setSessionID((String) JSTypesUtil.jsToJava(packet.get(1)));
+    sessionData.setSessionID((String) packet.getByIndex(1));
     long receiverIndex = 0;
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
 
@@ -455,12 +457,13 @@ public class JSTPConnection implements
       rejectPacket(packet);
       return;
     }
-    String methodName = packet.getOrderedKeys().get(1);
+    String methodName = packet.getKey(1);
 
     final Map<String, ManualHandler> iface = callHandlers.get(interfaceName);
     if (iface == null) {
       return;
     }
+
     ManualHandler handler = iface.get(methodName);
     if (handler != null) {
       handler.invoke(packet);
@@ -492,7 +495,7 @@ public class JSTPConnection implements
       return;
     }
 
-    String eventName = packet.getOrderedKeys().get(1);
+    String eventName = packet.getKey(1);
     List<ManualHandler> eventHandlers = interfaceHandlers.get(eventName);
     if (eventHandlers == null) {
       return;
@@ -504,12 +507,12 @@ public class JSTPConnection implements
   }
 
   private void inspectPacketHandler(JSObject packet) {
-    String interfaceName = ((JSString) ((JSArray) packet.get(0)).get(1)).getValue();
-    JSArray methods = clientMethodNames.get(interfaceName);
+    String interfaceName = getInterfaceName(packet);
+    List<String> methods = clientMethodNames.get(interfaceName);
     if (methods != null) {
       callback(JSCallback.OK, methods);
     } else {
-      callback(JSCallback.ERROR, new JSNumber(Constants.ERR_INTERFACE_NOT_FOUND));
+      callback(JSCallback.ERROR, Collections.singletonList(Constants.ERR_INTERFACE_NOT_FOUND));
     }
   }
 
@@ -604,31 +607,25 @@ public class JSTPConnection implements
   }
 
   private String getInterfaceName(JSObject packet) {
-    return (String) ((JSArray) packet.get(0))
-        .get(1)
-        .getGeneralizedValue();
+    return JSTypesUtil.getMixed(packet, 0.0, 1);
   }
 
-  private long getPacketNumber(JSObject messageObject) {
-    return (long) ((JSNumber) ((JSArray) messageObject.get(0))
-        .get(0))
-        .getValue();
+  private long getPacketNumber(JSObject packet) {
+    return JSTypesUtil.<Double>getMixed(packet, 0.0, 0).longValue();
   }
 
   private boolean isSecondArray(JSObject packet) {
-    return packet.get(1) instanceof JSArray;
+    return packet.getByIndex(1) instanceof List;
   }
 
   public void setClientMethodNames(String interfaceName, String... names) {
-    JSArray methods = clientMethodNames.get(interfaceName);
+    List<String> methods = clientMethodNames.get(interfaceName);
     if (methods == null) {
-      methods = new JSArray();
+      methods = new ArrayList<>();
     } else {
       methods.clear();
     }
-    for (String name : names) {
-      methods.add(name);
-    }
+    methods.addAll(Arrays.asList(names));
     clientMethodNames.put(interfaceName, methods);
   }
 

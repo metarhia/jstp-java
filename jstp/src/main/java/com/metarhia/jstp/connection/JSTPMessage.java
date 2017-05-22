@@ -1,26 +1,21 @@
 package com.metarhia.jstp.connection;
 
-import com.metarhia.jstp.core.JSTypes.JSArray;
-import com.metarhia.jstp.core.JSTypes.JSObject;
-import com.metarhia.jstp.core.JSTypes.JSValue;
+import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
+import java.util.ArrayList;
+import java.util.List;
 
 public class JSTPMessage {
 
   /**
    * Generated message
    */
-  private JSObject message;
-
-  /**
-   * Custom user arguments contained in message (added for convenience as there are
-   * usually only payload object
-   */
-  private JSValue args;
+  private JSObject<Object> message;
 
   /**
    * Arguments specific for protocol (always contains packageNumber)
    */
-  private JSArray protocolArgs;
+  private List<Object> protocolArgs;
 
   /**
    * Number of package corresponding to this message
@@ -34,66 +29,42 @@ public class JSTPMessage {
   private String stringRepresentation;
 
   private JSTPMessage() {
-    this.message = new JSObject();
-    this.args = new JSArray();
+    this.message = new IndexedHashMap<>(2);
   }
 
   public JSTPMessage(long packageNumber, String type) {
-    this(packageNumber, type, null, null);
-  }
-
-  public JSTPMessage(long packageNumber, String type, String argsKey, JSValue args) {
     this();
 
     this.packageNumber = packageNumber;
 
-    this.protocolArgs = new JSArray();
+    this.protocolArgs = new ArrayList<>(2);
     this.protocolArgs.add(this.packageNumber);
 
     message.put(type, this.protocolArgs);
-
-    if (argsKey != null) {
-      this.args = args;
-      message.put(argsKey, this.args);
-    }
   }
 
-  public void addProtocolArgs(JSValue... args) {
-    this.protocolArgs.addAll(args);
-  }
-
-  public void addProtocolArg(String value) {
+  public JSTPMessage addProtocolArg(Object value) {
     this.protocolArgs.add(value);
+    return this;
   }
 
-  public void addProtocolArg(double number) {
-    this.protocolArgs.add(number);
-  }
-
-  public void addProtocolArg(boolean value) {
-    this.protocolArgs.add(value);
-  }
-
-  public void put(String key, JSValue value) {
+  public JSTPMessage putArg(String key, Object value) {
     message.put(key, value);
+    return this;
   }
 
-  public JSObject getMessage() {
+  public JSTPMessage setPackageNumber(int packageNumber) {
+    this.packageNumber = packageNumber;
+    this.protocolArgs.set(0, this.packageNumber);
+    return this;
+  }
+
+  public JSObject<Object> getMessage() {
     return message;
-  }
-
-  public JSValue getArgs() {
-    return args;
   }
 
   public long getPackageNumber() {
     return packageNumber;
-  }
-
-  public void setPackageNumber(int packageNumber) {
-    this.packageNumber = packageNumber;
-
-    this.protocolArgs.set(0, this.packageNumber);
   }
 
   public String getStringRepresentation() {

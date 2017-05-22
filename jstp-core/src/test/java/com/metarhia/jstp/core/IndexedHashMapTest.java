@@ -3,6 +3,8 @@ package com.metarhia.jstp.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
+import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -14,7 +16,7 @@ class IndexedHashMapTest {
 
   @Test
   void getByIndex() {
-    final IndexedHashMap actual = TestUtils.mapOfClass(IndexedHashMap.class,
+    final JSObject actual = TestUtils.mapOfClass(IndexedHashMap.class,
         "a", 1,
         "b", 2);
 
@@ -33,23 +35,6 @@ class IndexedHashMapTest {
   }
 
   @Test
-  void set() {
-    final IndexedHashMap<String, Integer> actual = TestUtils.mapOfClass(IndexedHashMap.class,
-        "a", 1,
-        "b", 2,
-        "c", 3,
-        "d", 4);
-
-    actual.set(1, "c", 13);
-
-    assertEquals("c", actual.getKey(1));
-    assertEquals(13, (int) actual.getByIndex(1));
-
-    assertEquals("d", actual.getKey(2));
-    assertEquals(4, (int) actual.getByIndex(2));
-  }
-
-  @Test
   void putAll() {
     final Map<String, Integer> expected =
         TestUtils.mapOfClass(HashMap.class, "a", 1, "b", 2);
@@ -62,25 +47,25 @@ class IndexedHashMapTest {
 
   @Test
   void remove() {
-    final IndexedHashMap<String, Integer> actual = TestUtils.mapOfClass(IndexedHashMap.class,
+    final IndexedHashMap<Integer> actual = TestUtils.mapOfClass(IndexedHashMap.class,
         "a", 1,
         "b", 2);
 
     actual.remove("b");
 
-    assertThat(actual.getKeys()).doesNotContain("b");
+    assertThat(actual.keys()).doesNotContain("b");
     assertThat(actual).doesNotContainKeys("b");
   }
 
   @Test
   void clear() {
-    final IndexedHashMap<String, Integer> actual = TestUtils.mapOfClass(IndexedHashMap.class,
+    final IndexedHashMap<Integer> actual = TestUtils.mapOfClass(IndexedHashMap.class,
         "a", 1,
         "b", 2);
 
     actual.clear();
 
     assertThat(actual).isEmpty();
-    assertThat(actual.getKeys()).isEmpty();
+    assertThat(actual.keys()).isEmpty();
   }
 }

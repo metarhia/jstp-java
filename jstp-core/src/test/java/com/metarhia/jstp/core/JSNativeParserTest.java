@@ -3,6 +3,8 @@ package com.metarhia.jstp.core;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import com.metarhia.jstp.core.JSTypes.JSEntry;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import com.metarhia.jstp.core.TestUtils.TestData;
 import java.util.ArrayList;
@@ -48,9 +50,8 @@ class JSNativeParserTest {
   };
 
   private static final TestData[] parseKeyValuePairTestData = new TestData[]{
-      new TestData<>("a: 4", new JSNativeParser.KeyValuePair<>("a", 4.0)),
-      new TestData<>("55 : ['abc']", new JSNativeParser.KeyValuePair<>(
-          "55.0", Arrays.asList("abc")))
+      new TestData<>("a: 4", new JSEntry<>("a", 4.0)),
+      new TestData<>("55 : ['abc']", new JSEntry<>("55", Arrays.asList("abc")))
   };
 
   private static final TestData[] parseThrowTestData = new TestData[]{
@@ -87,9 +88,9 @@ class JSNativeParserTest {
 
   @Test
   public void parseKeyValuePair() throws Exception {
-    for (TestData<String, JSNativeParser.KeyValuePair> td : parseKeyValuePairTestData) {
+    for (TestData<String, JSEntry> td : parseKeyValuePairTestData) {
       parser.setInput(td.input);
-      JSNativeParser.KeyValuePair actual = parser.parseKeyValuePair();
+      JSEntry actual = parser.parseKeyValuePair();
       assertEquals(td.expected.getKey(), actual.getKey(),
           "Failed parsing(key): " + td.input);
       assertEquals(td.expected.getValue(), actual.getValue(),
@@ -164,7 +165,7 @@ class JSNativeParserTest {
     expected.put("contacts", nestedContacts);
 
     parser.setInput(input);
-    Map<String, Object> actual = parser.parseObject();
+    JSObject<?> actual = parser.parseObject();
 
     assertEquals(expected, actual);
   }
