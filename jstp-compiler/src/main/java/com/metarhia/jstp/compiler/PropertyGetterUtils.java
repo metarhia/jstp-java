@@ -1,8 +1,8 @@
 package com.metarhia.jstp.compiler;
 
-import com.metarhia.jstp.compiler.annotations.CustomNamed;
-import com.metarhia.jstp.compiler.annotations.Indexed;
-import com.metarhia.jstp.compiler.annotations.Named;
+import com.metarhia.jstp.compiler.annotations.Array;
+import com.metarhia.jstp.compiler.annotations.Mixed;
+import com.metarhia.jstp.compiler.annotations.Object;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -29,14 +29,14 @@ public final class PropertyGetterUtils {
 
   static CodeBlock composeGetterFromAnnotations(CodeBlock name, Element element)
       throws PropertyFormatException {
-    if (element.getAnnotation(CustomNamed.class) != null) {
-      CustomNamed annotation = element.getAnnotation(CustomNamed.class);
+    if (element.getAnnotation(Mixed.class) != null) {
+      Mixed annotation = element.getAnnotation(Mixed.class);
       return composeCustomGetter(name, annotation.value());
-    } else if (element.getAnnotation(Named.class) != null) {
-      Named annotation = element.getAnnotation(Named.class);
+    } else if (element.getAnnotation(Object.class) != null) {
+      Object annotation = element.getAnnotation(Object.class);
       return composeObjectGetter(name, annotation.value());
-    } else if (element.getAnnotation(Indexed.class) != null) {
-      Indexed annotation = element.getAnnotation(Indexed.class);
+    } else if (element.getAnnotation(Array.class) != null) {
+      Array annotation = element.getAnnotation(Array.class);
       return composeArrayGetter(name, annotation.value());
     }
     return null;

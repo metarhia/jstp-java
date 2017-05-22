@@ -55,7 +55,7 @@ public class JSTPAnnotationProcessor extends AbstractProcessor {
   }
 
   public void processInterfaceAnnotation(Element annotatedElement,
-      Class<?> annotation) {
+                                         Class<?> annotation) {
     try {
       if (annotatedElement.getKind() != ElementKind.INTERFACE) {
         error(annotatedElement, "Only interfaces can be annotated with @%s",
@@ -103,8 +103,7 @@ public class JSTPAnnotationProcessor extends AbstractProcessor {
   public Set<String> getSupportedAnnotationTypes() {
     return new HashSet<>(Arrays.asList(
         JSTPReceiver.class.getCanonicalName(),
-        JSTPHandler.class.getCanonicalName()
-    ));
+        JSTPHandler.class.getCanonicalName()));
   }
 
   @Override
