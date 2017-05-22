@@ -3,11 +3,11 @@ package com.metarhia.jstp.compiler;
 import com.metarhia.jstp.compiler.annotations.CustomNamed;
 import com.metarhia.jstp.compiler.annotations.Indexed;
 import com.metarhia.jstp.compiler.annotations.Named;
-import com.metarhia.jstp.core.JSTypes.JSArray;
-import com.metarhia.jstp.core.JSTypes.JSObject;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.regex.Pattern;
 import javax.lang.model.element.Element;
 
@@ -49,7 +49,7 @@ public final class PropertyGetterUtils {
   public static CodeBlock composeArrayGetter(CodeBlock identifier, int... indices) {
     CodeBlock.Builder builder = CodeBlock.builder();
     for (int i = indices.length - 1; i >= 0; i--) {
-      builder.add(TYPE_CAST_PATTERN, ClassName.get(JSArray.class));
+      builder.add(TYPE_CAST_PATTERN, ClassName.get(List.class));
     }
     builder.add(identifier);
     for (int i = 0; i < indices.length; i++) {
@@ -102,7 +102,7 @@ public final class PropertyGetterUtils {
       if (property.startsWith("[") && property.endsWith("]")
           ||
           (property.startsWith("{") && property.endsWith("}"))) {
-        ClassName type = ClassName.get(property.startsWith("[") ? JSArray.class : JSObject.class);
+        ClassName type = ClassName.get(property.startsWith("[") ? List.class : JSObject.class);
         if (property.length() < 3) {
           throw new PropertyFormatException("Empty array of indices");
         }
