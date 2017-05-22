@@ -1,7 +1,7 @@
 package com.metarhia.jstp.benchmarks;
 
 import com.metarhia.jstp.connection.AbstractSocket.AbstractSocketListener;
-import com.metarhia.jstp.core.JSTypes.JSObject;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 
 /**
  * Created by lundibundi on 3/16/17.
