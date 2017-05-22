@@ -2,7 +2,7 @@ package com.metarhia.jstp.connection;
 
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
-import com.metarhia.jstp.core.JSNativeSerializer;
+import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import com.metarhia.jstp.handlers.StateHandler;
@@ -330,7 +330,7 @@ public class JSTPConnection implements
   private void send(JSTPMessage message, boolean buffer) {
     if (transport.isConnected() || noConnBufferingPolicy == NoConnBufferingPolicy.BUFFER) {
       final String stringRepresentation =
-          JSNativeSerializer.stringify(message.getMessage()) + TERMINATOR;
+          JSSerializer.stringify(message.getMessage()) + TERMINATOR;
       message.setStringRepresentation(stringRepresentation);
       if (buffer) {
         // policy can only be applied to messages that actually can be buffered

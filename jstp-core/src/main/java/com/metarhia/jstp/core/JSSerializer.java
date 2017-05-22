@@ -12,7 +12,7 @@ import java.util.Queue;
 /**
  * Created by lundibundi on 4/2/17.
  */
-public class JSNativeSerializer {
+public class JSSerializer {
 
   public static String stringify(Object input) {
     return stringify(input, new StringBuilder(30)).toString();

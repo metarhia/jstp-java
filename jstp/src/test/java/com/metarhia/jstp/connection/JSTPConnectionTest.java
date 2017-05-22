@@ -16,8 +16,8 @@ import static org.mockito.Mockito.when;
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
-import com.metarhia.jstp.core.JSNativeParser;
-import com.metarhia.jstp.core.JSNativeSerializer;
+import com.metarhia.jstp.core.JSParser;
+import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.handlers.CallHandler;
@@ -115,7 +115,7 @@ public class JSTPConnectionTest {
       }
     });
 
-    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(packet));
+    connection.onPacketReceived(JSParser.<IndexedHashMap<?>>parse(packet));
     assertTrue(success[0]);
   }
 
@@ -131,7 +131,7 @@ public class JSTPConnectionTest {
       }
     });
 
-    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(packet));
+    connection.onPacketReceived(JSParser.<IndexedHashMap<?>>parse(packet));
 
     assertTrue(success[0]);
   }
@@ -149,7 +149,7 @@ public class JSTPConnectionTest {
       }
     });
 
-    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(packet));
+    connection.onPacketReceived(JSParser.<IndexedHashMap<?>>parse(packet));
 
     assertTrue(success[0]);
   }
@@ -166,7 +166,7 @@ public class JSTPConnectionTest {
       }
     });
 
-    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(packet));
+    connection.onPacketReceived(JSParser.<IndexedHashMap<?>>parse(packet));
 
     assertTrue(success[0]);
   }
@@ -176,7 +176,7 @@ public class JSTPConnectionTest {
     String input = "{ping:[42]}" + JSTPConnection.TERMINATOR;
     String response = "{pong:[42]}" + JSTPConnection.TERMINATOR;
 
-    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(input));
+    connection.onPacketReceived(JSParser.<IndexedHashMap<?>>parse(input));
 
     verify(transport, times(1)).send(response);
   }
@@ -187,7 +187,7 @@ public class JSTPConnectionTest {
     long packageNumber = 13;
     String message =
         String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR,
-            packageNumber, JSNativeSerializer.stringify(args));
+            packageNumber, JSSerializer.stringify(args));
 
     connection.callback(JSCallback.OK, args, packageNumber);
 
@@ -214,7 +214,7 @@ public class JSTPConnectionTest {
         String.format("\\{callback:\\[\\d+\\],ok:\\[%s\\]\\}" + JSTPConnection.TERMINATOR, methods);
 
     String inspectMessage = String.format("{inspect:[12, '%s']}", interfaceName);
-    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(inspectMessage));
+    connection.onPacketReceived(JSParser.<IndexedHashMap<?>>parse(inspectMessage));
 
     verify(transport, times(1)).send(matches(message));
   }
@@ -244,7 +244,7 @@ public class JSTPConnectionTest {
       }
     });
     int expectedRejectedCalls = 0;
-    JSNativeParser parser = new JSNativeParser();
+    JSParser parser = new JSParser();
     for (Map.Entry<String, List<String>> illList : illPackets.entrySet()) {
       for (String packet : illList.getValue()) {
         expectedRejectedCalls++;
@@ -279,8 +279,8 @@ public class JSTPConnectionTest {
 
     final String input =
         String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName,
-            methodName, JSNativeSerializer.stringify(recvArgs));
-    JSObject callback = JSNativeParser.parse(input);
+            methodName, JSSerializer.stringify(recvArgs));
+    JSObject callback = JSParser.parse(input);
     connection.setCallHandler(interfaceName, "method", new CallHandler() {
       @Override
       public void handleCallback(List<?> data) {
@@ -372,7 +372,7 @@ public class JSTPConnectionTest {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         JSObject errPacket =
-            JSNativeParser.parse(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR);
+            JSParser.parse(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR);
         connection.onPacketReceived(errPacket);
         return null;
       }

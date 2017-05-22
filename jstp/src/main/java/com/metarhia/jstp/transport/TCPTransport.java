@@ -2,7 +2,7 @@ package com.metarhia.jstp.transport;
 
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.connection.AbstractSocket;
-import com.metarhia.jstp.core.JSNativeParser;
+import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParsingException;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
@@ -45,7 +45,7 @@ public class TCPTransport implements AbstractSocket {
   private OutputStream out;
   private BufferedInputStream in;
 
-  private JSNativeParser jsParser;
+  private JSParser jsParser;
   private ByteArrayOutputStream packetBuilder;
 
   private long closingTick;
@@ -75,7 +75,7 @@ public class TCPTransport implements AbstractSocket {
     this.sslEnabled = sslEnabled;
     packetBuilder = new ByteArrayOutputStream(DEFAULT_PACKET_SIZE);
     messageQueue = new ConcurrentLinkedQueue<>();
-    jsParser = new JSNativeParser();
+    jsParser = new JSParser();
   }
 
   public boolean connect() {

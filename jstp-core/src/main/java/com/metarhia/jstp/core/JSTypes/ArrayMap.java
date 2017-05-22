@@ -2,7 +2,7 @@ package com.metarhia.jstp.core.JSTypes;
 
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSInterfaces.JSSerializable;
-import com.metarhia.jstp.core.JSNativeSerializer;
+import com.metarhia.jstp.core.JSSerializer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -176,6 +176,6 @@ public class ArrayMap<T> implements JSObject<T>, JSSerializable {
 
   @Override
   public StringBuilder stringify(StringBuilder builder) {
-    return JSNativeSerializer.stringifyIterable(values, builder);
+    return JSSerializer.stringifyIterable(values, builder);
   }
 }

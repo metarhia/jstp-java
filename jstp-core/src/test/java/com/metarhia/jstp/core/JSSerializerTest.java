@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Created by lundibundi on 4/2/17.
  */
-class JSNativeSerializerTest {
+class JSSerializerTest {
 
   private static final ArrayList<TestData<String, String>> stringifyTestData =
       new ArrayList<>(Arrays.asList(
@@ -26,17 +26,17 @@ class JSNativeSerializerTest {
       ));
 
   static {
-    final TestData[] parseTestData = JSNativeParserTest.parseTestData;
+    final TestData[] parseTestData = JSParserTest.parseTestData;
     for (int i = 7; i < parseTestData.length; i++) {
       String input = (String) parseTestData[i].input;
       stringifyTestData.add(new TestData<>(input, input));
     }
   }
 
-  private JSNativeParser parser;
+  private JSParser parser;
 
-  public JSNativeSerializerTest() {
-    parser = new JSNativeParser();
+  public JSSerializerTest() {
+    parser = new JSParser();
   }
 
   @Test
@@ -44,7 +44,7 @@ class JSNativeSerializerTest {
     for (TestData<String, String> td : stringifyTestData) {
       parser.setInput(td.input);
       Object parsed = parser.parse();
-      String actual = JSNativeSerializer.stringify(parsed);
+      String actual = JSSerializer.stringify(parsed);
       assertEquals(td.expected, actual, "Failed to parse->stringify: " + td.input);
     }
   }
