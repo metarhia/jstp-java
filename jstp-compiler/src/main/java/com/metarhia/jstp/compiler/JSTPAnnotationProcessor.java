@@ -5,6 +5,7 @@ import static javax.annotation.processing.Completions.of;
 import com.metarhia.jstp.compiler.annotations.JSTPHandler;
 import com.metarhia.jstp.compiler.annotations.JSTPReceiver;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -86,17 +87,20 @@ public class JSTPAnnotationProcessor extends AbstractProcessor {
 
   @Override
   public Iterable<? extends Completion> getCompletions(Element element,
-      AnnotationMirror annotationMirror,
-      ExecutableElement executableElement, String s) {
-    if (s.startsWith("N")) {
-      return Arrays.asList(of("Number"));
-    } else if (s.startsWith("I")) {
-      return Arrays.asList(of("Indexed"));
-    } else if (s.startsWith("E")) {
-      return Arrays.asList(of("ErrorHandler"));
-    } else {
-      return Arrays.asList(of("JSTPReceiver"));
+                                                       AnnotationMirror annotationMirror,
+                                                       ExecutableElement executableElement,
+                                                       String s) {
+    final Set<String> completions = new HashSet<>(Arrays.asList(
+        "Array", "Object", "JSTPReceiver", "JSTPHandler",
+        "Mixed", "ErrorHandler", "NotNull", "Typed", "NoDefaultGet"));
+
+    final ArrayList<Completion> matching = new ArrayList<>();
+    for (String completion : completions) {
+      if (completion.startsWith(s)) {
+        matching.add(of(completion));
+      }
     }
+    return matching;
   }
 
   @Override
