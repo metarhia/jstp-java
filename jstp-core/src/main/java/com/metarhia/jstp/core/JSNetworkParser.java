@@ -1,6 +1,6 @@
 package com.metarhia.jstp.core;
 
-import com.metarhia.jstp.core.JSTypes.JSObject;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +19,7 @@ public final class JSNetworkParser {
 
   public static List<JSObject> parse(byte[] msg, int[] length) throws JSParsingException {
     List<JSObject> packets = new ArrayList<>();
-    JSParser parser = new JSParser();
+    JSNativeParser parser = new JSNativeParser();
     int chunkStart = 0;
     int chunkLength = bytesUntil(msg, chunkStart, length[0], TERMINATOR);
     while (chunkLength != -1 && chunkStart < length[0]) {

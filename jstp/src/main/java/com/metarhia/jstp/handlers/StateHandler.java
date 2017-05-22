@@ -1,11 +1,11 @@
 package com.metarhia.jstp.handlers;
 
-import com.metarhia.jstp.core.JSTypes.JSValue;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 
 /**
  * Created by lundibundi on 8/7/16.
  */
 public interface StateHandler {
 
-  void onState(JSValue value);
+  void onState(JSObject value);
 }

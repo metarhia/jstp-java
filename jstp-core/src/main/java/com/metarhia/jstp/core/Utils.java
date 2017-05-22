@@ -22,7 +22,11 @@ public final class Utils {
   }
 
   public static String escapeString(String input) {
-    StringBuilder builder = new StringBuilder(input.length());
+    return escapeString(input, new StringBuilder()).toString();
+  }
+
+  public static StringBuilder escapeString(String input, StringBuilder builder) {
+    builder.ensureCapacity(builder.length() + input.length());
     for (int i = 0; i < input.length(); i++) {
       final char c = input.charAt(i);
       String escaped = getEscapedCharacter(c);
@@ -32,7 +36,7 @@ public final class Utils {
         builder.append(escaped);
       }
     }
-    return builder.toString();
+    return builder;
   }
 
   public static String getEscapedCharacter(char c) {
@@ -64,22 +68,29 @@ public final class Utils {
 
   public static String unescapeString(char[] input, int fromIndex, int maxIndex)
       throws ParseException {
+    return unescapeString(input, fromIndex, maxIndex, new StringBuilder(30));
+  }
+
+  public static String unescapeString(char[] input, int fromIndex,
+                                      int maxIndex, StringBuilder builder)
+      throws ParseException {
     int backslash = fromIndex;
     int index = indexOf(input, '\\', backslash, maxIndex);
     if (index < 0) {
       return new String(input, fromIndex, maxIndex - fromIndex);
     }
-    StringBuilder result = new StringBuilder(maxIndex - fromIndex);
+    builder.setLength(0);
+    builder.ensureCapacity(maxIndex - fromIndex);
     while (index >= 0) {
       index++;
-      result.append(input, backslash, index - backslash - 1);
-      backslash = index + addControlChar(input, index, result);
+      builder.append(input, backslash, index - backslash - 1);
+      backslash = index + addControlChar(input, index, builder);
       index = indexOf(input, '\\', backslash, maxIndex);
     }
     if (backslash < maxIndex) {
-      result.append(input, backslash, maxIndex - backslash);
+      builder.append(input, backslash, maxIndex - backslash);
     }
-    return result.toString();
+    return builder.toString();
   }
 
   public static int addControlChar(char[] input, int start, StringBuilder dst)
@@ -154,11 +165,11 @@ public final class Utils {
     int powerMod = 0;
     for (i = start; i < length; i++) {
       final char ch = data[i];
-      if (ch == '.' && dotIndex < 0) {
-        dotIndex = i;
-      } else if (ch >= '0' && ch <= '9') {
+      if (ch >= '0' && ch <= '9') {
         powerMod++;
         value = value * 10 + (ch - '0');
+      } else if (ch == '.' && dotIndex < 0) {
+        dotIndex = i;
       } else if (ch == 'e' || ch == 'E') {
         powerMod -= charArrayToInt(data, i + 1, length, end);
         break;

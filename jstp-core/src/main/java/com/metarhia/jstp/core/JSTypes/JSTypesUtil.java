@@ -1,73 +1,50 @@
 package com.metarhia.jstp.core.JSTypes;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import java.util.List;
-import java.util.Map;
 
 public final class JSTypesUtil {
 
   private JSTypesUtil() {
   }
 
+  public static <T> T getFromArray(List<?> array, int... indexes) {
+    Object next = array;
+    for (int i : indexes) {
+      next = ((List<?>) next).get(i);
+    }
+    return (T) next;
+  }
+
+  public static <T> T getFromObject(JSObject<?> object, String... keys) {
+    Object next = object;
+    for (String key : keys) {
+      next = ((JSObject<?>) next).get(key);
+    }
+    return (T) next;
+  }
+
   /**
-   * Supported types: {@link Integer} {@link Double} {@link String} {@link Boolean}
-   * {@link List}
-   * <p>
-   * Wraps java value to be used in JS hierarchy
+   * Iteratively gets values from {@param value} by keys
    *
-   * @param value object of java type to be wrapped in JS hierarchy
-   * @return appropriate JSValue or JSUndefined
+   * @param value initial value
+   * @param keys array of keys to be fetched
+   * @param <T> return type
+   * @return
    */
-  public static JSValue javaToJS(Object value) {
-    if (value instanceof Number) {
-      return new JSNumber(((Number) value).doubleValue());
-    } else if (value instanceof String) {
-      return new JSString((String) value);
-    } else if (value instanceof Boolean) {
-      return new JSBool((Boolean) value);
-    } else if (value instanceof List<?>) {
-      return new JSArray((List<Object>) value);
-    } else if (value instanceof JSValue) {
-      return (JSValue) value;
-    } else if (value == null) {
-      return JSNull.get();
-    }
-    return JSUndefined.get();
-  }
-
-  public static Object jsToJava(JSValue jsValue) {
-    return jsToJava(jsValue, false);
-  }
-
-  public static Object jsToJava(JSValue jsValue, boolean forceInt) {
-    if (jsValue instanceof JSNumber) {
-      final double value = ((JSNumber) jsValue).getValue();
-      if (forceInt) {
-        return (int) value;
+  public static <T> T getMixed(Object value, Object... keys) {
+    Object next = value;
+    for (Object k : keys) {
+      if (k instanceof Integer) {
+        next = ((List<?>) next).get((Integer) k);
+      } else if (k instanceof Double) {
+        next = ((JSObject) next).getByIndex(((Double) k).intValue());
+      } else if (k instanceof String) {
+        next = ((JSObject) next).get(k);
       } else {
-        return value;
+        throw new RuntimeException("Unsupported key type");
       }
-    } else if (jsValue instanceof JSString) {
-      return ((JSString) jsValue).getValue();
-    } else if (jsValue instanceof JSBool) {
-      return ((JSBool) jsValue).getValue();
-    } else if (jsValue instanceof JSArray) {
-      List<Object> value = new ArrayList<>();
-      for (JSValue val : ((JSArray) jsValue).getValue()) {
-        value.add(jsToJava(val, forceInt));
-      }
-      return value;
-    } else if (jsValue instanceof JSObject) {
-      Map<String, Object> value = new HashMap<>();
-      for (Map.Entry<String, JSValue> me : ((JSObject) jsValue).getValue().entrySet()) {
-        value.put(me.getKey(), jsToJava(me.getValue(), forceInt));
-      }
-      return value;
-    } else if (jsValue instanceof JSNull) {
-      return null;
-    } else {
-      return JSUndefined.get();
     }
+    return (T) next;
   }
 }

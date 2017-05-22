@@ -1,6 +1,6 @@
 package com.metarhia.jstp.core.JSTypes;
 
-public final class JSUndefined implements JSValue {
+public final class JSUndefined {
 
   private static JSUndefined instance;
 
@@ -17,11 +17,6 @@ public final class JSUndefined implements JSValue {
   public static boolean isUndefined(Object obj) {
     return obj == instance
         || obj instanceof JSUndefined;
-  }
-
-  @Override
-  public Object getGeneralizedValue() {
-    return this;
   }
 
   @Override

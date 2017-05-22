@@ -2,9 +2,9 @@ package com.metarhia.jstp.transport;
 
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.connection.AbstractSocket;
-import com.metarhia.jstp.core.JSParser;
+import com.metarhia.jstp.core.JSNativeParser;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParsingException;
-import com.metarhia.jstp.core.JSTypes.JSObject;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -45,7 +45,7 @@ public class TCPTransport implements AbstractSocket {
   private OutputStream out;
   private BufferedInputStream in;
 
-  private JSParser jsParser;
+  private JSNativeParser jsParser;
   private ByteArrayOutputStream packetBuilder;
 
   private long closingTick;
@@ -75,7 +75,7 @@ public class TCPTransport implements AbstractSocket {
     this.sslEnabled = sslEnabled;
     packetBuilder = new ByteArrayOutputStream(DEFAULT_PACKET_SIZE);
     messageQueue = new ConcurrentLinkedQueue<>();
-    jsParser = new JSParser();
+    jsParser = new JSNativeParser();
   }
 
   public boolean connect() {
@@ -193,8 +193,7 @@ public class TCPTransport implements AbstractSocket {
 
       jsParser.setInput(message);
       try {
-        JSObject packet = jsParser.parseObject();
-        socketListener.onPacketReceived(packet);
+        socketListener.onPacketReceived((JSObject) jsParser.parse());
       } catch (JSParsingException e) {
         logger.info("Message parsing failed", e);
       }

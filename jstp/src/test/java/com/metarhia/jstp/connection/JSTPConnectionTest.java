@@ -15,15 +15,14 @@ import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
-import com.metarhia.jstp.core.JSParser;
+import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
+import com.metarhia.jstp.core.JSNativeParser;
+import com.metarhia.jstp.core.JSNativeSerializer;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParsingException;
-import com.metarhia.jstp.core.JSTypes.JSArray;
-import com.metarhia.jstp.core.JSTypes.JSNull;
-import com.metarhia.jstp.core.JSTypes.JSObject;
-import com.metarhia.jstp.core.JSTypes.JSString;
-import com.metarhia.jstp.core.JSTypes.JSValue;
 import com.metarhia.jstp.handlers.CallHandler;
 import com.metarhia.jstp.storage.FileStorage;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -107,7 +106,7 @@ public class JSTPConnectionTest {
 
   @Test
   public void emptyObject() throws Exception {
-    final String s = "{}" + JSTPConnection.TERMINATOR;
+    final String packet = "{}" + JSTPConnection.TERMINATOR;
     final boolean[] success = {false};
     connection.addSocketListener(new SimpleJSTPConnectionListener() {
       @Override
@@ -116,7 +115,7 @@ public class JSTPConnectionTest {
       }
     });
 
-    connection.onPacketReceived((JSObject) JSParser.parse(s));
+    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(packet));
     assertTrue(success[0]);
   }
 
@@ -127,12 +126,12 @@ public class JSTPConnectionTest {
     final Boolean[] success = {false};
     connection.setCallHandler("auth", "newAccount", new ManualHandler() {
       @Override
-      public void invoke(JSValue packet) {
+      public void invoke(JSObject packet) {
         success[0] = true;
       }
     });
 
-    connection.onPacketReceived((JSObject) JSParser.parse(packet));
+    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(packet));
 
     assertTrue(success[0]);
   }
@@ -145,12 +144,12 @@ public class JSTPConnectionTest {
     final Boolean[] success = {false};
     connection.addEventHandler("auth", "insert", new ManualHandler() {
       @Override
-      public void invoke(JSValue packet) {
+      public void invoke(JSObject packet) {
         success[0] = true;
       }
     });
 
-    connection.onPacketReceived((JSObject) JSParser.parse(packet));
+    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(packet));
 
     assertTrue(success[0]);
   }
@@ -162,12 +161,12 @@ public class JSTPConnectionTest {
     final Boolean[] success = {false};
     connection.addHandler(17, new ManualHandler() {
       @Override
-      public void invoke(JSValue packet) {
+      public void invoke(JSObject packet) {
         success[0] = true;
       }
     });
 
-    connection.onPacketReceived((JSObject) JSParser.parse(packet));
+    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(packet));
 
     assertTrue(success[0]);
   }
@@ -177,17 +176,18 @@ public class JSTPConnectionTest {
     String input = "{ping:[42]}" + JSTPConnection.TERMINATOR;
     String response = "{pong:[42]}" + JSTPConnection.TERMINATOR;
 
-    connection.onPacketReceived((JSObject) JSParser.parse(input));
+    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(input));
 
     verify(transport, times(1)).send(response);
   }
 
   @Test
   public void checkCallback() throws Exception {
-    final JSArray args = new JSArray("data");
+    final List<?> args = Arrays.asList("data");
     long packageNumber = 13;
     String message =
-        String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR, packageNumber, args);
+        String.format("{callback:[%d],ok:%s}" + JSTPConnection.TERMINATOR,
+            packageNumber, JSNativeSerializer.stringify(args));
 
     connection.callback(JSCallback.OK, args, packageNumber);
 
@@ -213,9 +213,8 @@ public class JSTPConnectionTest {
     String message =
         String.format("\\{callback:\\[\\d+\\],ok:\\[%s\\]\\}" + JSTPConnection.TERMINATOR, methods);
 
-    String inspectMessage = String.format("{inspect:[12, %s]}", new JSString(interfaceName));
-    JSObject inspectPacket = new JSParser(inspectMessage).parseObject();
-    connection.onPacketReceived(inspectPacket);
+    String inspectMessage = String.format("{inspect:[12, '%s']}", interfaceName);
+    connection.onPacketReceived(JSNativeParser.<IndexedHashMap<?>>parse(inspectMessage));
 
     verify(transport, times(1)).send(matches(message));
   }
@@ -245,7 +244,7 @@ public class JSTPConnectionTest {
       }
     });
     int expectedRejectedCalls = 0;
-    JSParser parser = new JSParser();
+    JSNativeParser parser = new JSNativeParser();
     for (Map.Entry<String, List<String>> illList : illPackets.entrySet()) {
       for (String packet : illList.getValue()) {
         expectedRejectedCalls++;
@@ -254,7 +253,7 @@ public class JSTPConnectionTest {
         }
         parser.setInput(packet);
         try {
-          final JSObject message = parser.parseObject();
+          final JSObject message = parser.parse();
           connection.onPacketReceived(message);
         } catch (JSParsingException e) {
           // TODO: remove counter here and don't use onPacketReceived
@@ -274,16 +273,18 @@ public class JSTPConnectionTest {
     long packetNum = 42;
     String methodName = "method";
     String interfaceName = "interfaceName";
-    final JSArray recvArgs = new JSArray(JSNull.get());
-    final JSArray responseArgs = new JSArray(24, "whatever");
+    final List<?> recvArgs = new ArrayList<>();
+    recvArgs.add(null);
+    final List<?> responseArgs = Arrays.asList(24, "whatever");
 
     final String input =
-        String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName, methodName, recvArgs);
-    JSObject callback = new JSParser(input).parseObject();
+        String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName,
+            methodName, JSNativeSerializer.stringify(recvArgs));
+    JSObject callback = JSNativeParser.parse(input);
     connection.setCallHandler(interfaceName, "method", new CallHandler() {
       @Override
-      public void handleCallback(JSArray data) {
-        assertTrue(data.equals(recvArgs));
+      public void handleCallback(List<?> data) {
+        assertEquals(data, recvArgs);
         callback(connection, JSCallback.OK, responseArgs);
       }
     });
@@ -314,7 +315,7 @@ public class JSTPConnectionTest {
           String sessionID) {
         connection.handshake(appName, new ManualHandler() {
           @Override
-          public void invoke(JSValue packet) {
+          public void invoke(JSObject packet) {
             success[0] = true;
           }
         });
@@ -370,7 +371,8 @@ public class JSTPConnectionTest {
     doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        JSObject errPacket = new JSParser(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR).parseObject();
+        JSObject errPacket =
+            JSNativeParser.parse(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR);
         connection.onPacketReceived(errPacket);
         return null;
       }
