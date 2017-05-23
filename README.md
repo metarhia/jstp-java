@@ -307,7 +307,7 @@ public interface ExampleHandler {
 }
 ```
 
-##### NotNull
+##### @NotNull
 
 Annotates that the method should only be called if all of its arguments are not
 null (in case of method-wide annotation) or only specific parameters are not
@@ -323,7 +323,7 @@ public interface ExampleHandler {
 }
 ```
 
-##### Named
+##### @Object
 
 Gets the field of the received packet by specified name. It also allows getting
 elements from nested objects, the value will be retrieved in the order of keys
@@ -334,21 +334,21 @@ specified.
 public interface OkErrorHandler {
   // ...
   @NotNull
-  @Named("ok")
+  @Object("ok")
   void onOK(List<?> args);
 
   @NotNull
-  @Named("error")
+  @Object("error")
   void onError(List<?> args);
 
   // gets String value by key "neededValue" in object got by "ok"
-  @Named(value = {"ok", "neededValue"})
+  @Object(value = {"ok", "neededValue"})
   void onNeededValueRetrieved(String value);
   // ...
 }
 ```
 
-##### Indexed
+##### @Array
 
 Can be used to get the specific value from JSTP message. It also allows
 getting elements from nested arrays, the value will be retrieved in the order
@@ -358,21 +358,21 @@ of indexes specified.
 @JSTPHandler
 public interface ExampleHandler {
   // ...
-  void onFirstIndex(@Indexed(1) String arg);
+  void onFirstIndex(@Array(1) String arg);
 
   // gets (List<?>) packet[1][2]
-   void onValueBySecondIndex(@Indexed({1, 2}) List<?> args);
+   void onValueBySecondIndex(@Array({1, 2}) List<?> args);
   // ...
 }
 ```
 
-##### Custom-named
+##### @Mixed
 
-It is a sort of combination of `Named` and `Indexed` annotations. You can get
+It is a sort of combination of `@Object` and `@Array` annotations. You can get
 needed value by index or by key. It also allows getting elements from nested
 objects and arrays, the value will be retrieved in the order of keys and
 indexes specified. To get a value by key, you should just declare the required
-key like in `@Named` annotation, for example `"some key"`. To get value from
+key like in `@Object` annotation, for example `"some key"`. To get value from
 array by index, you can declare it as `"[index]"`. To get an object value by
 index (according to keys order) you should declare it as `"{key index}"`.
 
@@ -381,14 +381,14 @@ index (according to keys order) you should declare it as `"{key index}"`.
 public interface ExampleHandler {
   // ...
 
-  @CustomNamed("ok")
+  @Mixed("ok")
   void onNeededNamedValue(Object args);
 
-  @CustomNamed("{1}")
+  @Mixed("{1}")
   void onKeyByIndexValue(Object args);
 
   // gets packet["ok"][1][2]
-  @CustomNamed(value = {"ok", "[1]", "{2}"})
+  @Mixed(value = {"ok", "[1]", "{2}"})
   void onNeededMixValue(Object args);
   // ...
 }
