@@ -18,8 +18,6 @@ public class Tokenizer implements Serializable {
   private static final CharRange LETTER_UPPER_RANGE = new CharRange(0x41, 0x5a);
   private static final CharRange LETTER_LOWER_RANGE = new CharRange(0x61, 0x7a);
 
-  private final IdentifierMatchRange IDENTIFIER_MATCHER = new IdentifierMatchRange();
-
   private final FloatMatchRange floatMatchRange = new FloatMatchRange();
 
   private final int[] cachedArray = new int[1];
@@ -102,10 +100,9 @@ public class Tokenizer implements Serializable {
       return lastToken = Token.STRING;
     }
 
-//        if (ch == '_' || Character.isLetter(ch)) {
-    if (ch == 0x5f || isLetter(ch)) { // underscore
+    if (Character.isUnicodeIdentifierStart(ch)) {
       // identifier
-      int lastIndex = getPastLastIndex(input, index, IDENTIFIER_MATCHER);
+      int lastIndex = getPastLastIdentifierIndex(input, index);
       str = new String(input, index - 1, lastIndex - index + 1);
       index = lastIndex;
 
@@ -141,9 +138,15 @@ public class Tokenizer implements Serializable {
     return Utils.indexOf(input, ch, from, length);
   }
 
+  private int getPastLastIdentifierIndex(char[] input, int index) {
+    while (index < length && Character.isUnicodeIdentifierPart(input[index])) {
+      ++index;
+    }
+    return index;
+  }
+
   private int getPastLastIndex(char[] input, int index, MatchRange matcher) {
-    while (index < length
-        && matcher.matches(input[index])) {
+    while (index < length && matcher.matches(input[index])) {
       ++index;
     }
     return index;
@@ -202,14 +205,6 @@ public class Tokenizer implements Serializable {
     prevIndex = 0;
     lastToken = null;
     length = 0;
-  }
-
-  private static class IdentifierMatchRange implements MatchRange {
-
-    @Override
-    public boolean matches(char ch) {
-      return isLetter(ch) || isNumber(ch) || ch == 0x5f; // '_'
-    }
   }
 
   private static class FloatMatchRange implements MatchRange {
