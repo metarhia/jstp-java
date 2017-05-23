@@ -394,6 +394,16 @@ public interface ExampleHandler {
 }
 ```
 
+You can use `@Array`, `@Object`, `@Mixed` annotations with both
+methods and parameters. In case of method it'll decide starting
+value to get from (to apply getters) for other parameter-wide
+getters. If no method-wide getter is specified the value
+under second key of object'll be used by default, to cancel
+this behaviour you can either define you own getter or specify
+`@NoDefaultGet` annotation (this way starting value'll be
+the jstp message itself).
+
+
 After compilation class named like `JSTP + (YourHandlerName)` (for this example
 it will be `JSTPExampleHandler`) will be generated and you will be able to use
 it in packet processing.
