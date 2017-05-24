@@ -9,7 +9,7 @@ public interface JSTPConnectionListener {
 
   void onConnected(boolean restored);
 
-  void onPacketRejected(JSObject packet);
+  void onMessageRejected(JSObject message);
 
   void onConnectionError(int errorCode);
 

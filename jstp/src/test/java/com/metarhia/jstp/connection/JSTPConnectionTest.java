@@ -41,20 +41,20 @@ import org.mockito.stubbing.Answer;
 
 public class JSTPConnectionTest {
 
-  private static final List<BasicArguments> callPackets = Arrays.asList(
+  private static final List<BasicArguments> callMessages = Arrays.asList(
       new BasicArguments("iface3", "method", Collections.EMPTY_LIST),
       new BasicArguments("iface2", "method2", Collections.singletonList(13)),
       new BasicArguments("iface", "method3", Arrays.asList(1, "abc", 42)));
 
-  private static final List<CallbackArguments> callbackPackets = Arrays.asList(
+  private static final List<CallbackArguments> callbackMessages = Arrays.asList(
       new CallbackArguments(13, JSCallback.OK, Collections.EMPTY_LIST),
       new CallbackArguments(11, JSCallback.OK, Collections.singletonList(13)),
       new CallbackArguments(42, JSCallback.OK, Arrays.asList(1, "abc", 42)),
       new CallbackArguments(43, JSCallback.ERROR, Arrays.asList(1, "Remote error")));
 
-  private static final List<BasicArguments> eventPackets = callPackets;
+  private static final List<BasicArguments> eventMessages = callMessages;
 
-  private static final List<InspectArguments> inspectPackets = Arrays.asList(
+  private static final List<InspectArguments> inspectMessages = Arrays.asList(
       new InspectArguments(11, "iface1",
           Arrays.asList("method")),
       new InspectArguments(11, "iface2",
@@ -62,36 +62,36 @@ public class JSTPConnectionTest {
       new InspectArguments(13, "auth",
           null));
 
-  private static final Map<String, List<String>> illPackets = new HashMap<>();
+  private static final Map<String, List<String>> illFormedMessages = new HashMap<>();
 
   static {
-    illPackets.put("Call packet", Arrays.asList(
+    illFormedMessages.put("Call message", Arrays.asList(
         "{call:['ss','auth'],newAccount:{a: 'Payload data'}}",
         "{call:[17,14],newAccount:['Payload data']}",
         "{call:[17,'auth']}"));
-    illPackets.put("Callback packet", Arrays.asList(
+    illFormedMessages.put("Callback message", Arrays.asList(
         "{callback:['ss'],ok:[15703]}"));
 
-    illPackets.put("Event packet", Arrays.asList(
+    illFormedMessages.put("Event message", Arrays.asList(
         "{event:['chat'],message:['Marcus','Hello there!']}",
         "{event:[-12,'chat']}"));
 
-//    illPackets.put("Handshake request packet", Arrays.asList(
+//    illFormedMessages.put("Handshake request message", Arrays.asList(
 //        "{handshake:[0],marcus:'7b458e1a9dda67cb7a3e'}",
 //        "{handshake:[0,'example']}",
 //        "{handshake:[0,'example'],marcus:1111}",
 //        "{handshake:[0,'example'],marcus:'7b458e1a9dda67cb7a3e'}"
 //    ));
 
-    illPackets.put("Handshake response packet", Arrays.asList(
+    illFormedMessages.put("Handshake response message", Arrays.asList(
         "{handshake:['xx'],ok:'9b71d224bd62bcdec043'}",
         "{handshake:[0],ok:333}"));
 
-    illPackets.put("inspect request packet", Arrays.asList(
+    illFormedMessages.put("inspect request message", Arrays.asList(
         "{inspect:['22','interfaceName']}",
         "{inspect:[42]}"));
 
-    illPackets.put("inspect response packet", Arrays.asList(
+    illFormedMessages.put("inspect response message", Arrays.asList(
         "{callback:[42]}",
         "{callback:[42],ok:{'method1':'method2'}}"));
   }
@@ -129,12 +129,12 @@ public class JSTPConnectionTest {
     final boolean[] success = {false};
     connection.addSocketListener(new SimpleJSTPConnectionListener() {
       @Override
-      public void onPacketRejected(JSObject packet) {
+      public void onMessageRejected(JSObject message) {
         success[0] = true;
       }
     });
 
-    connection.onPacketReceived(JSParser.<IndexedHashMap<?>>parse(packet));
+    connection.onMessageReceived(JSParser.<IndexedHashMap<?>>parse(packet));
     assertTrue(success[0]);
   }
 
@@ -143,7 +143,7 @@ public class JSTPConnectionTest {
     String input = "{ping:[42]}" + JSTPConnection.TERMINATOR;
     String response = "{pong:[42]}" + JSTPConnection.TERMINATOR;
 
-    connection.onPacketReceived(JSParser.<JSObject>parse(input));
+    connection.onMessageReceived(JSParser.<JSObject>parse(input));
 
     verify(transport, times(1))
         .send(argThat(new MessageMatcher(response)));
@@ -165,17 +165,17 @@ public class JSTPConnectionTest {
   }
 
   @Test
-  public void illFormedPackets() throws Exception {
+  public void illFormedMessages() throws Exception {
     JSTPConnectionListener listener = spy(JSTPConnectionListener.class);
     connection.addSocketListener(listener);
     JSParser parser = new JSParser();
-    for (Map.Entry<String, List<String>> illList : illPackets.entrySet()) {
+    for (Map.Entry<String, List<String>> illList : illFormedMessages.entrySet()) {
       for (String messageString : illList.getValue()) {
         parser.setInput(messageString);
         final JSObject message = parser.parse();
-        connection.onPacketReceived(message);
+        connection.onMessageReceived(message);
 
-        verify(listener, times(1)).onPacketRejected(message);
+        verify(listener, times(1)).onMessageRejected(message);
 
         connection.handshake(TestConstants.MOCK_APP_NAME, null);
       }
@@ -184,7 +184,7 @@ public class JSTPConnectionTest {
 
   @Test
   public void callbackHandler() throws Exception {
-    long packetNum = 42;
+    long messageNumber = 42;
     String methodName = "method";
     String interfaceName = "interfaceName";
     final List<?> recvArgs = new ArrayList<>();
@@ -192,7 +192,7 @@ public class JSTPConnectionTest {
     final List<?> responseArgs = Arrays.asList(24, "whatever");
 
     final String input =
-        String.format("{call:[%d,'%s'], %s:%s}", packetNum, interfaceName,
+        String.format("{call:[%d,'%s'], %s:%s}", messageNumber, interfaceName,
             methodName, JSSerializer.stringify(recvArgs));
     JSObject callback = JSParser.parse(input);
     connection.setCallHandler(interfaceName, "method", new CallHandler() {
@@ -202,9 +202,9 @@ public class JSTPConnectionTest {
         callback(connection, JSCallback.OK, responseArgs);
       }
     });
-    connection.onPacketReceived(callback);
+    connection.onMessageReceived(callback);
     verify(connection, times(1))
-        .callback(JSCallback.OK, responseArgs, packetNum);
+        .callback(JSCallback.OK, responseArgs, messageNumber);
   }
 
   @Test
@@ -229,7 +229,7 @@ public class JSTPConnectionTest {
                                        String sessionID) {
         connection.handshake(appName, new ManualHandler() {
           @Override
-          public void invoke(JSObject packet) {
+          public void handle(JSObject message) {
             success[0] = true;
           }
         });
@@ -285,9 +285,9 @@ public class JSTPConnectionTest {
     doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        JSObject errPacket =
+        JSObject errMessage =
             JSParser.parse(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR);
-        connection.onPacketReceived(errPacket);
+        connection.onMessageReceived(errMessage);
         return null;
       }
     }).when(connection).handshake(anyString(), Mockito.<ManualHandler>isNull());
@@ -349,7 +349,7 @@ public class JSTPConnectionTest {
 
   @Test
   void checkCall() throws Exception {
-    for (BasicArguments ba : callPackets) {
+    for (BasicArguments ba : callMessages) {
       String args = JSSerializer.stringify(ba.args);
       String callString = String.format(TestConstants.MOCK_CALL,
           0, ba.interfaceName, ba.methodName, args);
@@ -364,23 +364,23 @@ public class JSTPConnectionTest {
   @Test
   void checkCallHandling() throws Exception {
     ManualHandler handler = spy(ManualHandler.class);
-    for (BasicArguments ba : callPackets) {
+    for (BasicArguments ba : callMessages) {
       String args = JSSerializer.stringify(ba.args);
       String callString = String.format(TestConstants.MOCK_CALL,
           0, ba.interfaceName, ba.methodName, args);
       final JSObject message = JSParser.parse(callString);
 
       connection.setCallHandler(ba.interfaceName, ba.methodName, handler);
-      connection.onPacketReceived(message);
+      connection.onMessageReceived(message);
       connection.removeCallHandler(ba.interfaceName, ba.methodName);
 
-      verify(handler, times(1)).invoke(message);
+      verify(handler, times(1)).handle(message);
     }
   }
 
   @Test
   void checkEvent() throws Exception {
-    for (BasicArguments ba : eventPackets) {
+    for (BasicArguments ba : eventMessages) {
       String args = JSSerializer.stringify(ba.args);
       String eventString = String.format(TestConstants.MOCK_EVENT,
           0, ba.interfaceName, ba.methodName, args);
@@ -395,28 +395,28 @@ public class JSTPConnectionTest {
   @Test
   void checkEventHandling() throws Exception {
     ManualHandler handler = spy(ManualHandler.class);
-    for (BasicArguments ba : eventPackets) {
+    for (BasicArguments ba : eventMessages) {
       String args = JSSerializer.stringify(ba.args);
       String callString = String.format(TestConstants.MOCK_EVENT,
           0, ba.interfaceName, ba.methodName, args);
       final JSObject message = JSParser.parse(callString);
 
       connection.addEventHandler(ba.interfaceName, ba.methodName, handler);
-      connection.onPacketReceived(message);
+      connection.onMessageReceived(message);
       connection.removeEventHandler(ba.interfaceName, ba.methodName, handler);
 
-      verify(handler, times(1)).invoke(message);
+      verify(handler, times(1)).handle(message);
     }
   }
 
   @Test
   void checkCallback() throws Exception {
-    for (CallbackArguments cba : callbackPackets) {
+    for (CallbackArguments cba : callbackMessages) {
       String args = JSSerializer.stringify(cba.args);
       String callbackString = String.format(TestConstants.MOCK_CALLBACK,
-          cba.packageCounter, cba.callback, args);
+          cba.messageNumber, cba.callback, args);
 
-      connection.callback(cba.callback, cba.args, cba.packageCounter);
+      connection.callback(cba.callback, cba.args, cba.messageNumber);
 
       verify(transport, times(1))
           .send(argThat(new MessageMatcher(callbackString)));
@@ -426,27 +426,27 @@ public class JSTPConnectionTest {
   @Test
   void checkCallbackHandling() throws Exception {
     ManualHandler handler = spy(ManualHandler.class);
-    for (CallbackArguments cba : callbackPackets) {
+    for (CallbackArguments cba : callbackMessages) {
       String args = JSSerializer.stringify(cba.args);
       String callString = String.format(TestConstants.MOCK_CALLBACK,
-          cba.packageCounter, cba.callback, args);
+          cba.messageNumber, cba.callback, args);
       final JSObject message = JSParser.parse(callString);
 
-      connection.addHandler(cba.packageCounter, handler);
-      connection.onPacketReceived(message);
+      connection.addHandler(cba.messageNumber, handler);
+      connection.onMessageReceived(message);
 
-      verify(handler, times(1)).invoke(message);
+      verify(handler, times(1)).handle(message);
     }
   }
 
   @Test
   public void checkInspect() throws Exception {
-    for (InspectArguments ia : inspectPackets) {
+    for (InspectArguments ia : inspectMessages) {
 
       connection.inspect(ia.interfaceName, null);
 
       String inspectRequest = String.format(TestConstants.MOCK_INSPECT,
-          ia.packetCounter, ia.interfaceName);
+          ia.messageNumber, ia.interfaceName);
       verify(transport, times(1))
           .send(argThat(new MessageMatcherNoCount(inspectRequest)));
     }
@@ -454,14 +454,14 @@ public class JSTPConnectionTest {
 
   @Test
   public void checkInspectHandler() throws Exception {
-    for (InspectArguments ia : inspectPackets) {
+    for (InspectArguments ia : inspectMessages) {
       if (ia.methods != null) {
         connection.setClientMethodNames(ia.interfaceName, ia.methods);
       }
       String inspectRequest = String.format(TestConstants.MOCK_INSPECT,
-          ia.packetCounter, ia.interfaceName);
+          ia.messageNumber, ia.interfaceName);
 
-      connection.onPacketReceived(JSParser.<JSObject>parse(inspectRequest));
+      connection.onMessageReceived(JSParser.<JSObject>parse(inspectRequest));
 
       JSCallback callback = JSCallback.OK;
       List<?> args = ia.methods;
@@ -470,7 +470,7 @@ public class JSTPConnectionTest {
         args = Collections.singletonList(Constants.ERR_INTERFACE_NOT_FOUND);
       }
       String response = String.format(TestConstants.MOCK_CALLBACK,
-          ia.packetCounter, callback, JSSerializer.stringify(args));
+          ia.messageNumber, callback, JSSerializer.stringify(args));
       verify(transport, times(1))
           .send(argThat(new MessageMatcher(response)));
     }
@@ -522,9 +522,9 @@ public class JSTPConnectionTest {
 
     String callString =
         String.format(TestConstants.MOCK_CALL, 13, interfaceName, methodName, "[]");
-    connection.onPacketReceived(JSParser.<JSObject>parse(callString));
+    connection.onMessageReceived(JSParser.<JSObject>parse(callString));
 
-    verify(handler, times(0)).invoke(any(JSObject.class));
+    verify(handler, times(0)).handle(any(JSObject.class));
   }
 
   @Test
@@ -538,9 +538,9 @@ public class JSTPConnectionTest {
 
     String callString =
         String.format(TestConstants.MOCK_EVENT, 13, interfaceName, methodName, "[]");
-    connection.onPacketReceived(JSParser.<JSObject>parse(callString));
+    connection.onMessageReceived(JSParser.<JSObject>parse(callString));
 
-    verify(handler, times(0)).invoke(any(JSObject.class));
+    verify(handler, times(0)).handle(any(JSObject.class));
   }
 
   private static class BasicArguments {
@@ -558,12 +558,12 @@ public class JSTPConnectionTest {
 
   private static class CallbackArguments {
 
-    long packageCounter;
+    long messageNumber;
     JSCallback callback;
     List<?> args;
 
-    public CallbackArguments(long packageCounter, JSCallback callback, List<?> args) {
-      this.packageCounter = packageCounter;
+    public CallbackArguments(long messageNumber, JSCallback callback, List<?> args) {
+      this.messageNumber = messageNumber;
       this.callback = callback;
       this.args = args;
     }
@@ -571,13 +571,13 @@ public class JSTPConnectionTest {
 
   private static class InspectArguments {
 
-    long packetCounter;
+    long messageNumber;
     String interfaceName;
     List<String> methods;
 
-    public InspectArguments(long packetCounter, String interfaceName,
+    public InspectArguments(long messageNumber, String interfaceName,
                             List<String> methods) {
-      this.packetCounter = packetCounter;
+      this.messageNumber = messageNumber;
       this.interfaceName = interfaceName;
       this.methods = methods;
     }

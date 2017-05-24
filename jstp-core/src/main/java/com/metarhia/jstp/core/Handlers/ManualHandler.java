@@ -7,5 +7,5 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
  */
 public interface ManualHandler {
 
-  void invoke(JSObject packet);
+  void handle(JSObject message);
 }

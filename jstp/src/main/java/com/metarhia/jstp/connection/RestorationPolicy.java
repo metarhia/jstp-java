@@ -8,10 +8,10 @@ import java.util.Queue;
 public interface RestorationPolicy {
 
   /**
-   * Called after restoration handshake so that this client may resend packets
+   * Called after restoration handshake so that this client may resend buffered messages
    *
    * @param connection connection to work with
-   * @param sendQueue connection buffer of packets that was sent but was not received
+   * @param sendQueue connection buffer of messages that was sent but was not received
    * @return true if session was restored, false otherwise
    */
   boolean restore(JSTPConnection connection, Queue<JSTPMessage> sendQueue);

@@ -24,7 +24,7 @@ public class TCPTransport implements AbstractSocket {
 
   public static final long DEFAULT_CLOSING_TICK = 1000;
   public static final long DEFAULT_CLOSING_TIMEOUT = 5000;
-  public static final int DEFAULT_PACKET_SIZE = 100;
+  public static final int DEFAULT_MESSAGE_SIZE = 100;
 
   private static final Logger logger = LoggerFactory.getLogger(TCPTransport.class);
 
@@ -46,7 +46,7 @@ public class TCPTransport implements AbstractSocket {
   private BufferedInputStream in;
 
   private JSParser jsParser;
-  private ByteArrayOutputStream packetBuilder;
+  private ByteArrayOutputStream messageBuilder;
 
   private long closingTick;
   private long closingTimeout;
@@ -73,7 +73,7 @@ public class TCPTransport implements AbstractSocket {
     this.host = host;
     this.port = port;
     this.sslEnabled = sslEnabled;
-    packetBuilder = new ByteArrayOutputStream(DEFAULT_PACKET_SIZE);
+    messageBuilder = new ByteArrayOutputStream(DEFAULT_MESSAGE_SIZE);
     messageQueue = new ConcurrentLinkedQueue<>();
     jsParser = new JSParser();
   }
@@ -183,22 +183,22 @@ public class TCPTransport implements AbstractSocket {
   void processMessage() throws IOException {
     int b;
     while ((b = in.read()) > 0) {
-      packetBuilder.write(b);
+      messageBuilder.write(b);
     }
-    if (packetBuilder.size() != 0 && socketListener != null) {
-      packetBuilder.write('\0');
-      String message = packetBuilder.toString(Constants.UTF_8_CHARSET_NAME);
+    if (messageBuilder.size() != 0 && socketListener != null) {
+      messageBuilder.write('\0');
+      String message = messageBuilder.toString(Constants.UTF_8_CHARSET_NAME);
 
       logger.trace("Received message: {}", message);
 
       jsParser.setInput(message);
       try {
-        socketListener.onPacketReceived((JSObject) jsParser.parse());
+        socketListener.onMessageReceived((JSObject) jsParser.parse());
       } catch (JSParsingException e) {
         logger.info("Message parsing failed", e);
       }
     }
-    packetBuilder.reset();
+    messageBuilder.reset();
     if (b == -1) {
       closeInternal();
     }

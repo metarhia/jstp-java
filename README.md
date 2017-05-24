@@ -84,7 +84,7 @@ As of now the only available transport is TCP. Optionally you can
 define restoration policy (there are 2 basic ones in SDK:
 `DropRestorationPolicy` - which will create new connection every
 time transport is restored and `SessionRestorationPolicy` - which
-will resend cached packets and try to restore session.
+will resend cached messages and try to restore session.
 `SessionRestorationPolicy` is used by default). For example:
 
 ```java
@@ -112,7 +112,7 @@ connection.addSocketListener(new JSTPConnectionListener() {
   }
 
   @Override
-  public void onPacketRejected(JSObject packet) {
+  public void onMessageRejected(JSObject message) {
     // ...
   }
 
@@ -139,19 +139,19 @@ connection.connect("applicationName");
 connection.connect("applicationName", "sessionId");
 ```
 
-### JSTP packet types
+### JSTP message types
 
 #### Handshake
 
-Usually you don't have to send handshake packets manually. You may need
+Usually you don't have to send handshake messages manually. You may need
 them if If you need to implement your own restoration policy or change
-transport on active connection. You can send `handshake` packet as follows:
+transport on active connection. You can send `handshake` message as follows:
 
 ```java
 // anonymous handshake message
 connection.handshake("applicationName", new ManualHandler() {
   @Override
-  public void invoke(JSObject packet) {
+  public void handle(JSObject message) {
     // ...
   }
 });
@@ -159,7 +159,7 @@ connection.handshake("applicationName", new ManualHandler() {
 // handshake with attempt to restore session
 connection.handshake("applicationName", "sessionId", new ManualHandler() {
   @Override
-  public void invoke(JSObject packet) {
+  public void handle(JSObject message) {
     // ...
   }
 });
@@ -167,7 +167,7 @@ connection.handshake("applicationName", "sessionId", new ManualHandler() {
 // handshake message with authorization
 connection.handshake("applicationName", "name", "pass", new ManualHandler() {
   @Override
-  public void invoke(JSObject  packet) {
+  public void handle(JSObject  message) {
     // ...
   }
 });
@@ -183,13 +183,13 @@ List<?> args = new ArrayList();
 // ...
 connection.call("interfaceName", "methodName", args, new ManualHandler() {
   @Override
-  public void invoke(final JSObject value) {
+  public void handle(final JSObject message) {
     // ...
   }
 );
 ```
 
-To handle incoming `call` packets, you have to `setCallHandler()` for that call.
+To handle incoming `call` messages, you have to `setCallHandler()` for that call.
 There can only be one call handler for each call.
 
 #### Callback
@@ -208,12 +208,12 @@ connection.setCallHandler("interfaceName", "methodName", new CallHandler() {
 });
 ```
 
-You also can send `callback` packets like this:
+You also can send `callback` messages like this:
 
 ```java
 connection.callback(JSCallback.OK, args);
 
-// define custom packet index
+// define custom message number
 Long customIndex;
 // ...
 connection.callback(JSCallback.OK, args, customIndex);
@@ -222,7 +222,7 @@ connection.callback(JSCallback.OK, args, customIndex);
 
 #### Inspect
 
-Incoming inspect packets are handled by JSTPConnection itself. To make
+Incoming inspect messages are handled by JSTPConnection itself. To make
 methods visible through inspect message you just need to define method
 names with appropriate interfaces.
 
@@ -232,11 +232,11 @@ connection.setClientMethodNames("interfaceName2", "methodName1", "methodName2");
 // ...
 ```
 
-To send `inspect` packet:
+To send `inspect` message:
 ```java
 connection.inspect("interfaceName", new ManualHandler() {
   @Override
-  public void invoke(JSObject packet) {
+  public void handle(JSObject message) {
     // ...
   }
 });
@@ -250,13 +250,13 @@ There can be multiple event handlers for each event.
 ```java
 connection.addEventHandler("interfaceName", "methodName", new ManualHandler() {
   @Override
-  public void invoke(JSObject packet) {
+  public void handle(JSObject message) {
     // ...
   }
 });
 ```
 
-Sending `event` packet:
+Sending `event` message:
 ```java
 List<Object> args = new ArrayList<>();
 // ...
@@ -265,9 +265,9 @@ connection.event("interfaceName", "methodName", args);
 
 ### JSTP compiler
 
-JSTP compiler is a nice feature to ease handling of JSTP packets. You can
+JSTP compiler is a nice feature to ease handling of JSTP messages. You can
 declare interfaces that correspond to specific API or simple call to avoid
-writing all boilerplate code to get the arguments out of the packet. JSTP
+writing all boilerplate code to get the arguments out of the message. JSTP
 compiler will parse those at compile time and generate implementations.
 
 #### Installation
@@ -294,7 +294,7 @@ Maven:
 
 #### Handlers usage
 
-JSTP handlers are used to process data from incoming JSTP packets, just like
+JSTP handlers are used to process data from incoming JSTP messages, just like
 usual `ManualHandler`s do.  Unlike `ManualHandler`, you are able to customize
 JSTP handlers as you wish, declaring methods with annotations described below.
 To create your own handler, just add the  `@JSTPHandler` annotation to the
@@ -325,7 +325,7 @@ public interface ExampleHandler {
 
 ##### @Object
 
-Gets the field of the received packet by specified name. It also allows getting
+Gets the field of the received message by specified name. It also allows getting
 elements from nested objects, the value will be retrieved in the order of keys
 specified.
 
@@ -360,7 +360,7 @@ public interface ExampleHandler {
   // ...
   void onFirstIndex(@Array(1) String arg);
 
-  // gets (List<?>) packet[1][2]
+  // gets (List<?>) message[1][2]
    void onValueBySecondIndex(@Array({1, 2}) List<?> args);
   // ...
 }
@@ -387,7 +387,7 @@ public interface ExampleHandler {
   @Mixed("{1}")
   void onKeyByIndexValue(Object args);
 
-  // gets packet["ok"][1][2]
+  // gets message["ok"][1][2]
   @Mixed(value = {"ok", "[1]", "{2}"})
   void onNeededMixValue(Object args);
   // ...
@@ -406,7 +406,7 @@ the jstp message itself).
 
 After compilation class named like `JSTP + (YourHandlerName)` (for this example
 it will be `JSTPExampleHandler`) will be generated and you will be able to use
-it in packet processing.
+it in message processing.
 
 ```java
 connection.call("interfaceName", "methodName", args, new JSTPExampleHandler() {
@@ -428,7 +428,7 @@ public interface ExampleReceiver {
 The syntax of declaring methods is the same as in `JSTPHandler`. After
 compilation class named like `JSTP + (Your receiver name)` (for this example it
 will be `JSTPExampleReceiver`) will be generated and you will be able to use it
-in packet processing.
+in message processing.
 
 You can use custom receiver like this:
 ```java

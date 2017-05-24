@@ -18,14 +18,14 @@ public final class JSNetworkParser {
   }
 
   public static List<JSObject> parse(byte[] msg, int[] length) throws JSParsingException {
-    List<JSObject> packets = new ArrayList<>();
+    List<JSObject> messages = new ArrayList<>();
     JSParser parser = new JSParser();
     int chunkStart = 0;
     int chunkLength = bytesUntil(msg, chunkStart, length[0], TERMINATOR);
     while (chunkLength != -1 && chunkStart < length[0]) {
-      String packetData = new String(msg, chunkStart, chunkLength, UTF_8_CHARSET);
-      parser.setInput(packetData);
-      packets.add(parser.parseObject());
+      String messageData = new String(msg, chunkStart, chunkLength, UTF_8_CHARSET);
+      parser.setInput(messageData);
+      messages.add(parser.parseObject());
       chunkStart += chunkLength;
       chunkLength = bytesUntil(msg, chunkStart, length[0], TERMINATOR);
     }
@@ -36,7 +36,7 @@ public final class JSNetworkParser {
     } else {
       length[0] = 0;
     }
-    return packets;
+    return messages;
   }
 
   private static int bytesUntil(byte[] bytes, int offset, int length, byte until) {

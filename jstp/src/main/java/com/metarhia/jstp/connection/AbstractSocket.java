@@ -34,7 +34,7 @@ public interface AbstractSocket {
 
     void onConnected();
 
-    void onPacketReceived(JSObject packet);
+    void onMessageReceived(JSObject message);
 
     void onConnectionClosed();
 

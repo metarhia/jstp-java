@@ -66,7 +66,7 @@ public class TCPTransportTest {
 
     connection.addEventHandler("auth", "insert", new ManualHandler() {
       @Override
-      public void invoke(JSObject packet) {
+      public void handle(JSObject message) {
         success[0] = true;
         synchronized (readThread) {
           if (success[1]) {
@@ -79,7 +79,7 @@ public class TCPTransportTest {
 
     connection.addHandler(17, new ManualHandler() {
       @Override
-      public void invoke(JSObject packet) {
+      public void handle(JSObject message) {
         success[1] = true;
         synchronized (readThread) {
           if (success[0]) {

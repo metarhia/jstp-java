@@ -13,14 +13,14 @@ public class JSTPMessage {
   private JSObject<Object> message;
 
   /**
-   * Arguments specific for protocol (always contains packageNumber)
+   * Arguments specific for protocol (always contains messageNumber)
    */
   private List<Object> protocolArgs;
 
   /**
    * Number of package corresponding to this message
    */
-  private long packageNumber;
+  private long messageNumber;
 
   /**
    * Implementation will by no means invalidate this value, it is the responsibility of the user to
@@ -32,13 +32,13 @@ public class JSTPMessage {
     this.message = new IndexedHashMap<>(2);
   }
 
-  public JSTPMessage(long packageNumber, String type) {
+  public JSTPMessage(long messageNumber, String type) {
     this();
 
-    this.packageNumber = packageNumber;
+    this.messageNumber = messageNumber;
 
     this.protocolArgs = new ArrayList<>(2);
-    this.protocolArgs.add(this.packageNumber);
+    this.protocolArgs.add(this.messageNumber);
 
     message.put(type, this.protocolArgs);
   }
@@ -53,9 +53,9 @@ public class JSTPMessage {
     return this;
   }
 
-  public JSTPMessage setPackageNumber(int packageNumber) {
-    this.packageNumber = packageNumber;
-    this.protocolArgs.set(0, this.packageNumber);
+  public JSTPMessage setMessageNumber(int messageNumber) {
+    this.messageNumber = messageNumber;
+    this.protocolArgs.set(0, this.messageNumber);
     return this;
   }
 
@@ -63,8 +63,8 @@ public class JSTPMessage {
     return message;
   }
 
-  public long getPackageNumber() {
-    return packageNumber;
+  public long getMessageNumber() {
+    return messageNumber;
   }
 
   public String getStringRepresentation() {

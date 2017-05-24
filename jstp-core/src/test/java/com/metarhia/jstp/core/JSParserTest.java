@@ -115,7 +115,7 @@ class JSParserTest {
   }
 
   @Test
-  public void testPacketSample() throws Exception {
+  public void testSampleMessage() throws Exception {
     String input = "{\n" +
         "  name: 'Marcus Aurelius',\n" +
         "  passport: 'AE127095',\n" +

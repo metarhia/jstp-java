@@ -12,7 +12,7 @@ public class SimpleJSTPConnectionListener implements JSTPConnectionListener {
   }
 
   @Override
-  public void onPacketRejected(JSObject packet) {
+  public void onMessageRejected(JSObject message) {
   }
 
   @Override

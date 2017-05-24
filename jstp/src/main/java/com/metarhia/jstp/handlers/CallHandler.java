@@ -15,9 +15,9 @@ public abstract class CallHandler implements ManualHandler {
   private long callbackNumber;
 
   @Override
-  public void invoke(JSObject packet) {
-    callbackNumber = JSTypesUtil.<Double>getMixed(packet, 0.0, 0).longValue();
-    handleCallback((List<?>) packet.getByIndex(1));
+  public void handle(JSObject message) {
+    callbackNumber = JSTypesUtil.<Double>getMixed(message, 0.0, 0).longValue();
+    handleCallback((List<?>) message.getByIndex(1));
   }
 
   public abstract void handleCallback(List<?> data);

@@ -43,8 +43,9 @@ import javax.lang.model.util.Types;
  */
 public class JSTPAnnotatedInterface {
 
-  private static final String PACKET_PARAMETER_NAME = "packet";
-  private static final String INVOKE_PREFIX = "invoke";
+  private static final String PREFIX = "JSTP";
+  private static final String MESSAGE_PARAMETER_NAME = "message";
+  private static final String HANDLER_METHOD = "handle";
   private static final String VARIABLE_DECLARATION = "$1T $2L";
   private static final String VARIABLE_DECLARATION_NULL = VARIABLE_DECLARATION + " = null";
   private static final String VARIABLE_DEFINITION = VARIABLE_DECLARATION + " = ($1T) $3L";
@@ -52,7 +53,6 @@ public class JSTPAnnotatedInterface {
       VARIABLE_DECLARATION + " = ($1T) ($3L).getGeneralizedValue()";
   private static final String VARIABLE_ASSIGNMENT = "$2L = ($1T) $3L";
   private static final String VARIABLE_ASSIGNMENT_JAVA_TYPE = "$2L = ($1T) ($3L).getGeneralizedValue()";
-  private static final String PREFIX = "JSTP";
 
   private static final Class JSTP_VALUE_TYPE = Object.class;
   private static final TypeName JSTP_VALUE_TYPENAME = TypeName.get(JSObject.class);
@@ -61,7 +61,7 @@ public class JSTPAnnotatedInterface {
   private TypeElement annotatedInterface;
 
   private List<ExecutableElement> errorHandlers;
-  private List<com.squareup.javapoet.MethodSpec> packetHandlers;
+  private List<com.squareup.javapoet.MethodSpec> messageHandlers;
 
   private MethodSpec.Builder mainInvokeBuilder;
   private TypeSpec.Builder jstpClassBuilder;
@@ -77,7 +77,7 @@ public class JSTPAnnotatedInterface {
     annotatedInterface = typeElement;
     typeUtils = new TypeUtils(types, elements);
     errorHandlers = new LinkedList<>();
-    packetHandlers = new LinkedList<>();
+    messageHandlers = new LinkedList<>();
 
     interfaceClassName = ClassName.get(annotatedInterface.asType());
     interfaceTypeName = TypeName.get(annotatedInterface.asType());
@@ -104,12 +104,11 @@ public class JSTPAnnotatedInterface {
           .addAnnotation(Override.class)
           .addModifiers(Modifier.PUBLIC);
     } else {
-      mainInvokeBuilder = MethodSpec.methodBuilder(INVOKE_PREFIX)
+      mainInvokeBuilder = MethodSpec.methodBuilder(HANDLER_METHOD)
           .addAnnotation(Override.class)
           .addModifiers(Modifier.PUBLIC)
-          .addParameter(JSTP_VALUE_TYPENAME, PACKET_PARAMETER_NAME);
+          .addParameter(JSTP_VALUE_TYPENAME, MESSAGE_PARAMETER_NAME);
     }
-
   }
 
   public void generateCode(Filer filer) throws
@@ -168,7 +167,7 @@ public class JSTPAnnotatedInterface {
         } else {
           // create new invoke wrapper
           MethodSpec invokeMethod = createInvokeMethod(method, handlersName);
-          packetHandlers.add(invokeMethod);
+          messageHandlers.add(invokeMethod);
         }
       }
     }
@@ -177,8 +176,8 @@ public class JSTPAnnotatedInterface {
     if (errorHandlers.size() > 0) {
       mainInvokeBuilder.beginControlFlow("try ");
     }
-    for (MethodSpec ms : packetHandlers) {
-      mainInvokeBuilder.addStatement("$L($L)", ms.name, PACKET_PARAMETER_NAME);
+    for (MethodSpec ms : messageHandlers) {
+      mainInvokeBuilder.addStatement("$L($L)", ms.name, MESSAGE_PARAMETER_NAME);
       jstpClassBuilder.addMethod(ms);
     }
 
@@ -202,20 +201,20 @@ public class JSTPAnnotatedInterface {
 
   private MethodSpec createInvokeMethod(ExecutableElement method, String handlersName)
       throws ClassCastException, PropertyFormatException {
-    final String name = INVOKE_PREFIX + capitalize(method.getSimpleName().toString());
+    final String name = HANDLER_METHOD + capitalize(method.getSimpleName().toString());
     MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(name)
         .addModifiers(Modifier.PRIVATE)
-        .addParameter(JSTP_VALUE_TYPENAME, PACKET_PARAMETER_NAME);
+        .addParameter(JSTP_VALUE_TYPENAME, MESSAGE_PARAMETER_NAME);
 
-    String payloadName = PACKET_PARAMETER_NAME;
+    String payloadName = MESSAGE_PARAMETER_NAME;
 
     TypeMirror payloadType = getClassFromTyped(method, true);
     CodeBlock payloadData = PropertyGetterUtils
-        .composeGetterFromAnnotations(PACKET_PARAMETER_NAME, method);
+        .composeGetterFromAnnotations(MESSAGE_PARAMETER_NAME, method);
     if (payloadData == null && method.getAnnotation(NoDefaultGet.class) == null) {
       // no method annotation and no explicit denial of default getter
       // so by default payload is second argument
-      payloadData = PropertyGetterUtils.composeCustomGetter(PACKET_PARAMETER_NAME, "{1}");
+      payloadData = PropertyGetterUtils.composeCustomGetter(MESSAGE_PARAMETER_NAME, "{1}");
     }
 
     if (payloadData != null) {
@@ -334,7 +333,7 @@ public class JSTPAnnotatedInterface {
       }
       if (strictJSType && !typeUtils.isSubtype(payloadType, JSTP_VALUE_TYPE)) {
         throw new ClassCastException(
-            "Cannot cast jstp packet data to " + payloadType.toString());
+            "Cannot cast jstp message data to " + payloadType.toString());
       }
     } else {
       payloadType = typeUtils.getTypeElement(JSTP_VALUE_TYPE.getCanonicalName());
@@ -448,7 +447,6 @@ public class JSTPAnnotatedInterface {
       builder.endControlFlow();
     }
   }
-
 
   private boolean checkFirstCast(List<? extends VariableElement> parameters, TypeMirror type) {
     return parameters.size() == 1

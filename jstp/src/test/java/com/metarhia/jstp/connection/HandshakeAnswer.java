@@ -32,12 +32,12 @@ public class HandshakeAnswer implements Answer<Void> {
 
   @Override
   public Void answer(InvocationOnMock invocation) throws Throwable {
-    final JSObject handshakePacket = new JSParser(response).parse();
-    connection.onPacketReceived(handshakePacket);
+    final JSObject handshakeMessage = new JSParser(response).parse();
+    connection.onMessageReceived(handshakeMessage);
     if (manualCall) {
       final ManualHandler handler = invocation.getArgument(1);
       if (handler != null) {
-        handler.invoke(handshakePacket);
+        handler.handle(handshakeMessage);
       }
     }
     return null;

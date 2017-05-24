@@ -12,11 +12,11 @@ public class SessionData implements Serializable {
 
   private String sessionID;
 
-  private AtomicLong packetCounter;
+  private AtomicLong messageCounter;
 
-  private long numSentPackets;
+  private long numSentMessages;
 
-  private long numReceivedPackets;
+  private long numReceivedMessages;
 
   public SessionData() {
     this(null);
@@ -26,35 +26,35 @@ public class SessionData implements Serializable {
     this(appName, 0);
   }
 
-  public SessionData(String appName, long packetCounter) {
+  public SessionData(String appName, long messageCounter) {
     this.appName = appName;
-    this.packetCounter = new AtomicLong(packetCounter);
+    this.messageCounter = new AtomicLong(messageCounter);
   }
 
   public SessionData(String appName, String sessionID,
-      long packetCounter, long numSentPackets, long numReceivedPackets) {
-    this(appName, packetCounter);
+                     long messageCounter, long numSentMessages, long numReceivedMessages) {
+    this(appName, messageCounter);
     this.sessionID = sessionID;
-    this.numSentPackets = numSentPackets;
-    this.numReceivedPackets = numReceivedPackets;
+    this.numSentMessages = numSentMessages;
+    this.numReceivedMessages = numReceivedMessages;
   }
 
-  public long getAndIncrementPacketCounter() {
-    return packetCounter.getAndIncrement();
+  public long getAndIncrementMessageCounter() {
+    return messageCounter.getAndIncrement();
   }
 
-  public void incrementNumSentPackets() {
-    this.numSentPackets++;
+  public void incrementNumSentMessages() {
+    this.numSentMessages++;
   }
 
-  public void incrementNumReceivedPackets() {
-    this.numReceivedPackets++;
+  public void incrementNumReceivedMessages() {
+    this.numReceivedMessages++;
   }
 
   public void reset() {
     sessionID = null;
-    this.numReceivedPackets = 0;
-    this.numSentPackets = 0;
+    this.numReceivedMessages = 0;
+    this.numSentMessages = 0;
   }
 
   @Override
@@ -68,10 +68,10 @@ public class SessionData implements Serializable {
 
     SessionData that = (SessionData) o;
 
-    if (numSentPackets != that.numSentPackets) {
+    if (numSentMessages != that.numSentMessages) {
       return false;
     }
-    if (numReceivedPackets != that.numReceivedPackets) {
+    if (numReceivedMessages != that.numReceivedMessages) {
       return false;
     }
     if (appName != null ? !appName.equals(that.appName) : that.appName != null) {
@@ -80,16 +80,16 @@ public class SessionData implements Serializable {
     if (sessionID != null ? !sessionID.equals(that.sessionID) : that.sessionID != null) {
       return false;
     }
-    return packetCounter.get() == that.packetCounter.get();
+    return messageCounter.get() == that.messageCounter.get();
   }
 
   @Override
   public int hashCode() {
     int result = appName != null ? appName.hashCode() : 0;
     result = 31 * result + (sessionID != null ? sessionID.hashCode() : 0);
-    result = 31 * result + packetCounter.hashCode();
-    result = 31 * result + (int) (numSentPackets ^ (numSentPackets >>> 32));
-    result = 31 * result + (int) (numReceivedPackets ^ (numReceivedPackets >>> 32));
+    result = 31 * result + messageCounter.hashCode();
+    result = 31 * result + (int) (numSentMessages ^ (numSentMessages >>> 32));
+    result = 31 * result + (int) (numReceivedMessages ^ (numReceivedMessages >>> 32));
     return result;
   }
 
@@ -109,28 +109,28 @@ public class SessionData implements Serializable {
     this.sessionID = sessionID;
   }
 
-  public AtomicLong getPacketCounter() {
-    return packetCounter;
+  public AtomicLong getMessageCounter() {
+    return messageCounter;
   }
 
-  public void setPacketCounter(AtomicLong packetCounter) {
-    this.packetCounter = packetCounter;
+  public void setMessageCounter(AtomicLong messageCounter) {
+    this.messageCounter = messageCounter;
   }
 
-  public long getNumSentPackets() {
-    return numSentPackets;
+  public long getNumSentMessages() {
+    return numSentMessages;
   }
 
-  public void setNumSentPackets(long numSentPackets) {
-    if (numSentPackets < 0) this.numSentPackets = 0;
-    else this.numSentPackets = numSentPackets;
+  public void setNumSentMessages(long numSentMessages) {
+    if (numSentMessages < 0) this.numSentMessages = 0;
+    else this.numSentMessages = numSentMessages;
   }
 
-  public long getNumReceivedPackets() {
-    return numReceivedPackets;
+  public long getNumReceivedMessages() {
+    return numReceivedMessages;
   }
 
-  public void setNumReceivedPackets(long numReceivedPackets) {
-    this.numReceivedPackets = numReceivedPackets;
+  public void setNumReceivedMessages(long numReceivedMessages) {
+    this.numReceivedMessages = numReceivedMessages;
   }
 }

@@ -14,7 +14,7 @@ public class SimpleAbstractSocketListener implements AbstractSocketListener {
   }
 
   @Override
-  public void onPacketReceived(JSObject jsObject) {
+  public void onMessageReceived(JSObject message) {
 
   }
 

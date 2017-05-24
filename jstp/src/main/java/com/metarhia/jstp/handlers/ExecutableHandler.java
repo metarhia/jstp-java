@@ -8,15 +8,15 @@ public abstract class ExecutableHandler implements ManualHandler, Runnable {
 
   private Executor executor;
 
-  protected JSObject packet;
+  protected JSObject message;
 
   public ExecutableHandler(Executor executor) {
     this.executor = executor;
   }
 
   @Override
-  public void invoke(JSObject packet) {
-    this.packet = packet;
+  public void handle(JSObject message) {
+    this.message = message;
     executor.execute(this);
   }
 }
