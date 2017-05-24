@@ -2,8 +2,8 @@ package com.metarhia.jstp.connection;
 
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
-import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
+import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import com.metarhia.jstp.handlers.StateHandler;
 import com.metarhia.jstp.storage.StorageInterface;
@@ -507,12 +507,14 @@ public class JSTPConnection implements
   }
 
   private void inspectPacketHandler(JSObject packet) {
+    long packetCounter = getPacketNumber(packet);
     String interfaceName = getInterfaceName(packet);
     List<String> methods = clientMethodNames.get(interfaceName);
     if (methods != null) {
-      callback(JSCallback.OK, methods);
+      callback(JSCallback.OK, methods, packetCounter);
     } else {
-      callback(JSCallback.ERROR, Collections.singletonList(Constants.ERR_INTERFACE_NOT_FOUND));
+      callback(JSCallback.ERROR,
+          Collections.singletonList(Constants.ERR_INTERFACE_NOT_FOUND), packetCounter);
     }
   }
 
