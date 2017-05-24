@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.isA;
@@ -16,6 +15,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
@@ -53,6 +53,14 @@ public class JSTPConnectionTest {
       new CallbackArguments(43, JSCallback.ERROR, Arrays.asList(1, "Remote error")));
 
   private static final List<BasicArguments> eventPackets = callPackets;
+
+  private static final List<InspectArguments> inspectPackets = Arrays.asList(
+      new InspectArguments(11, "iface1",
+          Arrays.asList("method")),
+      new InspectArguments(11, "iface2",
+          Arrays.asList("method1, method2")),
+      new InspectArguments(13, "auth",
+          null));
 
   private static final Map<String, List<String>> illPackets = new HashMap<>();
 
@@ -139,31 +147,6 @@ public class JSTPConnectionTest {
 
     verify(transport, times(1))
         .send(argThat(new MessageMatcher(response)));
-  }
-
-  @Test
-  public void checkInspectCall() throws Exception {
-    String interfaceName = "interfaceName";
-    String message =
-        String.format("\\{inspect:\\[\\d+,'%s'\\]\\}" + JSTPConnection.TERMINATOR, interfaceName);
-
-    connection.inspect(interfaceName, null);
-
-    verify(transport, times(1)).send(matches(message));
-  }
-
-  @Test
-  public void checkInspectResponse() throws Exception {
-    String interfaceName = "interfaceName";
-    connection.setClientMethodNames(interfaceName, "method1", "method2");
-    String methods = "'method1','method2'";
-    String message =
-        String.format("\\{callback:\\[\\d+\\],ok:\\[%s\\]\\}" + JSTPConnection.TERMINATOR, methods);
-
-    String inspectMessage = String.format("{inspect:[12, '%s']}", interfaceName);
-    connection.onPacketReceived(JSParser.<JSObject>parse(inspectMessage));
-
-    verify(transport, times(1)).send(matches(message));
   }
 
   @Test
@@ -457,6 +440,43 @@ public class JSTPConnectionTest {
   }
 
   @Test
+  public void checkInspect() throws Exception {
+    for (InspectArguments ia : inspectPackets) {
+
+      connection.inspect(ia.interfaceName, null);
+
+      String inspectRequest = String.format(TestConstants.MOCK_INSPECT,
+          ia.packetCounter, ia.interfaceName);
+      verify(transport, times(1))
+          .send(argThat(new MessageMatcherNoCount(inspectRequest)));
+    }
+  }
+
+  @Test
+  public void checkInspectHandler() throws Exception {
+    for (InspectArguments ia : inspectPackets) {
+      if (ia.methods != null) {
+        connection.setClientMethodNames(ia.interfaceName, ia.methods);
+      }
+      String inspectRequest = String.format(TestConstants.MOCK_INSPECT,
+          ia.packetCounter, ia.interfaceName);
+
+      connection.onPacketReceived(JSParser.<JSObject>parse(inspectRequest));
+
+      JSCallback callback = JSCallback.OK;
+      List<?> args = ia.methods;
+      if (args == null) {
+        callback = JSCallback.ERROR;
+        args = Collections.singletonList(Constants.ERR_INTERFACE_NOT_FOUND);
+      }
+      String response = String.format(TestConstants.MOCK_CALLBACK,
+          ia.packetCounter, callback, JSSerializer.stringify(args));
+      verify(transport, times(1))
+          .send(argThat(new MessageMatcher(response)));
+    }
+  }
+
+  @Test
   void useTransportNotConnected() {
     AbstractSocket transport = mock(AbstractSocket.class);
     JSTPConnection connection = spy(new JSTPConnection(transport));
@@ -546,6 +566,20 @@ public class JSTPConnectionTest {
       this.packageCounter = packageCounter;
       this.callback = callback;
       this.args = args;
+    }
+  }
+
+  private static class InspectArguments {
+
+    long packetCounter;
+    String interfaceName;
+    List<String> methods;
+
+    public InspectArguments(long packetCounter, String interfaceName,
+                            List<String> methods) {
+      this.packetCounter = packetCounter;
+      this.interfaceName = interfaceName;
+      this.methods = methods;
     }
   }
 }

@@ -27,6 +27,7 @@ public class TestConstants {
   public static final String MOCK_CALL = "{call:[%d,'%s'],%s:%s}";
   public static final String MOCK_CALLBACK = "{callback:[%d],%s:%s}";
   public static final String MOCK_EVENT = "{event:[%d,'%s'],%s:%s}";
+  public static final String MOCK_INSPECT = "{inspect:[%d,'%s']}";
 
   public static final Charset UTF_8_CHARSET = Constants.UTF_8_CHARSET;
 }
