@@ -624,13 +624,17 @@ public class JSTPConnection implements
   }
 
   public void setClientMethodNames(String interfaceName, String... names) {
+    setClientMethodNames(interfaceName, Arrays.asList(names));
+  }
+
+  public void setClientMethodNames(String interfaceName, List<String> names) {
     List<String> methods = clientMethodNames.get(interfaceName);
     if (methods == null) {
       methods = new ArrayList<>();
     } else {
       methods.clear();
     }
-    methods.addAll(Arrays.asList(names));
+    methods.addAll(names);
     clientMethodNames.put(interfaceName, methods);
   }
 
