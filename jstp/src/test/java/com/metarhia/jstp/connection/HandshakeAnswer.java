@@ -17,7 +17,11 @@ public class HandshakeAnswer implements Answer<Void> {
   private boolean manualCall;
 
   public HandshakeAnswer(JSTPConnection connection) {
-    this(connection, TestConstants.MOCK_HANDSHAKE_RESPONSE, true);
+    this(connection, "sessionId");
+  }
+
+  public HandshakeAnswer(JSTPConnection connection, String sessionId) {
+    this(connection, String.format(TestConstants.MOCK_HANDSHAKE_RESPONSE, sessionId), true);
   }
 
   public HandshakeAnswer(JSTPConnection connection, String response, boolean manualCall) {
