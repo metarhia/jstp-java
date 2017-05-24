@@ -539,8 +539,11 @@ public class JSTPConnection implements
     interfaceHandlers.put(methodName, callHandler);
   }
 
-  public void removeCallHandler(String methodName) {
-    callHandlers.remove(methodName);
+  public void removeCallHandler(String interfaceName, String methodName) {
+    final Map<String, ManualHandler> interfaceHandlers = callHandlers.get(interfaceName);
+    if (interfaceHandlers != null) {
+      interfaceHandlers.remove(methodName);
+    }
   }
 
   public void setStateHandler(StateHandler stateHandler) {
