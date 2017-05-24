@@ -270,7 +270,7 @@ public class JSTPConnection implements
 
   public void call(String interfaceName,
                    String methodName,
-                   List<Object> args,
+                   List<?> args,
                    ManualHandler handler) {
     long packageCounter = sessionData.getAndIncrementPacketCounter();
     JSTPMessage callMessage = new JSTPMessage(packageCounter, CALL)
