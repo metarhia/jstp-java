@@ -1,5 +1,6 @@
 package com.metarhia.jstp.compiler.annotations;
 
+import com.metarhia.jstp.core.Handlers.ManualHandler;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 
@@ -9,4 +10,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 public @interface JSTPHandler {
 
+  Class value() default ManualHandler.class;
 }

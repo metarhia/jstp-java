@@ -1,6 +1,7 @@
 package com.metarhia.jstp.compiler;
 
 import com.metarhia.jstp.compiler.annotations.ErrorHandler;
+import com.metarhia.jstp.compiler.annotations.JSTPHandler;
 import com.metarhia.jstp.compiler.annotations.JSTPReceiver;
 import com.metarhia.jstp.compiler.annotations.NoDefaultGet;
 import com.metarhia.jstp.compiler.annotations.NotNull;
@@ -8,6 +9,7 @@ import com.metarhia.jstp.compiler.annotations.Typed;
 import com.metarhia.jstp.core.Handlers.Handler;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
+import com.metarhia.jstp.handlers.ExecutableHandler;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
@@ -21,6 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.Executor;
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -54,8 +57,6 @@ public class JSTPAnnotatedInterface {
   private static final Class JSTP_VALUE_TYPE = Object.class;
   private static final TypeName JSTP_VALUE_TYPENAME = TypeName.get(JSObject.class);
 
-  private static Class receiverSuperinterface = ManualHandler.class;
-  private static Class handlerSuperClass = Handler.class;
   private final Class<?> annotation;
   private TypeElement annotatedInterface;
 
@@ -68,27 +69,47 @@ public class JSTPAnnotatedInterface {
   private String handlersName;
   private TypeName interfaceClassName;
   private TypeName interfaceTypeName;
+  private Class<?> handlerClass;
 
-  public JSTPAnnotatedInterface(Class<?> annotation, TypeElement typeElement, Elements elements,
-                                Types types) {
+  public JSTPAnnotatedInterface(Class<?> annotation, TypeElement typeElement,
+                                Elements elements, Types types) {
     this.annotation = annotation;
     annotatedInterface = typeElement;
     typeUtils = new TypeUtils(types, elements);
     errorHandlers = new LinkedList<>();
     packetHandlers = new LinkedList<>();
 
-    handlersName = null;
-    if (annotation == JSTPReceiver.class) {
-      handlersName = "handlers";
-    }
-
     interfaceClassName = ClassName.get(annotatedInterface.asType());
     interfaceTypeName = TypeName.get(annotatedInterface.asType());
 
-    mainInvokeBuilder = MethodSpec.methodBuilder(INVOKE_PREFIX)
-        .addAnnotation(Override.class)
-        .addModifiers(Modifier.PUBLIC)
-        .addParameter(JSTP_VALUE_TYPENAME, PACKET_PARAMETER_NAME);
+    handlerClass = ManualHandler.class;
+
+    TypeMirror jstpHandlerClass = null;
+    handlersName = null;
+    if (annotation == JSTPReceiver.class) {
+      handlerClass = Handler.class;
+      handlersName = "handlers";
+    } else {
+      try {
+        annotatedInterface.getAnnotation(JSTPHandler.class).value();
+      } catch (MirroredTypeException e) {
+        // intended ...
+        jstpHandlerClass = e.getTypeMirror();
+      }
+    }
+
+    if (typeUtils.isSubtype(jstpHandlerClass, ExecutableHandler.class)) {
+      handlerClass = ExecutableHandler.class;
+      mainInvokeBuilder = MethodSpec.methodBuilder("run")
+          .addAnnotation(Override.class)
+          .addModifiers(Modifier.PUBLIC);
+    } else {
+      mainInvokeBuilder = MethodSpec.methodBuilder(INVOKE_PREFIX)
+          .addAnnotation(Override.class)
+          .addModifiers(Modifier.PUBLIC)
+          .addParameter(JSTP_VALUE_TYPENAME, PACKET_PARAMETER_NAME);
+    }
+
   }
 
   public void generateCode(Filer filer) throws
@@ -100,11 +121,24 @@ public class JSTPAnnotatedInterface {
     if (handlersName == null) {
       jstpClassBuilder = TypeSpec.classBuilder(implementationClassName)
           .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
-          .addSuperinterface(ManualHandler.class)
           .addSuperinterface(interfaceTypeName);
+
+      if (handlerClass != ExecutableHandler.class) {
+        jstpClassBuilder.addSuperinterface(handlerClass);
+      } else {
+        jstpClassBuilder.superclass(handlerClass);
+
+        final MethodSpec mainConstructor = MethodSpec.constructorBuilder()
+            .addModifiers(Modifier.PUBLIC)
+            .addParameter(ClassName.get(Executor.class), "executor")
+            .addStatement("super($N)", "executor")
+            .build();
+
+        jstpClassBuilder.addMethod(mainConstructor);
+      }
     } else {
       final ParameterizedTypeName handlerSuperclass =
-          ParameterizedTypeName.get(ClassName.get(handlerSuperClass), interfaceTypeName);
+          ParameterizedTypeName.get(ClassName.get(handlerClass), interfaceTypeName);
 
       jstpClassBuilder = TypeSpec.classBuilder(implementationClassName)
           .addModifiers(Modifier.PUBLIC)
@@ -172,7 +206,6 @@ public class JSTPAnnotatedInterface {
     MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(name)
         .addModifiers(Modifier.PRIVATE)
         .addParameter(JSTP_VALUE_TYPENAME, PACKET_PARAMETER_NAME);
-
 
     String payloadName = PACKET_PARAMETER_NAME;
 
