@@ -9,7 +9,7 @@ sourceCompatibility = '1.7'
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
-def jstpVersion = '0.7.0'
+def jstpVersion = '0.8.0'
 def packetName = 'jstp'
 
 publishing {
