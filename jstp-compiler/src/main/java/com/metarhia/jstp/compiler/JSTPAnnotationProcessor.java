@@ -2,12 +2,13 @@ package com.metarhia.jstp.compiler;
 
 import static javax.annotation.processing.Completions.of;
 
-import com.metarhia.jstp.compiler.annotations.JSTPHandler;
-import com.metarhia.jstp.compiler.annotations.JSTPReceiver;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Completion;
@@ -18,22 +19,28 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
-public class JSTPAnnotationProcessor extends AbstractProcessor {
+public abstract class JSTPAnnotationProcessor extends AbstractProcessor {
 
-  private Types typeUtils;
-  private Elements elementUtils;
-  private Filer filer;
-  private Messager messager;
+  protected Types typeUtils;
+  protected Elements elementUtils;
+  protected Filer filer;
+  protected Messager messager;
 
   public JSTPAnnotationProcessor() {
   }
+
+  protected abstract void handleAnnotation(Element annotatedElement, Class<?> annotation)
+      throws ExceptionHandlerInvokeException, IOException, PropertyFormatException;
+
+  protected abstract List<Class<? extends Annotation>> getSupportedAnnotations();
+
+  protected abstract List<String> getAvailableCompletions();
 
   @Override
   public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -46,11 +53,10 @@ public class JSTPAnnotationProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
-    for (Element annotatedElement : roundEnvironment.getElementsAnnotatedWith(JSTPReceiver.class)) {
-      processInterfaceAnnotation(annotatedElement, JSTPReceiver.class);
-    }
-    for (Element annotatedElement : roundEnvironment.getElementsAnnotatedWith(JSTPHandler.class)) {
-      processInterfaceAnnotation(annotatedElement, JSTPHandler.class);
+    for (Class<? extends Annotation> annotation : getSupportedAnnotations()) {
+      for (Element annotatedElement : roundEnvironment.getElementsAnnotatedWith(annotation)) {
+        processInterfaceAnnotation(annotatedElement, annotation);
+      }
     }
     return true;
   }
@@ -58,42 +64,22 @@ public class JSTPAnnotationProcessor extends AbstractProcessor {
   public void processInterfaceAnnotation(Element annotatedElement,
                                          Class<?> annotation) {
     try {
-      if (annotatedElement.getKind() != ElementKind.INTERFACE) {
-        error(annotatedElement, "Only interfaces can be annotated with @%s",
-            annotation.getSimpleName());
-        return;
-      }
-
-      TypeElement typeElement = (TypeElement) annotatedElement;
-      JSTPAnnotatedInterface jstpReceiver = new JSTPAnnotatedInterface(annotation,
-          typeElement, elementUtils, typeUtils);
-
-      jstpReceiver.generateCode(filer);
-    } catch (PropertyFormatException e) {
-      messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
-    } catch (ExceptionHandlerInvokeException e) {
-      messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
-    } catch (ClassCastException e) {
-      messager.printMessage(Diagnostic.Kind.ERROR, e.getMessage());
+      handleAnnotation(annotatedElement, annotation);
+    } catch (RuntimeException e) {
+      errorWithStacktrace(e, "Cannot write class to file: " + e.getMessage());
     } catch (IOException e) {
-      messager.printMessage(
-          Diagnostic.Kind.ERROR, "Cannot write class to file: " + e.getMessage());
+      errorWithStacktrace(e, "Cannot write class to file: " + e.getMessage());
     } catch (Exception e) {
-      messager.printMessage(
-          Diagnostic.Kind.ERROR, "Unexpected error: " + e.toString());
+      errorWithStacktrace(e, "Unexpected error: " + e.toString());
     }
   }
-
 
   @Override
   public Iterable<? extends Completion> getCompletions(Element element,
                                                        AnnotationMirror annotationMirror,
                                                        ExecutableElement executableElement,
                                                        String s) {
-    final Set<String> completions = new HashSet<>(Arrays.asList(
-        "Array", "Object", "JSTPReceiver", "JSTPHandler",
-        "Mixed", "ErrorHandler", "NotNull", "Typed", "NoDefaultGet"));
-
+    final Set<String> completions = new HashSet<>(getAvailableCompletions());
     final ArrayList<Completion> matching = new ArrayList<>();
     for (String completion : completions) {
       if (completion.startsWith(s)) {
@@ -105,9 +91,11 @@ public class JSTPAnnotationProcessor extends AbstractProcessor {
 
   @Override
   public Set<String> getSupportedAnnotationTypes() {
-    return new HashSet<>(Arrays.asList(
-        JSTPReceiver.class.getCanonicalName(),
-        JSTPHandler.class.getCanonicalName()));
+    final HashSet<String> annotations = new HashSet<>();
+    for (Class<? extends Annotation> annotation : getSupportedAnnotations()) {
+      annotations.add(annotation.getCanonicalName());
+    }
+    return annotations;
   }
 
   @Override
@@ -115,7 +103,18 @@ public class JSTPAnnotationProcessor extends AbstractProcessor {
     return SourceVersion.RELEASE_7;
   }
 
-  private void error(Element e, String msg, Object... args) {
+  protected void errorWithStacktrace(Exception e, String msg, Object... args) {
+    StringWriter out = new StringWriter();
+    e.printStackTrace(new PrintWriter(out));
+
+    String format = String.format(msg, args);
+    format = format + " \n stacktrace: " + out.toString();
+    messager.printMessage(
+        Diagnostic.Kind.ERROR,
+        format);
+  }
+
+  protected void error(Element e, String msg, Object... args) {
     messager.printMessage(
         Diagnostic.Kind.ERROR,
         String.format(msg, args),

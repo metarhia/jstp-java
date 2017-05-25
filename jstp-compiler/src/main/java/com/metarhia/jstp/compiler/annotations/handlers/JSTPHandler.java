@@ -1,4 +1,4 @@
-package com.metarhia.jstp.compiler.annotations;
+package com.metarhia.jstp.compiler.annotations.handlers;
 
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import java.lang.annotation.ElementType;

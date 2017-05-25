@@ -1,8 +1,8 @@
 package com.metarhia.jstp.compiler;
 
-import com.metarhia.jstp.compiler.annotations.Array;
-import com.metarhia.jstp.compiler.annotations.Mixed;
-import com.metarhia.jstp.compiler.annotations.Object;
+import com.metarhia.jstp.compiler.annotations.handlers.Array;
+import com.metarhia.jstp.compiler.annotations.handlers.Mixed;
+import com.metarhia.jstp.compiler.annotations.handlers.Object;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;

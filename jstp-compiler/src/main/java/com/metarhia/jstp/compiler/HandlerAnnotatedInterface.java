@@ -1,11 +1,11 @@
 package com.metarhia.jstp.compiler;
 
-import com.metarhia.jstp.compiler.annotations.ErrorHandler;
-import com.metarhia.jstp.compiler.annotations.JSTPHandler;
-import com.metarhia.jstp.compiler.annotations.JSTPReceiver;
-import com.metarhia.jstp.compiler.annotations.NoDefaultGet;
-import com.metarhia.jstp.compiler.annotations.NotNull;
-import com.metarhia.jstp.compiler.annotations.Typed;
+import com.metarhia.jstp.compiler.annotations.handlers.ErrorHandler;
+import com.metarhia.jstp.compiler.annotations.handlers.JSTPHandler;
+import com.metarhia.jstp.compiler.annotations.handlers.JSTPReceiver;
+import com.metarhia.jstp.compiler.annotations.handlers.NoDefaultGet;
+import com.metarhia.jstp.compiler.annotations.handlers.NotNull;
+import com.metarhia.jstp.compiler.annotations.handlers.Typed;
 import com.metarhia.jstp.core.Handlers.Handler;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
@@ -41,7 +41,7 @@ import javax.lang.model.util.Types;
 /**
  * Created by lundibundi on 8/7/16.
  */
-public class JSTPAnnotatedInterface {
+public class HandlerAnnotatedInterface {
 
   private static final String PREFIX = "JSTP";
   private static final String MESSAGE_PARAMETER_NAME = "message";
@@ -49,10 +49,10 @@ public class JSTPAnnotatedInterface {
   private static final String VARIABLE_DECLARATION = "$1T $2L";
   private static final String VARIABLE_DECLARATION_NULL = VARIABLE_DECLARATION + " = null";
   private static final String VARIABLE_DEFINITION = VARIABLE_DECLARATION + " = ($1T) $3L";
-  private static final String VARIABLE_DEFINITION_JAVA_TYPE =
-      VARIABLE_DECLARATION + " = ($1T) ($3L).getGeneralizedValue()";
   private static final String VARIABLE_ASSIGNMENT = "$2L = ($1T) $3L";
-  private static final String VARIABLE_ASSIGNMENT_JAVA_TYPE = "$2L = ($1T) ($3L).getGeneralizedValue()";
+
+  private static final String VARIABLE_DEFINITION_CASTED = VARIABLE_DECLARATION + " = (($1T) $3L)";
+  private static final String VARIABLE_ASSIGNMENT_CASTED = "$2L = (($1T) $3L)";
 
   private static final Class JSTP_VALUE_TYPE = Object.class;
   private static final TypeName JSTP_VALUE_TYPENAME = TypeName.get(JSObject.class);
@@ -71,8 +71,8 @@ public class JSTPAnnotatedInterface {
   private TypeName interfaceTypeName;
   private Class<?> handlerClass;
 
-  public JSTPAnnotatedInterface(Class<?> annotation, TypeElement typeElement,
-                                Elements elements, Types types) {
+  public HandlerAnnotatedInterface(Class<?> annotation, TypeElement typeElement,
+                                   Elements elements, Types types) {
     this.annotation = annotation;
     annotatedInterface = typeElement;
     typeUtils = new TypeUtils(types, elements);
@@ -313,10 +313,14 @@ public class JSTPAnnotatedInterface {
                                      CodeBlock getter, boolean declared) {
     TypeMirror parameterType = parameter.asType();
     String pattern;
-    if (typeUtils.isSubtype(parameterType, JSTP_VALUE_TYPE)) {
-      pattern = declared ? VARIABLE_ASSIGNMENT : VARIABLE_DEFINITION;
+    if (typeUtils.isSameType(parameterType, Integer.class)) {
+      pattern = declared ? VARIABLE_ASSIGNMENT_CASTED : VARIABLE_DEFINITION_CASTED;
+      pattern += ".intValue()";
+    } else if (typeUtils.isSameType(parameterType, Long.class)) {
+      pattern = declared ? VARIABLE_ASSIGNMENT_CASTED : VARIABLE_DEFINITION_CASTED;
+      pattern += ".longValue()";
     } else {
-      pattern = declared ? VARIABLE_ASSIGNMENT_JAVA_TYPE : VARIABLE_DEFINITION_JAVA_TYPE;
+      pattern = declared ? VARIABLE_ASSIGNMENT : VARIABLE_DEFINITION;
     }
     methodBuilder.addStatement(pattern, parameterType, parameter.getSimpleName(), getter);
   }
@@ -397,7 +401,7 @@ public class JSTPAnnotatedInterface {
     for (ExecutableElement ee : errorHandlers) {
       List<? extends TypeMirror> exceptions = null;
       try {
-        ee.getAnnotation(ErrorHandler.class).exceptionTypes();
+        ee.getAnnotation(ErrorHandler.class).value();
       } catch (MirroredTypesException e) {
         // intended ...
         exceptions = e.getTypeMirrors();
