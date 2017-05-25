@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JSTPConnection implements
+public class Connection implements
     AbstractSocket.AbstractSocketListener {
 
   /**
@@ -45,28 +45,28 @@ public class JSTPConnection implements
 
   private static final Map<String, Method> METHOD_HANDLERS = new HashMap<>(10);
 
-  private static final Logger logger = LoggerFactory.getLogger(JSTPConnection.class);
+  private static final Logger logger = LoggerFactory.getLogger(Connection.class);
 
   private static AtomicLong nextConnectionID = new AtomicLong(0);
 
   static {
     try {
       METHOD_HANDLERS.put(HANDSHAKE,
-          JSTPConnection.class.getDeclaredMethod("handshakeMessageHandler", JSObject.class));
+          Connection.class.getDeclaredMethod("handshakeMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(CALL,
-          JSTPConnection.class.getDeclaredMethod("callMessageHandler", JSObject.class));
+          Connection.class.getDeclaredMethod("callMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(CALLBACK,
-          JSTPConnection.class.getDeclaredMethod("callbackMessageHandler", JSObject.class));
+          Connection.class.getDeclaredMethod("callbackMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(EVENT,
-          JSTPConnection.class.getDeclaredMethod("eventMessageHandler", JSObject.class));
+          Connection.class.getDeclaredMethod("eventMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(INSPECT,
-          JSTPConnection.class.getDeclaredMethod("inspectMessageHandler", JSObject.class));
+          Connection.class.getDeclaredMethod("inspectMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(STATE,
-          JSTPConnection.class.getDeclaredMethod("stateMessageHandler", JSObject.class));
+          Connection.class.getDeclaredMethod("stateMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(PING,
-          JSTPConnection.class.getDeclaredMethod("pingMessageHandler", JSObject.class));
+          Connection.class.getDeclaredMethod("pingMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(PONG,
-          JSTPConnection.class.getDeclaredMethod("pongMessageHandler", JSObject.class));
+          Connection.class.getDeclaredMethod("pongMessageHandler", JSObject.class));
     } catch (NoSuchMethodException e) {
       throw new RuntimeException("Cannot create method handlers", e);
     }
@@ -107,23 +107,23 @@ public class JSTPConnection implements
    */
   private Map<String, List<String>> clientMethodNames;
 
-  private List<JSTPConnectionListener> connectionListeners;
+  private List<ConnectionListener> connectionListeners;
 
   private RestorationPolicy restorationPolicy;
 
   private SessionData sessionData;
 
-  private Queue<JSTPMessage> sendQueue;
+  private Queue<Message> sendQueue;
 
   private int sendBufferCapacity;
 
   private NoConnBufferingPolicy noConnBufferingPolicy;
 
-  public JSTPConnection(AbstractSocket transport) {
+  public Connection(AbstractSocket transport) {
     this(transport, new SessionRestorationPolicy());
   }
 
-  public JSTPConnection(AbstractSocket transport, RestorationPolicy restorationPolicy) {
+  public Connection(AbstractSocket transport, RestorationPolicy restorationPolicy) {
     this.id = nextConnectionID.getAndIncrement();
     this.state = ConnectionState.STATE_AWAITING_HANDSHAKE;
     this.sessionData = new SessionData();
@@ -231,9 +231,9 @@ public class JSTPConnection implements
       handlers.put(packageCounter, handler);
     }
 
-    JSTPMessage hm;
+    Message hm;
     List<?> args = Arrays.asList(sessionID, sessionData.getNumReceivedMessages());
-    hm = new JSTPMessage(packageCounter, HANDSHAKE)
+    hm = new Message(packageCounter, HANDSHAKE)
         .putArg("session", args);
     hm.addProtocolArg(appName);
 
@@ -259,7 +259,7 @@ public class JSTPConnection implements
       handlers.put(packageCounter, handler);
     }
 
-    JSTPMessage hm = new JSTPMessage(packageCounter, HANDSHAKE)
+    Message hm = new Message(packageCounter, HANDSHAKE)
         .addProtocolArg(appName);
     if (username != null && password != null) {
       hm.putArg(username, password);
@@ -273,7 +273,7 @@ public class JSTPConnection implements
                    List<?> args,
                    ManualHandler handler) {
     long messageNumber = sessionData.getAndIncrementMessageCounter();
-    JSTPMessage callMessage = new JSTPMessage(messageNumber, CALL)
+    Message callMessage = new Message(messageNumber, CALL)
         .putArg(methodName, args)
         .addProtocolArg(interfaceName);
 
@@ -293,7 +293,7 @@ public class JSTPConnection implements
       messageNumber = sessionData.getAndIncrementMessageCounter();
     }
 
-    JSTPMessage callbackMessage = new JSTPMessage(messageNumber, CALLBACK)
+    Message callbackMessage = new Message(messageNumber, CALLBACK)
         .putArg(result.toString(), args);
 
     send(callbackMessage);
@@ -301,7 +301,7 @@ public class JSTPConnection implements
 
   public void inspect(String interfaceName, ManualHandler handler) {
     long messageNumber = sessionData.getAndIncrementMessageCounter();
-    JSTPMessage inspectMessage = new JSTPMessage(messageNumber, INSPECT)
+    Message inspectMessage = new Message(messageNumber, INSPECT)
         .addProtocolArg(interfaceName);
 
     if (handler != null) {
@@ -313,18 +313,18 @@ public class JSTPConnection implements
 
   public void event(String interfaceName, String methodName, List<?> args) {
     long messageNumber = sessionData.getAndIncrementMessageCounter();
-    JSTPMessage eventMessage = new JSTPMessage(messageNumber, EVENT)
+    Message eventMessage = new Message(messageNumber, EVENT)
         .putArg(methodName, args)
         .addProtocolArg(interfaceName);
 
     send(eventMessage);
   }
 
-  private void send(JSTPMessage message) {
+  private void send(Message message) {
     send(message, true);
   }
 
-  private void send(JSTPMessage message, boolean buffer) {
+  private void send(Message message, boolean buffer) {
     if (transport.isConnected() || noConnBufferingPolicy == NoConnBufferingPolicy.BUFFER) {
       final String stringRepresentation =
           JSSerializer.stringify(message.getMessage()) + TERMINATOR;
@@ -360,7 +360,7 @@ public class JSTPConnection implements
     transport.send(message);
   }
 
-  public void addSocketListener(JSTPConnectionListener listener) {
+  public void addSocketListener(ConnectionListener listener) {
     this.connectionListeners.add(listener);
   }
 
@@ -521,7 +521,7 @@ public class JSTPConnection implements
 
   private void pingMessageHandler(JSObject message) {
     long pingNumber = getMessageNumber(message);
-    JSTPMessage streamMessage = new JSTPMessage(pingNumber, PONG);
+    Message streamMessage = new Message(pingNumber, PONG);
     send(streamMessage);
   }
 
@@ -705,26 +705,26 @@ public class JSTPConnection implements
   }
 
   private void reportClosed() {
-    for (JSTPConnectionListener listener : connectionListeners) {
+    for (ConnectionListener listener : connectionListeners) {
       listener.onConnectionClosed();
     }
   }
 
   private void reportConnected(boolean restored) {
-    for (JSTPConnectionListener listener : connectionListeners) {
+    for (ConnectionListener listener : connectionListeners) {
       listener.onConnected(restored);
     }
   }
 
   private void reportError(int errorCode) {
-    for (JSTPConnectionListener listener : connectionListeners) {
+    for (ConnectionListener listener : connectionListeners) {
       listener.onConnectionError(errorCode);
     }
   }
 
   private void rejectMessage(JSObject message) {
     close();
-    for (JSTPConnectionListener listener : connectionListeners) {
+    for (ConnectionListener listener : connectionListeners) {
       listener.onMessageRejected(message);
     }
   }

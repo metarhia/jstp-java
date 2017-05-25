@@ -5,7 +5,7 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
 /**
  * Created by lundibundi on 2/22/17.
  */
-public interface JSTPConnectionListener {
+public interface ConnectionListener {
 
   void onConnected(boolean restored);
 

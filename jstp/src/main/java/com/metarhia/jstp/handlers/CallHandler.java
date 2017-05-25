@@ -1,7 +1,7 @@
 package com.metarhia.jstp.handlers;
 
 import com.metarhia.jstp.connection.JSCallback;
-import com.metarhia.jstp.connection.JSTPConnection;
+import com.metarhia.jstp.connection.Connection;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
@@ -22,7 +22,7 @@ public abstract class CallHandler implements ManualHandler {
 
   public abstract void handleCallback(List<?> data);
 
-  public void callback(JSTPConnection connection, JSCallback result, List<?> args) {
+  public void callback(Connection connection, JSCallback result, List<?> args) {
     connection.callback(result, args, callbackNumber);
   }
 }

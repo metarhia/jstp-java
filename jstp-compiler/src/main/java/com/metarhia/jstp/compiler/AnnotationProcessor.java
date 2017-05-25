@@ -25,14 +25,14 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
-public abstract class JSTPAnnotationProcessor extends AbstractProcessor {
+public abstract class AnnotationProcessor extends AbstractProcessor {
 
   protected Types typeUtils;
   protected Elements elementUtils;
   protected Filer filer;
   protected Messager messager;
 
-  public JSTPAnnotationProcessor() {
+  public AnnotationProcessor() {
   }
 
   protected abstract void handleAnnotation(Element annotatedElement, Class<?> annotation)

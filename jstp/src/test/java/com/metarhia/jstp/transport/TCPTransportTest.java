@@ -8,7 +8,7 @@ import static org.mockito.Mockito.spy;
 
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.connection.HandshakeAnswer;
-import com.metarhia.jstp.connection.JSTPConnection;
+import com.metarhia.jstp.connection.Connection;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import java.io.BufferedInputStream;
@@ -27,11 +27,11 @@ public class TCPTransportTest {
   private TCPTransport tcpTransport;
 
   @Spy
-  private JSTPConnection connection;
+  private Connection connection;
 
   public TCPTransportTest() {
     tcpTransport = new TCPTransport("", 0);
-    connection = spy(new JSTPConnection(tcpTransport));
+    connection = spy(new Connection(tcpTransport));
     doAnswer(new HandshakeAnswer(connection)).when(connection)
         .handshake(anyString(), isA(ManualHandler.class));
     doAnswer(new HandshakeAnswer(connection)).when(connection)
@@ -43,8 +43,8 @@ public class TCPTransportTest {
 
   @Test
   public void onMessageReceivedMultiple() throws Exception {
-    String packet = "{callback:[17],ok:[15703]}" + JSTPConnection.TERMINATOR
-        + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + JSTPConnection.TERMINATOR;
+    String packet = "{callback:[17],ok:[15703]}" + Connection.TERMINATOR
+        + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + Connection.TERMINATOR;
 
     final Boolean[] success = {false, false};
 

@@ -12,19 +12,19 @@ import org.mockito.stubbing.Answer;
  */
 public class HandshakeAnswer implements Answer<Void> {
 
-  private JSTPConnection connection;
+  private Connection connection;
   private String response;
   private boolean manualCall;
 
-  public HandshakeAnswer(JSTPConnection connection) {
+  public HandshakeAnswer(Connection connection) {
     this(connection, "sessionId");
   }
 
-  public HandshakeAnswer(JSTPConnection connection, String sessionId) {
+  public HandshakeAnswer(Connection connection, String sessionId) {
     this(connection, String.format(TestConstants.MOCK_HANDSHAKE_RESPONSE, sessionId), true);
   }
 
-  public HandshakeAnswer(JSTPConnection connection, String response, boolean manualCall) {
+  public HandshakeAnswer(Connection connection, String response, boolean manualCall) {
     this.connection = connection;
     this.response = response;
     this.manualCall = manualCall;

@@ -14,13 +14,13 @@ public class DropRestorationPolicy implements RestorationPolicy {
   }
 
   @Override
-  public boolean restore(JSTPConnection connection, Queue<JSTPMessage> sendQueue) {
+  public boolean restore(Connection connection, Queue<Message> sendQueue) {
     sendQueue.clear();
     return false;
   }
 
   @Override
-  public void onTransportAvailable(JSTPConnection connection, String appName, String sessionID) {
+  public void onTransportAvailable(Connection connection, String appName, String sessionID) {
     if (!reconnectWhenTransportReady) {
       return;
     }

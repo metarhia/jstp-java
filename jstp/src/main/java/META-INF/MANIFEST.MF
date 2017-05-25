@@ -1,4 +1,4 @@
 Manifest-Version: 1.0
 Class-Path: jstp.jar
-Main-Class: com.metarhia.jstp.connection.JSTPConnection
+Main-Class: com.metarhia.jstp.connection.Connection
 

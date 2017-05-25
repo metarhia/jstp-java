@@ -1,7 +1,7 @@
 package com.metarhia.jstp.compiler;
 
-import com.metarhia.jstp.compiler.annotations.handlers.JSTPHandler;
-import com.metarhia.jstp.compiler.annotations.handlers.JSTPReceiver;
+import com.metarhia.jstp.compiler.annotations.handlers.Handler;
+import com.metarhia.jstp.compiler.annotations.handlers.Receiver;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
@@ -10,7 +10,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 
-public class HandlerAnnotationProcessor extends JSTPAnnotationProcessor {
+public class HandlerAnnotationProcessor extends AnnotationProcessor {
 
   public HandlerAnnotationProcessor() {
   }
@@ -33,13 +33,13 @@ public class HandlerAnnotationProcessor extends JSTPAnnotationProcessor {
 
   @Override
   protected List<Class<? extends Annotation>> getSupportedAnnotations() {
-    return Arrays.asList(JSTPReceiver.class, JSTPHandler.class);
+    return Arrays.asList(Receiver.class, Handler.class);
   }
 
   @Override
   protected List<String> getAvailableCompletions() {
     return Arrays.asList(
-        "Array", "Object", "JSTPReceiver", "JSTPHandler",
+        "Array", "Object", "Receiver", "Handler",
         "Mixed", "ErrorHandler", "NotNull", "Typed", "NoDefaultGet");
   }
 }

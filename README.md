@@ -75,7 +75,7 @@ interface.
 They can be parsed in js with a simple eval statement or
 [js parser](https://github.com/metarhia/JSTP)
 
-## JSTPConnection
+## Connection
 
 ### Establish connection
 
@@ -93,7 +93,7 @@ int port = 80;
 boolean usesSSL = true;
 
 AbstractSocket transport = new TCPTransport(host, port, usesSSL);
-JSTPConnection connection = new JSTPConnection(transport);
+Connection connection = new Connection(transport);
 ```
 
 You can change used transport by calling `useTransport()` method.
@@ -102,10 +102,10 @@ as current transport. It will try to connect and upon connection
 appropriate method of restoration policy will be called when transport
 reports that it's connected.
 
-To react to connection events, you can use `JSTPConnectionListener`:
+To react to connection events, you can use `ConnectionListener`:
 
 ```java
-connection.addSocketListener(new JSTPConnectionListener() {
+connection.addSocketListener(new ConnectionListener() {
   @Override
   public void onConnected(boolean restored) {
     // ...
@@ -222,7 +222,7 @@ connection.callback(JSCallback.OK, args, customIndex);
 
 #### Inspect
 
-Incoming inspect messages are handled by JSTPConnection itself. To make
+Incoming inspect messages are handled by Connection itself. To make
 methods visible through inspect message you just need to define method
 names with appropriate interfaces.
 
@@ -297,11 +297,11 @@ Maven:
 JSTP handlers are used to process data from incoming JSTP messages, just like
 usual `ManualHandler`s do.  Unlike `ManualHandler`, you are able to customize
 JSTP handlers as you wish, declaring methods with annotations described below.
-To create your own handler, just add the  `@JSTPHandler` annotation to the
+To create your own handler, just add the  `@Handler` annotation to the
 required interface.
 
 ```java
-@JSTPHandler
+@Handler
 public interface ExampleHandler {
   // ...
 }
@@ -314,7 +314,7 @@ null (in case of method-wide annotation) or only specific parameters are not
 null (in case of argument-wide annotations)
 
 ```java
-@JSTPHandler
+@Handler
 public interface ExampleHandler {
   // ...
   @NotNull
@@ -330,7 +330,7 @@ elements from nested objects, the value will be retrieved in the order of keys
 specified.
 
 ```java
-@JSTPHandler
+@Handler
 public interface OkErrorHandler {
   // ...
   @NotNull
@@ -355,7 +355,7 @@ getting elements from nested arrays, the value will be retrieved in the order
 of indexes specified.
 
 ```java
-@JSTPHandler
+@Handler
 public interface ExampleHandler {
   // ...
   void onFirstIndex(@Array(1) String arg);
@@ -377,7 +377,7 @@ array by index, you can declare it as `"[index]"`. To get an object value by
 index (according to keys order) you should declare it as `"{key index}"`.
 
 ```java
-@JSTPHandler
+@Handler
 public interface ExampleHandler {
   // ...
 
@@ -409,23 +409,23 @@ it will be `JSTPExampleHandler`) will be generated and you will be able to use
 it in message processing.
 
 ```java
-connection.call("interfaceName", "methodName", args, new JSTPExampleHandler() {
+connection.call("interfaceName", "methodName", args, new ExampleHandler() {
     // ...
 });
 ```
-#### JSTP receiver
+#### JSTP Receivers
 You can process received values not only via single handler, but by several
-ones. They can be added or removed from `JSTP receiver` via `addHandler()` and
-`removeHandler() methods. JSTP receiver is generated similarly to `JSTPHandler`.
+ones. They can be added or removed from `Receiver` via `addHandler()` and
+`removeHandler() methods. JSTP receiver is generated similarly to `Handler`.
 To generate receiver, you need to do the following:
 
 ```java
-@JSTPReceiver
+@Receiver
 public interface ExampleReceiver {
   // ...
 }
 ```
-The syntax of declaring methods is the same as in `JSTPHandler`. After
+The syntax of declaring methods is the same as in `Handler`. After
 compilation class named like `JSTP + (Your receiver name)` (for this example it
 will be `JSTPExampleReceiver`) will be generated and you will be able to use it
 in message processing.

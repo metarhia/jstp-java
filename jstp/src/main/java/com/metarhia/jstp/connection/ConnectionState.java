@@ -1,7 +1,7 @@
 package com.metarhia.jstp.connection;
 
 /**
- * Denotes possible {@link JSTPConnection} states
+ * Denotes possible {@link Connection} states
  */
 public enum ConnectionState {
   STATE_AWAITING_HANDSHAKE,

@@ -14,7 +14,7 @@ public interface RestorationPolicy {
    * @param sendQueue connection buffer of messages that was sent but was not received
    * @return true if session was restored, false otherwise
    */
-  boolean restore(JSTPConnection connection, Queue<JSTPMessage> sendQueue);
+  boolean restore(Connection connection, Queue<Message> sendQueue);
 
   /**
    * Called when transport signalled that it has been connected
@@ -23,5 +23,5 @@ public interface RestorationPolicy {
    * @param appName current name of the application that this connection is associated with
    * @param sessionID current session or null if there was no session
    */
-  void onTransportAvailable(JSTPConnection connection, String appName, String sessionID);
+  void onTransportAvailable(Connection connection, String appName, String sessionID);
 }

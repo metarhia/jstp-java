@@ -3,7 +3,7 @@ package com.metarhia.jstp.compiler;
 import com.metarhia.jstp.compiler.annotations.proxy.Call;
 import com.metarhia.jstp.compiler.annotations.proxy.Event;
 import com.metarhia.jstp.compiler.annotations.proxy.Proxy;
-import com.metarhia.jstp.connection.JSTPConnection;
+import com.metarhia.jstp.connection.Connection;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -45,9 +45,9 @@ public class ProxyAnnotatedInterface {
   private static final String VARIABLE_ASSIGNMENT = "$1L = $2L";
   private static final String VARIABLE_CREATION = "$1L = new $2T($3L)";
 
-  private static final Class<?> CONNECTION_PARAMETER_TYPE = JSTPConnection.class;
+  private static final Class<?> CONNECTION_PARAMETER_TYPE = Connection.class;
   private static final ClassName CONNECTION_PARAMETER_CLASSNAME
-      = ClassName.get(JSTPConnection.class);
+      = ClassName.get(Connection.class);
   private static final String CONNECTION_FIELD_NAME = "connection";
 
   private static final String SINGLETON_INSTANCE_NAME = "instance";

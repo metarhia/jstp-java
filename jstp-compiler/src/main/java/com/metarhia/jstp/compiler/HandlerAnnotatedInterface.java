@@ -1,12 +1,11 @@
 package com.metarhia.jstp.compiler;
 
 import com.metarhia.jstp.compiler.annotations.handlers.ErrorHandler;
-import com.metarhia.jstp.compiler.annotations.handlers.JSTPHandler;
-import com.metarhia.jstp.compiler.annotations.handlers.JSTPReceiver;
+import com.metarhia.jstp.compiler.annotations.handlers.Handler;
 import com.metarhia.jstp.compiler.annotations.handlers.NoDefaultGet;
 import com.metarhia.jstp.compiler.annotations.handlers.NotNull;
+import com.metarhia.jstp.compiler.annotations.handlers.Receiver;
 import com.metarhia.jstp.compiler.annotations.handlers.Typed;
-import com.metarhia.jstp.core.Handlers.Handler;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.handlers.ExecutableHandler;
@@ -86,19 +85,20 @@ public class HandlerAnnotatedInterface {
 
     TypeMirror jstpHandlerClass = null;
     handlersName = null;
-    if (annotation == JSTPReceiver.class) {
-      handlerClass = Handler.class;
+    if (annotation == Receiver.class) {
+      handlerClass = com.metarhia.jstp.core.Handlers.Handler.class;
       handlersName = "handlers";
     } else {
       try {
-        annotatedInterface.getAnnotation(JSTPHandler.class).value();
+        annotatedInterface.getAnnotation(Handler.class).value();
       } catch (MirroredTypeException e) {
         // intended ...
         jstpHandlerClass = e.getTypeMirror();
       }
     }
 
-    if (typeUtils.isSubtype(jstpHandlerClass, ExecutableHandler.class)) {
+    if (jstpHandlerClass != null &&
+        typeUtils.isSubtype(jstpHandlerClass, ExecutableHandler.class)) {
       handlerClass = ExecutableHandler.class;
       mainInvokeBuilder = MethodSpec.methodBuilder("run")
           .addAnnotation(Override.class)

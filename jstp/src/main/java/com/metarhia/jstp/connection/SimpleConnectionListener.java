@@ -5,7 +5,7 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
 /**
  * Created by lundibundi on 2/22/17.
  */
-public class SimpleJSTPConnectionListener implements JSTPConnectionListener {
+public class SimpleConnectionListener implements ConnectionListener {
 
   @Override
   public void onConnected(boolean restored) {

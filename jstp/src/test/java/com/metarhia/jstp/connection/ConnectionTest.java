@@ -39,7 +39,7 @@ import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-public class JSTPConnectionTest {
+public class ConnectionTest {
 
   private static final List<BasicArguments> callMessages = Arrays.asList(
       new BasicArguments("iface3", "method", Collections.EMPTY_LIST),
@@ -96,17 +96,17 @@ public class JSTPConnectionTest {
         "{callback:[42],ok:{'method1':'method2'}}"));
   }
 
-  private static JSTPConnectionTest instance;
+  private static ConnectionTest instance;
 
   @Spy
-  private JSTPConnection connection;
+  private Connection connection;
 
   private AbstractSocket transport;
 
-  public JSTPConnectionTest() {
+  public ConnectionTest() {
     instance = this;
     transport = mock(AbstractSocket.class);
-    connection = spy(new JSTPConnection(transport));
+    connection = spy(new Connection(transport));
     doAnswer(new HandshakeAnswer(connection)).when(connection)
         .handshake(anyString(), isA(ManualHandler.class));
     doAnswer(new HandshakeAnswer(connection)).when(connection)
@@ -125,9 +125,9 @@ public class JSTPConnectionTest {
 
   @Test
   public void emptyObject() throws Exception {
-    final String packet = "{}" + JSTPConnection.TERMINATOR;
+    final String packet = "{}" + Connection.TERMINATOR;
     final boolean[] success = {false};
-    connection.addSocketListener(new SimpleJSTPConnectionListener() {
+    connection.addSocketListener(new SimpleConnectionListener() {
       @Override
       public void onMessageRejected(JSObject message) {
         success[0] = true;
@@ -140,8 +140,8 @@ public class JSTPConnectionTest {
 
   @Test
   public void checkPingPong() throws Exception {
-    String input = "{ping:[42]}" + JSTPConnection.TERMINATOR;
-    String response = "{pong:[42]}" + JSTPConnection.TERMINATOR;
+    String input = "{ping:[42]}" + Connection.TERMINATOR;
+    String response = "{pong:[42]}" + Connection.TERMINATOR;
 
     connection.onMessageReceived(JSParser.<JSObject>parse(input));
 
@@ -157,7 +157,7 @@ public class JSTPConnectionTest {
     connection.saveSession(storage);
 
     AbstractSocket socket = mock(AbstractSocket.class);
-    JSTPConnection anotherConn = new JSTPConnection(socket);
+    Connection anotherConn = new Connection(socket);
 
     anotherConn.restoreSession(storage);
 
@@ -166,7 +166,7 @@ public class JSTPConnectionTest {
 
   @Test
   public void illFormedMessages() throws Exception {
-    JSTPConnectionListener listener = spy(JSTPConnectionListener.class);
+    ConnectionListener listener = spy(ConnectionListener.class);
     connection.addSocketListener(listener);
     JSParser parser = new JSParser();
     for (Map.Entry<String, List<String>> illList : illFormedMessages.entrySet()) {
@@ -214,18 +214,18 @@ public class JSTPConnectionTest {
     AbstractSocket transport = mock(AbstractSocket.class);
     when(transport.isConnected()).thenReturn(true);
 
-    JSTPConnection connection = spy(new JSTPConnection(transport, new RestorationPolicy() {
+    Connection connection = spy(new Connection(transport, new RestorationPolicy() {
       @Override
-      public boolean restore(JSTPConnection connection, Queue<JSTPMessage> sendQueue) {
+      public boolean restore(Connection connection, Queue<Message> sendQueue) {
         success[1] = true;
-        synchronized (JSTPConnectionTest.this) {
-          JSTPConnectionTest.this.notify();
+        synchronized (ConnectionTest.this) {
+          ConnectionTest.this.notify();
         }
         return true;
       }
 
       @Override
-      public void onTransportAvailable(JSTPConnection connection, String appName,
+      public void onTransportAvailable(Connection connection, String appName,
                                        String sessionID) {
         connection.handshake(appName, new ManualHandler() {
           @Override
@@ -241,8 +241,8 @@ public class JSTPConnectionTest {
         .when(transport).send(anyString());
     connection.connect("appName");
 
-    synchronized (JSTPConnectionTest.this) {
-      JSTPConnectionTest.this.wait(2000);
+    synchronized (ConnectionTest.this) {
+      ConnectionTest.this.wait(2000);
     }
 
     assertTrue(success[0] && !success[1],
@@ -254,8 +254,8 @@ public class JSTPConnectionTest {
         .when(transport).send(anyString());
     connection.onConnected();
 
-    synchronized (JSTPConnectionTest.this) {
-      JSTPConnectionTest.this.wait(2000);
+    synchronized (ConnectionTest.this) {
+      ConnectionTest.this.wait(2000);
     }
 
     assertTrue(success[0] && success[1],
@@ -267,7 +267,7 @@ public class JSTPConnectionTest {
     AbstractSocket socket = mock(AbstractSocket.class);
     when(socket.isConnected()).thenReturn(true);
 
-    JSTPConnection connection = spy(new JSTPConnection(socket));
+    Connection connection = spy(new Connection(socket));
     doAnswer(new HandshakeAnswer(connection)).when(connection)
         .handshake(anyString(), Mockito.<ManualHandler>isNull());
 
@@ -281,7 +281,7 @@ public class JSTPConnectionTest {
     AbstractSocket socket = mock(AbstractSocket.class);
     when(socket.isConnected()).thenReturn(true);
 
-    final JSTPConnection connection = spy(new JSTPConnection(socket));
+    final Connection connection = spy(new Connection(socket));
     doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
@@ -292,7 +292,7 @@ public class JSTPConnectionTest {
       }
     }).when(connection).handshake(anyString(), Mockito.<ManualHandler>isNull());
 
-    JSTPConnectionListener listener = mock(JSTPConnectionListener.class);
+    ConnectionListener listener = mock(ConnectionListener.class);
     connection.addSocketListener(listener);
 
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
@@ -309,13 +309,13 @@ public class JSTPConnectionTest {
     String sessionId = "sessionId";
 
     AbstractSocket transport = mock(AbstractSocket.class);
-    JSTPConnection connection = spy(new JSTPConnection(transport));
+    Connection connection = spy(new Connection(transport));
     when(transport.isConnected()).thenReturn(true);
 
     connection.handshake(appName, sessionId, null);
 
     String request = String.format(
-        TestConstants.MOCK_HANDSHAKE_REQUEST_SESSION + JSTPConnection.TERMINATOR,
+        TestConstants.MOCK_HANDSHAKE_REQUEST_SESSION + Connection.TERMINATOR,
         appName, sessionId, 0);
     verify(transport, times(1))
         .send(request);
@@ -327,7 +327,7 @@ public class JSTPConnectionTest {
       @Override
       public void execute() throws Throwable {
         AbstractSocket abstractSocket = mock(AbstractSocket.class);
-        JSTPConnection connection = new JSTPConnection(abstractSocket);
+        Connection connection = new Connection(abstractSocket);
         connection.connect(null);
       }
     });
@@ -340,7 +340,7 @@ public class JSTPConnectionTest {
       @Override
       public void execute() throws Throwable {
         AbstractSocket abstractSocket = mock(AbstractSocket.class);
-        JSTPConnection connection = new JSTPConnection(abstractSocket);
+        Connection connection = new Connection(abstractSocket);
         connection.handshake(null, null);
       }
     });
@@ -479,7 +479,7 @@ public class JSTPConnectionTest {
   @Test
   void useTransportNotConnected() {
     AbstractSocket transport = mock(AbstractSocket.class);
-    JSTPConnection connection = spy(new JSTPConnection(transport));
+    Connection connection = spy(new Connection(transport));
     when(transport.isConnected()).thenReturn(false);
     connection.connect("testApp");
 
@@ -495,7 +495,7 @@ public class JSTPConnectionTest {
     String appName = "testApp";
 
     AbstractSocket transport = mock(AbstractSocket.class);
-    JSTPConnection connection = spy(new JSTPConnection(transport));
+    Connection connection = spy(new Connection(transport));
     when(transport.isConnected()).thenReturn(false);
     // to set app name
     connection.connect(appName);
@@ -506,7 +506,7 @@ public class JSTPConnectionTest {
     connection.useTransport(anotherSocket);
 
     String request =
-        String.format(TestConstants.MOCK_HANDSHAKE_REQUEST + JSTPConnection.TERMINATOR, appName);
+        String.format(TestConstants.MOCK_HANDSHAKE_REQUEST + Connection.TERMINATOR, appName);
     verify(anotherSocket, times(1))
         .send(request);
   }

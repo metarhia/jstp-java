@@ -14,15 +14,15 @@ public class SessionRestorationPolicy implements RestorationPolicy {
   }
 
   @Override
-  public boolean restore(JSTPConnection connection, Queue<JSTPMessage> sendQueue) {
-    for (JSTPMessage message : sendQueue) {
+  public boolean restore(Connection connection, Queue<Message> sendQueue) {
+    for (Message message : sendQueue) {
       connection.send(message.getStringRepresentation(), true);
     }
     return true;
   }
 
   @Override
-  public void onTransportAvailable(JSTPConnection connection, String appName, String sessionID) {
+  public void onTransportAvailable(Connection connection, String appName, String sessionID) {
     if (!reconnectWhenTransportReady) {
       return;
     }

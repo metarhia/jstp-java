@@ -5,7 +5,7 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import java.util.ArrayList;
 import java.util.List;
 
-public class JSTPMessage {
+public class Message {
 
   /**
    * Generated message
@@ -28,11 +28,11 @@ public class JSTPMessage {
    */
   private String stringRepresentation;
 
-  private JSTPMessage() {
+  private Message() {
     this.message = new IndexedHashMap<>(2);
   }
 
-  public JSTPMessage(long messageNumber, String type) {
+  public Message(long messageNumber, String type) {
     this();
 
     this.messageNumber = messageNumber;
@@ -43,17 +43,17 @@ public class JSTPMessage {
     message.put(type, this.protocolArgs);
   }
 
-  public JSTPMessage addProtocolArg(Object value) {
+  public Message addProtocolArg(Object value) {
     this.protocolArgs.add(value);
     return this;
   }
 
-  public JSTPMessage putArg(String key, Object value) {
+  public Message putArg(String key, Object value) {
     message.put(key, value);
     return this;
   }
 
-  public JSTPMessage setMessageNumber(int messageNumber) {
+  public Message setMessageNumber(int messageNumber) {
     this.messageNumber = messageNumber;
     this.protocolArgs.set(0, this.messageNumber);
     return this;
