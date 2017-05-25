@@ -10,7 +10,7 @@ Gradle:
 Add this to your build.gradle (check for the latest version):
 ```
 dependencies {
-  compile group: 'com.metarhia.jstp', name: 'jstp', version: '0.7.0'
+  compile group: 'com.metarhia.jstp', name: 'jstp', version: '0.8.0'
 }
 ```
 
@@ -19,7 +19,7 @@ Maven:
 <dependency>
   <groupId>com.metarhia.jstp</groupId>
   <artifactId>jstp</artifactId>
-  <version>0.7.0</version>
+  <version>0.8.0</version>
   <type>pom</type>
 </dependency>
 ```
@@ -277,7 +277,7 @@ compiler will parse those at compile time and generate implementations.
 Gradle:
 ```
 dependencies {
-  compile group: 'com.metarhia.jstp', name: 'jstp-compiler', version: '0.1.12'
+  compile group: 'com.metarhia.jstp', name: 'jstp-compiler', version: '0.2.0'
 }
 ```
 
@@ -287,7 +287,7 @@ Maven:
 <dependency>
   <groupId>com.metarhia.jstp</groupId>
   <artifactId>jstp-compiler</artifactId>
-  <version>0.1.12</version>
+  <version>0.2.0</version>
   <type>pom</type>
 </dependency>
 ```
