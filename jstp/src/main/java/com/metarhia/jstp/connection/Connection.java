@@ -311,10 +311,10 @@ public class Connection implements
     send(inspectMessage);
   }
 
-  public void event(String interfaceName, String methodName, List<?> args) {
+  public void event(String interfaceName, String eventName, List<?> args) {
     long messageNumber = sessionData.getAndIncrementMessageCounter();
     Message eventMessage = new Message(messageNumber, EVENT)
-        .putArg(methodName, args)
+        .putArg(eventName, args)
         .addProtocolArg(interfaceName);
 
     send(eventMessage);
