@@ -342,7 +342,7 @@ public interface OkErrorHandler {
   void onError(List<?> args);
 
   // gets String value by key "neededValue" in object got by "ok"
-  @Object(value = {"ok", "neededValue"})
+  @Object({"ok", "neededValue"})
   void onNeededValueRetrieved(String value);
   // ...
 }
@@ -388,7 +388,7 @@ public interface ExampleHandler {
   void onKeyByIndexValue(Object args);
 
   // gets message["ok"][1][2]
-  @Mixed(value = {"ok", "[1]", "{2}"})
+  @Mixed({"ok", "[1]", "{2}"})
   void onNeededMixValue(Object args);
   // ...
 }
