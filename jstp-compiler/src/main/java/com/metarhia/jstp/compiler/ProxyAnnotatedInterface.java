@@ -174,7 +174,7 @@ public class ProxyAnnotatedInterface {
     return callMethodBuilder.build();
   }
 
-  private MethodSpec createEventMethod(String remoteInterface, String remoteMethod,
+  private MethodSpec createEventMethod(String remoteInterface, String eventName,
                                        ExecutableElement method) {
     MethodSpec.Builder eventMethodBuilder = MethodSpec.overriding(method);
 
@@ -186,7 +186,7 @@ public class ProxyAnnotatedInterface {
         argsName, argsComposedCall);
 
     eventMethodBuilder.addStatement("$1L.$2L(\"$3L\", \"$4L\", $5L)",
-        CONNECTION_FIELD_NAME, "call", remoteInterface, remoteMethod, argsName);
+        CONNECTION_FIELD_NAME, "event", remoteInterface, eventName, argsName);
 
     return eventMethodBuilder.build();
   }
