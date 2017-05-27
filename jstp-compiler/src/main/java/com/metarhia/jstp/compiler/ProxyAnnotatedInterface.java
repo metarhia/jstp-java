@@ -1,10 +1,15 @@
 package com.metarhia.jstp.compiler;
 
+import com.metarhia.jstp.compiler.annotations.handlers.ErrorHandler;
+import com.metarhia.jstp.compiler.annotations.handlers.Handler;
 import com.metarhia.jstp.compiler.annotations.proxy.Call;
+import com.metarhia.jstp.compiler.annotations.proxy.CallHandler;
 import com.metarhia.jstp.compiler.annotations.proxy.Event;
+import com.metarhia.jstp.compiler.annotations.proxy.EventHandler;
 import com.metarhia.jstp.compiler.annotations.proxy.Proxy;
 import com.metarhia.jstp.connection.Connection;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
@@ -19,6 +24,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -61,10 +67,15 @@ public class ProxyAnnotatedInterface {
   private String remoteInterfaceName;
   private boolean singletonClass;
 
+  private List<ExecutableElement> errorHandlers;
+
   private TypeSpec.Builder classBuilder;
+  private Builder mainConstructorBuilder;
   private TypeUtils typeUtils;
   private TypeName interfaceClassName;
   private TypeName interfaceTypeName;
+
+  private HandlerAnnotatedInterface handlerAnnotatedProcessor;
 
   public ProxyAnnotatedInterface(TypeElement typeElement,
                                  Elements elements, Types types,
@@ -72,6 +83,9 @@ public class ProxyAnnotatedInterface {
     this.messager = messager;
     annotatedInterface = typeElement;
     typeUtils = new TypeUtils(types, elements);
+
+    handlerAnnotatedProcessor = new HandlerAnnotatedInterface(
+        Handler.class, typeElement, elements, types);
 
     interfaceClassName = ClassName.get(annotatedInterface.asType());
     interfaceTypeName = TypeName.get(annotatedInterface.asType());
@@ -95,7 +109,7 @@ public class ProxyAnnotatedInterface {
 
     classBuilder.addField(CONNECTION_PARAMETER_TYPE, CONNECTION_FIELD_NAME, Modifier.PRIVATE);
 
-    final Builder mainConstructorBuilder = MethodSpec.constructorBuilder()
+    mainConstructorBuilder = MethodSpec.constructorBuilder()
         .addParameter(CONNECTION_PARAMETER_CLASSNAME, CONNECTION_FIELD_NAME)
         .addStatement(VARIABLE_ASSIGNMENT, "this." + CONNECTION_FIELD_NAME,
             CONNECTION_FIELD_NAME);
@@ -121,17 +135,30 @@ public class ProxyAnnotatedInterface {
       mainConstructorBuilder.addModifiers(Modifier.PUBLIC);
     }
 
-    classBuilder.addMethod(mainConstructorBuilder.build());
+    // add all error handlers to generate clauses in listeners
+    for (Element e : annotatedInterface.getEnclosedElements()) {
+      if (e.getKind() == ElementKind.METHOD) {
+        ExecutableElement method = (ExecutableElement) e;
+        if (method.getAnnotation(ErrorHandler.class) != null) {
+          errorHandlers.add(method);
+        }
+      }
+    }
 
+    boolean makeAbstract = false;
     // generate methods to enclose the ones in the interface
     for (Element e : annotatedInterface.getEnclosedElements()) {
       if (e.getKind() == ElementKind.METHOD) {
         ExecutableElement method = (ExecutableElement) e;
-        MethodSpec actionMethod = createActionHandler(method);
-        if (actionMethod != null) {
-          classBuilder.addMethod(actionMethod);
+        if (method.getAnnotation(EventHandler.class) != null) {
+          makeAbstract = true;
         }
+        addActionHandler(method);
       }
+    }
+
+    if (makeAbstract) {
+      classBuilder.addModifiers(Modifier.ABSTRACT);
     }
 
     addDelegateMethod(CONNECTION_FIELD_NAME, Connection.class, "setCallHandler",
@@ -141,6 +168,8 @@ public class ProxyAnnotatedInterface {
     addDelegateMethod(CONNECTION_FIELD_NAME, Connection.class, "addEventHandler",
         Arrays.asList("interfaceName", "eventName", "handler"),
         String.class, String.class, ManualHandler.class);
+
+    classBuilder.addMethod(mainConstructorBuilder.build());
 
     // save to file
     JavaFile javaFile = JavaFile.builder(
@@ -180,15 +209,50 @@ public class ProxyAnnotatedInterface {
     return delegateBuilder.build();
   }
 
-  private MethodSpec createActionHandler(ExecutableElement method) {
+  private void addActionHandler(ExecutableElement method) throws PropertyFormatException {
     if (method.getAnnotation(Call.class) != null) {
       String[] names = getInterfaceAndMethod(method, remoteInterfaceName, Call.class, "value");
-      return createCallMethod(names[0], names[1], method);
+      final MethodSpec callMethod = createCallMethod(names[0], names[1], method);
+      classBuilder.addMethod(callMethod);
     } else if (method.getAnnotation(Event.class) != null) {
       String[] names = getInterfaceAndMethod(method, remoteInterfaceName, Event.class, "value");
-      return createEventMethod(names[0], names[1], method);
+      final MethodSpec eventMethod = createEventMethod(names[0], names[1], method);
+      classBuilder.addMethod(eventMethod);
+    } else if (method.getAnnotation(EventHandler.class) != null
+        || method.getAnnotation(CallHandler.class) != null) {
+      Class<? extends Annotation> annotation = EventHandler.class;
+      String[] names;
+      String methodName = "addEventHandler";
+      if (method.getAnnotation(CallHandler.class) != null) {
+        annotation = CallHandler.class;
+        methodName = "setCallHandler";
+      }
+      names = getInterfaceAndMethod(method, remoteInterfaceName, annotation, "value");
+      // add helper method
+      final MethodSpec handlerMethod = createHandlerMethod(method);
+      classBuilder.addMethod(handlerMethod);
+      // add handler to constructor
+      final TypeSpec manualHandler = createManualHandler(null, handlerMethod.name);
+      mainConstructorBuilder.addStatement("$L.$L(\"$L\", \"$L\", $L)",
+          CONNECTION_FIELD_NAME, methodName, names[0], names[1], manualHandler);
     }
-    return null;
+  }
+
+  private TypeSpec createManualHandler(String caller, String methodName) {
+    final MethodSpec.Builder builder = MethodSpec.methodBuilder("handle")
+        .addAnnotation(Override.class)
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(JSObject.class, "message");
+
+    final CodeBlock methodCall = composeMethodCall(caller, methodName,
+        Collections.singletonList("message"));
+
+    builder.addStatement("$1L", methodCall);
+
+    return TypeSpec.anonymousClassBuilder("")
+        .addSuperinterface(ManualHandler.class)
+        .addMethod(builder.build())
+        .build();
   }
 
   private MethodSpec createCallMethod(String remoteInterface, String remoteMethod,
@@ -233,6 +297,11 @@ public class ProxyAnnotatedInterface {
     return eventMethodBuilder.build();
   }
 
+  private MethodSpec createHandlerMethod(ExecutableElement method)
+      throws PropertyFormatException {
+    return handlerAnnotatedProcessor.createInvokeMethod(method, null);
+  }
+
   private CodeBlock composeParamMethodCall(String methodName,
                                            List<? extends VariableElement> parameters) {
     return composeParamMethodCall(null, methodName, parameters);
@@ -247,7 +316,7 @@ public class ProxyAnnotatedInterface {
     return composeMethodCall(name, methodName, names);
   }
 
-  private CodeBlock composeMethodCall(String name, String methodName,
+  private CodeBlock composeMethodCall(String caller, String methodName,
                                       Collection<String> parameters) {
     StringBuilder builder = new StringBuilder();
     int i = 0;
@@ -258,16 +327,16 @@ public class ProxyAnnotatedInterface {
       }
     }
 
-    if (name == null) {
+    if (caller == null) {
       return CodeBlock.of(METHOD_CALL_PATTERN, methodName, builder.toString());
-    } else if (name.contains(".")) {
-      int lastDot = name.lastIndexOf(".");
-      String packageName = name.substring(0, lastDot);
-      String className = name.substring(lastDot + 1);
+    } else if (caller.contains(".")) {
+      int lastDot = caller.lastIndexOf(".");
+      String packageName = caller.substring(0, lastDot);
+      String className = caller.substring(lastDot + 1);
       final ClassName clazz = ClassName.get(packageName, className);
       return CodeBlock.of(METHOD_STATIC_CALL_PATTERN, clazz, methodName, builder.toString());
     } else {
-      return CodeBlock.of(METHOD_FIELD_CALL_PATTERN, name, methodName, builder.toString());
+      return CodeBlock.of(METHOD_FIELD_CALL_PATTERN, caller, methodName, builder.toString());
     }
   }
 
