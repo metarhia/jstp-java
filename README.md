@@ -26,7 +26,7 @@ Maven:
 
 ## Parser usage
 
-`JSParser` will mostly convert to native java objects 
+`JSParser` will mostly convert to native java objects
 (with a few exceptions where specific implementation was needed)
 
 Few simple examples
@@ -263,6 +263,27 @@ List<Object> args = new ArrayList<>();
 connection.event("interfaceName", "methodName", args);
 ```
 
+### Executable handler
+
+If you want to handle incoming packets on a separate thread, you can use
+`ExecutableHandler` instead of `ManualHandler`. It requires `Executor` to run
+the packet handling method on it. Incoming `message` is a protected parameter in
+ExecutableHandler. You can use it like this:
+
+```java
+Connection connection;
+Executor executor;
+// ...
+connection.call("interfaceName", "methodName", new ArrayList<>(),
+  new ExecutableHandler(executor) {
+   @Override
+   public void run() {
+     Collection keys = message.keys();
+     // ...
+   }
+});
+```
+
 ### JSTP compiler
 
 JSTP compiler is a nice feature to ease handling of JSTP messages. You can
@@ -306,6 +327,21 @@ public interface ExampleHandler {
   // ...
 }
 ```
+
+You also can make your handler extended from `ManualHandler` or
+`ExecutableHandler` setting base class as an annotation parameter. For example,
+if you want the messages to be handled on a separate thread, you can set
+`ExecutableHandler.class` as a `@Handler` parameter:
+
+```java
+@Handler(ExecutableHandler.class)
+public interface ExampleHandler {
+  // ...
+}
+```
+
+With this annotation the generated class will respect `ExecutableHandler`
+interface and generate its code in `run()` method instead of `handle()` method.
 
 ##### @NotNull
 
