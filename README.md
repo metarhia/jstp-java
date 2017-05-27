@@ -26,7 +26,7 @@ Maven:
 
 ## Parser usage
 
-`JSParser` will mostly convert to native java objects 
+`JSParser` will mostly convert to native java objects
 (with a few exceptions where specific implementation was needed)
 
 Few simple examples
@@ -416,7 +416,7 @@ connection.call("interfaceName", "methodName", args, new ExampleHandler() {
 #### JSTP Receivers
 You can process received values not only via single handler, but by several
 ones. They can be added or removed from `Receiver` via `addHandler()` and
-`removeHandler() methods. JSTP receiver is generated similarly to `Handler`.
+`removeHandler()` methods. JSTP receiver is generated similarly to `Handler`.
 To generate receiver, you need to do the following:
 
 ```java
@@ -441,4 +441,92 @@ receiver.addHandler(new ExampleReceiver() {
     // ...
 });
 connection.call("interfaceName", "methodName", args, receiver);
+```
+
+#### Proxy
+
+`Proxy` is a class generated to provide user-friendly interface to your
+`Connection`. To create proxy, you just need to describe the wished interface
+with annotations.
+
+To declare the proxy interface, you need to add `@Proxy` annotation to interface
+definition. If you want your proxy to be a singleton, set the `singleton`
+parameter to `true`. If you want to set the default interface name for the
+Connection methods, you can set it as an `interfaceName` parameter.
+
+```java
+// Creates singleton proxy with default interface name defaultInterface
+@Proxy(interfaceName = "defaultInterface", singleton = true)
+public interface MyProxy {
+  // proxy methods
+}
+```
+
+For now, you can declare proxy wrappers for sending `call` and `event` packets.
+Proxy will be extended for other packets handling.
+
+##### Call
+
+To create wrapper for `call` packet, use `@Call` annotation. Set the method
+name as an annotation parameter (the default interface will be used), or
+interface name and method name. Specify the arguments and callback handler
+(if they are required) as your method parameters. See the examples:
+
+```java
+
+@Proxy(interfaceName = "defaultInterface")
+public interface MyProxy {
+  // Makes a call with specified interfaceName and methodName, sets param and
+  // otherParam as call arguments and uses hander on callback
+  @Call({"interfaceName", "methodName"})
+  void callInterfaceMethod(String param, int otherParam, ManualHandler handler);
+
+  // Makes a call with default interface name and methodName without arguments
+  // and uses hander on callback
+  @Call("methodName")
+  void callDefaultInterfaceMethod(ManualHandler handler);
+
+  // Makes a call with default interface name and otherMethodName without
+  // arguments and without callback handler
+  @Call("otherMethodName")
+  void callNoParametersMethod();
+}
+```
+
+##### Event
+
+To create wrapper for `event` packet, use `@Event` annotation. Set the method
+name as an annotation parameter (the default interface will be used), or
+interface name and method name. Specify the arguments (if they are required) as
+your method parameters. See the examples:
+
+```java
+@Proxy(interfaceName = "defaultInterface")
+public interface MyProxy {
+  // Sends event with specified interfaceName and eventName without parameters
+  @Event({"interfaceName", "eventName"})
+  void sendInterfaceEvent();
+
+  // Sends event with default interface name and eventName with specified
+  // parameters
+  @Event("eventName")
+  void sendEvent(String param);
+}
+```
+
+After compilation class named like `JSTP + (Your proxy name)` (for this example
+it will be `JSTPMyProxy`) will be generated. See the usage example:
+
+```java
+Connection connection;
+// ...
+JSTPMyProxy proxy = new JSTPMyProxy(connection);
+proxy.callDefaultInterfaceMethod(new ManualHandler() {
+    @Override
+    public void handle(JSObject jsObject) {
+        // handle result
+    }
+});
+
+proxy.sendEvent("myParam");
 ```
