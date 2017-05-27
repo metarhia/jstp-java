@@ -17,8 +17,11 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -27,6 +30,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import javax.tools.Diagnostic.Kind;
 
 /**
  * Created by lundibundi on 5/25/17.
@@ -53,6 +57,7 @@ public class ProxyAnnotatedInterface {
   private static final String SINGLETON_INSTANCE_NAME = "instance";
 
   private TypeElement annotatedInterface;
+  private final Messager messager;
   private String remoteInterfaceName;
   private boolean singletonClass;
 
@@ -61,7 +66,10 @@ public class ProxyAnnotatedInterface {
   private TypeName interfaceClassName;
   private TypeName interfaceTypeName;
 
-  public ProxyAnnotatedInterface(TypeElement typeElement, Elements elements, Types types) {
+  public ProxyAnnotatedInterface(TypeElement typeElement,
+                                 Elements elements, Types types,
+                                 Messager messager) {
+    this.messager = messager;
     annotatedInterface = typeElement;
     typeUtils = new TypeUtils(types, elements);
 
@@ -126,6 +134,14 @@ public class ProxyAnnotatedInterface {
       }
     }
 
+    addDelegateMethod(CONNECTION_FIELD_NAME, Connection.class, "setCallHandler",
+        Arrays.asList("interfaceName", "methodName", "handler"),
+        String.class, String.class, ManualHandler.class);
+
+    addDelegateMethod(CONNECTION_FIELD_NAME, Connection.class, "addEventHandler",
+        Arrays.asList("interfaceName", "eventName", "handler"),
+        String.class, String.class, ManualHandler.class);
+
     // save to file
     JavaFile javaFile = JavaFile.builder(
         typeUtils.getElements()
@@ -136,6 +152,32 @@ public class ProxyAnnotatedInterface {
         .indent("    ")
         .build();
     javaFile.writeTo(filer);
+  }
+
+  private void addDelegateMethod(String caller, Class<?> clazz, String name,
+                                 List<String> parameterNames, Class<?>... parameterTypes) {
+    try {
+      final Method method = clazz.getDeclaredMethod(name, parameterTypes);
+      final MethodSpec methodDelegate = createDelegateMethod(caller, method, parameterNames);
+      classBuilder.addMethod(methodDelegate);
+    } catch (NoSuchMethodException e) {
+      messager.printMessage(Kind.WARNING,
+          "Cannot get " + name + " method from " + clazz.getCanonicalName()
+              + ". Skipping delegate creation");
+    }
+  }
+
+  private MethodSpec createDelegateMethod(String caller, Method method, List<String> paramNames) {
+    MethodSpec.Builder delegateBuilder = MethodSpec.methodBuilder(method.getName())
+        .addModifiers(Modifier.PUBLIC)
+        .returns(method.getReturnType());
+    final Class<?>[] parameterTypes = method.getParameterTypes();
+    for (int i = 0; i < parameterTypes.length; i++) {
+      delegateBuilder.addParameter(parameterTypes[i], paramNames.get(i));
+    }
+    final CodeBlock originCall = composeMethodCall(caller, method.getName(), paramNames);
+    delegateBuilder.addStatement("$1L", originCall);
+    return delegateBuilder.build();
   }
 
   private MethodSpec createActionHandler(ExecutableElement method) {
@@ -206,7 +248,7 @@ public class ProxyAnnotatedInterface {
   }
 
   private CodeBlock composeMethodCall(String name, String methodName,
-                                      List<String> parameters) {
+                                      Collection<String> parameters) {
     StringBuilder builder = new StringBuilder();
     int i = 0;
     for (String param : parameters) {

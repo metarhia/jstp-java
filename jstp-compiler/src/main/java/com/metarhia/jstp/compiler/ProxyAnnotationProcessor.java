@@ -26,7 +26,7 @@ public class ProxyAnnotationProcessor extends AnnotationProcessor {
 
     TypeElement typeElement = (TypeElement) annotatedElement;
     ProxyAnnotatedInterface jstpReceiver = new ProxyAnnotatedInterface(
-        typeElement, elementUtils, typeUtils);
+        typeElement, elementUtils, typeUtils, messager);
 
     jstpReceiver.generateCode(filer);
   }
