@@ -138,7 +138,15 @@ public class ProxyAnnotatedInterface {
         Arrays.asList("interfaceName", "methodName", "handler"),
         String.class, String.class, ManualHandler.class);
 
+    addDelegateMethod(CONNECTION_FIELD_NAME, Connection.class, "removeCallHandler",
+        Arrays.asList("interfaceName", "methodName"),
+        String.class, String.class);
+
     addDelegateMethod(CONNECTION_FIELD_NAME, Connection.class, "addEventHandler",
+        Arrays.asList("interfaceName", "eventName", "handler"),
+        String.class, String.class, ManualHandler.class);
+
+    addDelegateMethod(CONNECTION_FIELD_NAME, Connection.class, "removeEventHandler",
         Arrays.asList("interfaceName", "eventName", "handler"),
         String.class, String.class, ManualHandler.class);
 
