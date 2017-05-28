@@ -298,7 +298,7 @@ compiler will parse those at compile time and generate implementations.
 Gradle:
 ```
 dependencies {
-  compile group: 'com.metarhia.jstp', name: 'jstp-compiler', version: '0.2.0'
+  compile group: 'com.metarhia.jstp', name: 'jstp-compiler', version: '0.2.2'
 }
 ```
 
@@ -308,7 +308,7 @@ Maven:
 <dependency>
   <groupId>com.metarhia.jstp</groupId>
   <artifactId>jstp-compiler</artifactId>
-  <version>0.2.0</version>
+  <version>0.2.2</version>
   <type>pom</type>
 </dependency>
 ```
