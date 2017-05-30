@@ -403,7 +403,6 @@ this behaviour you can either define you own getter or specify
 `@NoDefaultGet` annotation (this way starting value'll be
 the jstp message itself).
 
-
 After compilation class named like `JSTP + (YourHandlerName)` (for this example
 it will be `JSTPExampleHandler`) will be generated and you will be able to use
 it in message processing.
@@ -443,19 +442,20 @@ receiver.addHandler(new ExampleReceiver() {
 connection.call("interfaceName", "methodName", args, receiver);
 ```
 
-#### Proxy
+#### @Proxy
 
-`Proxy` is a class generated to provide user-friendly interface to your
-`Connection`. To create proxy, you just need to describe the wished interface
-with annotations.
+`@Proxy` annotation allows you to auto-generate interface to the remote
+server that will look as if you are calling local java methods easily. To create
+ a proxy, you just need to describe the interface with appropriate annotations.
 
-To declare the proxy interface, you need to add `@Proxy` annotation to interface
-definition. If you want your proxy to be a singleton, set the `singleton`
-parameter to `true`. If you want to set the default interface name for the
-Connection methods, you can set it as an `interfaceName` parameter.
+To declare the proxy interface, you need to add the `@Proxy` annotation to the
+interface definition. If you want your proxy to be a singleton, set the
+`singleton` parameter of the annotation to `true`. If you want to set the
+default interface name for the `Connection` methods, you can set it with
+`interfaceName` parameter.
 
 ```java
-// Creates singleton proxy with default interface name defaultInterface
+// Creates singleton proxy with default interface name "defaultInterface"
 @Proxy(interfaceName = "defaultInterface", singleton = true)
 public interface MyProxy {
   // proxy methods
@@ -467,60 +467,78 @@ Proxy will be extended for other packets handling.
 
 ##### Call
 
-To create wrapper for `call` packet, use `@Call` annotation. Set the method
+To create wrapper for `call` method, use `@Call` annotation. Set the method
 name as an annotation parameter (the default interface will be used), or
-interface name and method name. Specify the arguments and callback handler
-(if they are required) as your method parameters. See the examples:
+interface name and method name. The method name is not required as well: if you
+use `@Call` annotation without parameters at all, your Java method name will be
+used as a `call` method name. Specify the arguments and callback handler
+(if they are needed) as your method parameters. See the examples:
 
 ```java
 
 @Proxy(interfaceName = "defaultInterface")
 public interface MyProxy {
-  // Makes a call with specified interfaceName and methodName, sets param and
-  // otherParam as call arguments and uses hander on callback
+  // Makes a call with specified "interfaceName" and "methodName", sets "param"
+  // and "otherParam" as call arguments and uses "hander" to handle method
+  // callback
   @Call({"interfaceName", "methodName"})
   void callInterfaceMethod(String param, int otherParam, ManualHandler handler);
 
-  // Makes a call with default interface name and methodName without arguments
-  // and uses hander on callback
+  // Makes a call with default interface name and method name "methodName"
+  // without arguments and uses "hander" to handle method callback
   @Call("methodName")
   void callDefaultInterfaceMethod(ManualHandler handler);
 
-  // Makes a call with default interface name and otherMethodName without
-  // arguments and without callback handler
+  // Makes a call with default interface name and method name "otherMethodName"
+  // without arguments and without callback handler
   @Call("otherMethodName")
   void callNoParametersMethod();
+
+  // Makes a call with default interface name and method name "joinChat"
+  // without arguments and uses "handler" to handle method callback
+  @Call()
+  void joinChat(ManualHandler handler);
 }
 ```
 
 ##### Event
 
-To create wrapper for `event` packet, use `@Event` annotation. Set the method
+To create wrapper for `event` method, use `@Event` annotation. Set the method
 name as an annotation parameter (the default interface will be used), or
-interface name and method name. Specify the arguments (if they are required) as
+interface name and method name. The event name is not required as well: if you
+use `@Event` annotation without parameters at all, your Java method name will be
+used as an `event` name. Specify the arguments (if they are needed) as
 your method parameters. See the examples:
 
 ```java
 @Proxy(interfaceName = "defaultInterface")
 public interface MyProxy {
-  // Sends event with specified interfaceName and eventName without parameters
+  // Sends event with specified interface name "interfaceName" and event name
+  // "eventName" without parameters
   @Event({"interfaceName", "eventName"})
   void sendInterfaceEvent();
 
-  // Sends event with default interface name and eventName with specified
-  // parameters
+  // Sends event with default interface name and event name "eventName" with
+  // specified parameters
   @Event("eventName")
   void sendEvent(String param);
+
+  // Sends event with default interface name and event name
+  // "onSomethingHappened" without parameters
+  @Event()
+  void onSomethingHappened();
 }
 ```
 
 After compilation class named like `JSTP + (Your proxy name)` (for this example
-it will be `JSTPMyProxy`) will be generated. See the usage example:
+it will be `JSTPMyProxy`) will be generated. See some usage examples:
 
 ```java
 Connection connection;
+Executor executor;
 // ...
 JSTPMyProxy proxy = new JSTPMyProxy(connection);
+// calls method and handles callback by manual handler
 proxy.callDefaultInterfaceMethod(new ManualHandler() {
     @Override
     public void handle(JSObject jsObject) {
@@ -528,5 +546,137 @@ proxy.callDefaultInterfaceMethod(new ManualHandler() {
     }
 });
 
+// calls method and handles callback by handler created with @Handler annotation
+// (see the example of generating handlers)
+proxy.callDefaultInterfaceMethod(new JSTPOkErrorHandler() {
+    @Override
+    public void onOk(List<?> args) {
+        // handle data
+    }
+
+    @Override
+    public void onError(Integer errorCode) {
+        // handle error code
+    }
+});
+
+// calls method and handles callback by executable handler (see the example of
+// executable handler)
+proxy.callDefaultInterfaceMethod(new ExecutableHandler(executor) {
+    @Override
+    public void run() {
+        // handle message received
+    }
+});
+
+// sends event with specified parameters
 proxy.sendEvent("myParam");
+```
+
+
+##### Call handler
+
+You can process incoming `call` packets by setting `call` handlers for called
+methods, just like if you did it with `Connection` directly. You can set `call`
+handler by `setCallHandler()` method, and remove your handler by
+`removeCallHandler()` method. See the examples:
+
+```java
+// sets manual call handler for "methodName" of "interfaceName"
+proxy.setCallHandler("interfaceName", "methodName", new ManualHandler() {
+    @Override
+    public void handle(JSObject jsObject) {
+        // handle object
+    }
+});
+
+// sets executable call handler for "methodName" of "interfaceName" (see the
+// example of executable handler)
+proxy.setCallHandler("interfaceName", "methodName",
+        new ExecutableHandler(executor) {
+    @Override
+    public void run() {
+        // handle message received
+    }
+});
+```
+
+If we want to use handler created with `@Handler` annotation like this
+
+```java
+@Handler
+public interface OkErrorHandler {
+
+    @NotNull
+    @Object("ok")
+    void onOk(List<?> args);
+
+    @NotNull
+    @Object("error")
+    void onError(@Array(0) Integer errorCode);
+}
+```
+
+We can use generated `JSTPOkErrorHandler` as a call handler for proxy:
+
+```java
+proxy.setCallHandler("interfaceName", "methodName", new JSTPOkErrorHandler() {
+    @Override
+    public void onOk(List<?> args) {
+        // handle data
+    }
+
+    @Override
+    public void onError(Integer errorCode) {
+        // handle error code
+    }
+});
+```
+
+##### Event handler
+
+You can process incoming `event` packets by adding `event` handlers, just like
+if you did it with `Connection` directly. You can add `event` handler by
+`addEventHandler()` method, and remove your handler by `removeEventHandler()`
+method. See the examples:
+
+```java
+// adds manual event handler for "eventName" of "interfaceName"
+proxy.addEventHandler("interfaceName", "eventName", new ManualHandler() {
+    @Override
+    public void handle(JSObject jsObject) {
+        // handle object
+    }
+});
+
+// adds executable handler for "eventName" of "interfaceName" (see the example
+// of executable handler)
+proxy.addEventHandler("interfaceName", "eventName",
+        new ExecutableHandler(executor) {
+    @Override
+    public void run() {
+        // handle message received
+    }
+});
+```
+
+If we want to use handler created with `@Handler` annotation like this
+
+```java
+@Handler
+public interface EventHandler {
+
+    @Object("onMessage")
+    void onMessage(@Array(0) String receivedMessage);
+}
+```
+
+We can use generated `JSTPEventHandler` as an event handler for proxy:
+```java
+proxy.addEventHandler("interfaceName", "eventName", new JSTPEventHandler() {
+    @Override
+    public void onMessage(String receivedMessage) {
+        // handle message
+    }
+});
 ```
