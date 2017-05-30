@@ -43,7 +43,7 @@ import javax.lang.model.util.Types;
 public class HandlerAnnotatedInterface {
 
   private static final String PREFIX = "JSTP";
-  private static final String MESSAGE_PARAMETER_NAME = "message";
+  private static final String MESSAGE_PARAMETER_NAME = "internalMessage";
   private static final String HANDLER_METHOD = "handle";
   private static final String VARIABLE_DECLARATION = "$1T $2L";
   private static final String VARIABLE_DECLARATION_NULL = VARIABLE_DECLARATION + " = null";
