@@ -5,6 +5,7 @@ import com.metarhia.jstp.connection.AbstractSocket;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSParsingException;
+import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -195,7 +196,14 @@ public class TCPTransport implements AbstractSocket {
 
       jsParser.setInput(message);
       try {
-        socketListener.onMessageReceived((JSObject) jsParser.parse());
+        final Object parseResult = jsParser.parse();
+        if (parseResult instanceof JSObject) {
+          socketListener.onMessageReceived((JSObject) parseResult);
+        } else {
+          final String msg = "Unexpected message (expected JSObject): " +
+              JSSerializer.stringify(parseResult);
+          socketListener.onError(new RuntimeException(msg));
+        }
       } catch (JSParsingException e) {
         logger.info("Message parsing failed", e);
       }

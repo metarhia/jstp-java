@@ -692,6 +692,7 @@ public class Connection implements
 
   @Override
   public void onError(Exception e) {
+    // TODO: change signature of connectionError and pass it there
     logger.info("Transport error", e);
   }
 
