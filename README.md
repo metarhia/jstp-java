@@ -444,8 +444,8 @@ connection.call("interfaceName", "methodName", args, receiver);
 
 #### @Proxy
 
-`@Proxy` annotation allows you to auto-generate interface to the remote
-server that will look as if you are calling local java methods easily. To create
+`@Proxy` annotation allows you to easily auto-generate interface to the remote
+server that will look as if you are calling local java methods. To create
  a proxy, you just need to describe the interface with appropriate annotations.
 
 To declare the proxy interface, you need to add the `@Proxy` annotation to the
@@ -463,7 +463,6 @@ public interface MyProxy {
 ```
 
 For now, you can declare proxy wrappers for sending `call` and `event` packets.
-Proxy will be extended for other packets handling.
 
 ##### Call
 
@@ -494,8 +493,8 @@ public interface MyProxy {
   @Call("otherMethodName")
   void callNoParametersMethod();
 
-  // Makes a call with default interface name and method name "joinChat"
-  // without arguments and uses "handler" to handle method callback
+  // Makes a call with default interface name and method name joinChat
+  // without arguments and uses handler to handle method callback
   @Call()
   void joinChat(ManualHandler handler);
 }
@@ -524,7 +523,7 @@ public interface MyProxy {
   void sendEvent(String param);
 
   // Sends event with default interface name and event name
-  // "onSomethingHappened" without parameters
+  // onSomethingHappened without parameters
   @Event()
   void onSomethingHappened();
 }
@@ -674,6 +673,31 @@ public interface EventHandler {
 We can use generated `JSTPEventHandler` as an event handler for proxy:
 ```java
 proxy.addEventHandler("interfaceName", "eventName", new JSTPEventHandler() {
+    @Override
+    public void onMessage(String receivedMessage) {
+        // handle message
+    }
+});
+```
+
+If we modify the annotation in such a way:
+```java
+@Handler(ExecutableHandler.class)
+public interface EventHandler {
+
+    @Object("onMessage")
+    void onMessage(@Array(0) String receivedMessage);
+}
+```
+
+We can use handler with preferred executor:
+```java
+Executor executor;
+
+// ...
+
+proxy.addEventHandler("interfaceName", "eventName",
+        new JSTPEventHandler(executor) {
     @Override
     public void onMessage(String receivedMessage) {
         // handle message
