@@ -368,8 +368,11 @@ public class Connection implements
   public void onMessageReceived(JSObject message) {
     try {
       boolean handshake = false;
-      if (message.size() == 0
-          || !(handshake = message.getKey(0).equals(HANDSHAKE))
+      if (message.isEmpty()) {
+        // heartbeat packet
+        return;
+      }
+      if (!(handshake = message.getKey(0).equals(HANDSHAKE))
           && state != ConnectionState.STATE_CONNECTED) {
         rejectMessage(message);
       } else {

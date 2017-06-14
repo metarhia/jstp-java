@@ -34,6 +34,7 @@ import java.util.Queue;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
@@ -121,21 +122,6 @@ public class ConnectionTest {
       instance.connection.close();
       instance.connection = null;
     }
-  }
-
-  @Test
-  public void emptyObject() throws Exception {
-    final String packet = "{}" + Connection.TERMINATOR;
-    final boolean[] success = {false};
-    connection.addSocketListener(new SimpleConnectionListener() {
-      @Override
-      public void onMessageRejected(JSObject message) {
-        success[0] = true;
-      }
-    });
-
-    connection.onMessageReceived(JSParser.<IndexedHashMap<?>>parse(packet));
-    assertTrue(success[0]);
   }
 
   @Test
@@ -474,6 +460,18 @@ public class ConnectionTest {
       verify(transport, times(1))
           .send(argThat(new MessageMatcher(response)));
     }
+  }
+
+  @Test
+  public void checkHeartbeat() throws Exception {
+    JSObject heartbeat = new IndexedHashMap();
+    ConnectionListener listener = mock(ConnectionListener.class);
+
+    connection.onMessageReceived(heartbeat);
+
+    // must not reject heartbeat packet
+    verify(listener, times(0))
+        .onMessageRejected(ArgumentMatchers.<JSObject>notNull());
   }
 
   @Test
