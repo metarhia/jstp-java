@@ -493,9 +493,9 @@ public interface MyProxy {
   @Call("otherMethodName")
   void callNoParametersMethod();
 
-  // Makes a call with default interface name and method name joinChat
-  // without arguments and uses handler to handle method callback
-  @Call()
+  // Makes a call with default interface name and method name "joinChat"
+  // without arguments and uses "handler" to handle method callback
+  @Call
   void joinChat(ManualHandler handler);
 }
 ```
@@ -523,8 +523,8 @@ public interface MyProxy {
   void sendEvent(String param);
 
   // Sends event with default interface name and event name
-  // onSomethingHappened without parameters
-  @Event()
+  // "onSomethingHappened" without parameters
+  @Event
   void onSomethingHappened();
 }
 ```
@@ -680,7 +680,7 @@ proxy.addEventHandler("interfaceName", "eventName", new JSTPEventHandler() {
 });
 ```
 
-If we modify the annotation in such a way:
+If we modify the annotation like this:
 ```java
 @Handler(ExecutableHandler.class)
 public interface EventHandler {
