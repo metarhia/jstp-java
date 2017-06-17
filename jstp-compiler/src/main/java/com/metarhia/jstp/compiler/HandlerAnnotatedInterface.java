@@ -50,8 +50,8 @@ public class HandlerAnnotatedInterface {
   private static final String VARIABLE_DEFINITION = VARIABLE_DECLARATION + " = ($1T) $3L";
   private static final String VARIABLE_ASSIGNMENT = "$2L = ($1T) $3L";
 
-  private static final String VARIABLE_DEFINITION_CASTED = VARIABLE_DECLARATION + " = (($1T) $3L)";
-  private static final String VARIABLE_ASSIGNMENT_CASTED = "$2L = (($1T) $3L)";
+  public static final String DOUBLE_TO_INT_VALUE = "(($1T) $2L).intValue()";
+  public static final String DOUBLE_TO_LONG_VALUE = "(($1T) $2L).longValue()";
 
   private static final Class JSTP_VALUE_TYPE = Object.class;
   private static final TypeName JSTP_VALUE_TYPENAME = TypeName.get(JSObject.class);
@@ -312,15 +312,11 @@ public class HandlerAnnotatedInterface {
   private void composeArgumentGetter(MethodSpec.Builder methodBuilder, VariableElement parameter,
                                      CodeBlock getter, boolean declared) {
     TypeMirror parameterType = parameter.asType();
-    String pattern;
+    String pattern = declared ? VARIABLE_ASSIGNMENT : VARIABLE_DEFINITION;
     if (typeUtils.isSameType(parameterType, Integer.class)) {
-      pattern = declared ? VARIABLE_ASSIGNMENT_CASTED : VARIABLE_DEFINITION_CASTED;
-      pattern += ".intValue()";
+      getter = CodeBlock.of(DOUBLE_TO_INT_VALUE, TypeName.get(Double.class), getter);
     } else if (typeUtils.isSameType(parameterType, Long.class)) {
-      pattern = declared ? VARIABLE_ASSIGNMENT_CASTED : VARIABLE_DEFINITION_CASTED;
-      pattern += ".longValue()";
-    } else {
-      pattern = declared ? VARIABLE_ASSIGNMENT : VARIABLE_DEFINITION;
+      getter = CodeBlock.of(DOUBLE_TO_LONG_VALUE, TypeName.get(Double.class), getter);
     }
     methodBuilder.addStatement(pattern, parameterType, parameter.getSimpleName(), getter);
   }
