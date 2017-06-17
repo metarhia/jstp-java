@@ -2,8 +2,11 @@
   <artifact type="jar" build-on-make="true" name="jstp">
     <output-path>$PROJECT_DIR$/out/artifacts/jstp</output-path>
     <root id="archive" name="jstp.jar">
-      <element id="module-output" name="jstp" />
-      <element id="module-output" name="jstp-core" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/jstp/src/main/java/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="jstp_main" />
+      <element id="module-output" name="jstp-core_main" />
     </root>
   </artifact>
 </component>
