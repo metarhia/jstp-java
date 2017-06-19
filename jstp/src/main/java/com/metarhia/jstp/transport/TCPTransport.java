@@ -47,7 +47,6 @@ public class TCPTransport implements AbstractSocket {
   private BufferedInputStream in;
 
   private JSParser jsParser;
-  private ByteArrayOutputStream messageBuilder;
 
   private long closingTick;
   private long closingTimeout;
@@ -75,7 +74,6 @@ public class TCPTransport implements AbstractSocket {
     this.port = port;
     this.sslEnabled = sslEnabled;
     this.socketListener = listener;
-    messageBuilder = new ByteArrayOutputStream(DEFAULT_MESSAGE_SIZE);
     messageQueue = new ConcurrentLinkedQueue<>();
     jsParser = new JSParser();
   }
@@ -157,13 +155,16 @@ public class TCPTransport implements AbstractSocket {
   }
 
   private synchronized void startReceiverThread() {
+    final ByteArrayOutputStream localMessageBuilder =
+        new ByteArrayOutputStream(DEFAULT_MESSAGE_SIZE);
+    final BufferedInputStream localIn = in;
     this.receiverThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
           while (!closing) {
             while (running) {
-              processMessage();
+              processMessage(localIn, localMessageBuilder);
             }
             synchronized (pauseLock) {
               if (!running) {
@@ -175,18 +176,25 @@ public class TCPTransport implements AbstractSocket {
           // all ok - manually closing
           // npe - 'in' was null, means we are closing transport right now
         } catch (IOException e) {
-          logger.info("Receiver thread failed", e);
-          closeInternal();
+          if (!Thread.currentThread().isInterrupted()) {
+            // means this thread was closed
+            logger.info("Receiver thread failed", e);
+            closeInternal();
+          }
         }
       }
     });
     this.receiverThread.start();
   }
 
-  void processMessage() throws IOException {
-    int b;
+  void processMessage(BufferedInputStream in, ByteArrayOutputStream messageBuilder)
+      throws IOException {
+    int b = 0;
     while ((b = in.read()) > 0) {
       messageBuilder.write(b);
+    }
+    if (Thread.currentThread().isInterrupted()) {
+      return;
     }
     if (messageBuilder.size() != 0 && socketListener != null) {
       messageBuilder.write('\0');

@@ -7,14 +7,14 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
 import com.metarhia.jstp.TestConstants;
-import com.metarhia.jstp.connection.HandshakeAnswer;
 import com.metarhia.jstp.connection.Connection;
+import com.metarhia.jstp.connection.HandshakeAnswer;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.Spy;
@@ -46,6 +46,11 @@ public class TCPTransportTest {
     String packet = "{callback:[17],ok:[15703]}" + Connection.TERMINATOR
         + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + Connection.TERMINATOR;
 
+    final byte[] packetBytes = packet.getBytes(TestConstants.UTF_8_CHARSET);
+    final ByteArrayInputStream mockStream = new ByteArrayInputStream(packetBytes);
+    final BufferedInputStream in = new BufferedInputStream(mockStream);
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream(100);
+
     final Boolean[] success = {false, false};
 
     final Thread readThread = new Thread(new Runnable() {
@@ -53,7 +58,7 @@ public class TCPTransportTest {
       public void run() {
         try {
           while (tcpTransport != null) {
-            tcpTransport.processMessage();
+            tcpTransport.processMessage(in, baos);
           }
           synchronized (TCPTransportTest.this) {
             TCPTransportTest.this.notify();
@@ -89,13 +94,6 @@ public class TCPTransportTest {
         }
       }
     });
-
-    Field inputField = TCPTransport.class.getDeclaredField("in");
-    inputField.setAccessible(true);
-    final byte[] packetBytes = packet.getBytes(TestConstants.UTF_8_CHARSET);
-    final ByteArrayInputStream mockStream = new ByteArrayInputStream(packetBytes);
-    BufferedInputStream in = new BufferedInputStream(mockStream);
-    inputField.set(tcpTransport, in);
 
     readThread.start();
 
