@@ -220,6 +220,9 @@ public class HandlerAnnotatedInterface {
     if (payloadData != null) {
       payloadName = "internalPayload";
       methodBuilder.addStatement(VARIABLE_DEFINITION, payloadType, payloadName, payloadData);
+      methodBuilder.beginControlFlow("if ($L == null)", payloadName)
+          .addStatement("return")
+          .endControlFlow();
     }
 
     final List<? extends VariableElement> parameters = method.getParameters();
