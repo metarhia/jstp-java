@@ -66,6 +66,7 @@ public class HandlerAnnotatedInterface {
   private TypeSpec.Builder jstpClassBuilder;
   private TypeUtils typeUtils;
   private String handlersName;
+  private String messageParameterName;
   private TypeName interfaceClassName;
   private TypeName interfaceTypeName;
   private Class<?> handlerClass;
@@ -103,11 +104,13 @@ public class HandlerAnnotatedInterface {
       mainInvokeBuilder = MethodSpec.methodBuilder("run")
           .addAnnotation(Override.class)
           .addModifiers(Modifier.PUBLIC);
+      messageParameterName = "message";
     } else {
+      messageParameterName = MESSAGE_PARAMETER_NAME;
       mainInvokeBuilder = MethodSpec.methodBuilder(HANDLER_METHOD)
           .addAnnotation(Override.class)
           .addModifiers(Modifier.PUBLIC)
-          .addParameter(JSTP_VALUE_TYPENAME, MESSAGE_PARAMETER_NAME);
+          .addParameter(JSTP_VALUE_TYPENAME, messageParameterName);
     }
   }
 
@@ -177,7 +180,7 @@ public class HandlerAnnotatedInterface {
       mainInvokeBuilder.beginControlFlow("try ");
     }
     for (MethodSpec ms : messageHandlers) {
-      mainInvokeBuilder.addStatement("$L($L)", ms.name, MESSAGE_PARAMETER_NAME);
+      mainInvokeBuilder.addStatement("$L($L)", ms.name, messageParameterName);
       jstpClassBuilder.addMethod(ms);
     }
 
