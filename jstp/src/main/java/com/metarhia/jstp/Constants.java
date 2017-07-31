@@ -3,7 +3,7 @@ package com.metarhia.jstp;
 import java.nio.charset.Charset;
 
 /**
- * Created by lundibundi on 2/23/17.
+ * JSTP Constants
  */
 public class Constants {
 

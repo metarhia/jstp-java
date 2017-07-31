@@ -4,6 +4,9 @@ import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import java.util.concurrent.Executor;
 
+/**
+ * Message handler wrapper that allows to handle messages using specified executor
+ */
 public class ExecutableHandler implements ManualHandler, Runnable {
 
   private Executor executor;
@@ -14,6 +17,12 @@ public class ExecutableHandler implements ManualHandler, Runnable {
 
   private Integer errorCode;
 
+  /**
+   * Creates new executable handler instance
+   *
+   * @param executor executor to handle messages
+   * @param handler  handler to be wrapped
+   */
   public ExecutableHandler(Executor executor, ManualHandler handler) {
     this.executor = executor;
     this.handler = handler;

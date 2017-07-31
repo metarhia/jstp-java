@@ -9,6 +9,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Helper class to construct message to be sent via {@link Connection}
+ */
 public class Message implements Serializable {
 
   /**
@@ -26,6 +29,9 @@ public class Message implements Serializable {
    */
   private long messageNumber;
 
+  /*
+   * Type of the message
+   */
   private MessageType type;
 
   /**
@@ -38,6 +44,13 @@ public class Message implements Serializable {
     this.message = new IndexedHashMap<>(2);
   }
 
+  /**
+   * Creates new message with specified message number {@param messageNumber} of type
+   * {@param type}
+   *
+   * @param messageNumber number of the message
+   * @param type          type of the message
+   */
   public Message(long messageNumber, MessageType type) {
     this();
 
@@ -60,6 +73,13 @@ public class Message implements Serializable {
     this.message = message;
   }
 
+  /**
+   * Adds protocol argument
+   *
+   * @param value protocol argument
+   *
+   * @return current message instance
+   */
   public Message addProtocolArg(Object value) {
     this.protocolArgs.add(value);
     return this;
@@ -77,6 +97,14 @@ public class Message implements Serializable {
     return message.getKey(index);
   }
 
+  /**
+   * Adds argument
+   *
+   * @param key   argument key
+   * @param value argument value
+   *
+   * @return current message instance
+   */
   public Message putArg(String key, Object value) {
     message.put(key, value);
     return this;
@@ -87,12 +115,24 @@ public class Message implements Serializable {
     return this;
   }
 
+  /**
+   * Changes message number to {@param messageNumber}
+   *
+   * @param messageNumber new number of the message
+   *
+   * @return current message instance
+   */
   public Message setMessageNumber(long messageNumber) {
     this.messageNumber = messageNumber;
     this.protocolArgs.set(0, this.messageNumber);
     return this;
   }
 
+  /**
+   * Gets message as a {@link JSObject}
+   *
+   * @return message
+   */
   public JSObject<Object> get() {
     return message;
   }
@@ -119,10 +159,20 @@ public class Message implements Serializable {
     return Objects.hash(message);
   }
 
+  /**
+   * Gets message number
+   *
+   * @return message number
+   */
   public long getMessageNumber() {
     return messageNumber;
   }
 
+  /**
+   * Gets string representation of message
+   *
+   * @return string representation of message
+   */
   public String getStringRepresentation() {
     return stringRepresentation;
   }

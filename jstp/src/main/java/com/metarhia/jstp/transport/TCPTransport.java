@@ -20,10 +20,24 @@ import javax.net.ssl.SSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * TCP transport for JSTP connection
+ */
 public class TCPTransport implements Transport {
 
+  /**
+   * Default closing tick
+   */
   public static final long DEFAULT_CLOSING_TICK = 1000;
+
+  /**
+   * Default closing timeout
+   */
   public static final long DEFAULT_CLOSING_TIMEOUT = 5000;
+
+  /**
+   * Default message size
+   */
   public static final int DEFAULT_MESSAGE_SIZE = 100;
 
   private static final Logger logger = LoggerFactory.getLogger(TCPTransport.class);
@@ -52,18 +66,48 @@ public class TCPTransport implements Transport {
 
   private TransportListener socketListener;
 
+  /**
+   * Creates new TCP transport instance with specified host and port (SSL is disabled by default)
+   *
+   * @param host server host
+   * @param port server port
+   */
   public TCPTransport(String host, int port) {
     this(host, port, null);
   }
 
+  /**
+   * Creates new TCP transport instance with specified host, port and socket listener (SSL is
+   * disabled by default)
+   *
+   * @param host     server host
+   * @param port     server port
+   * @param listener socket events listener
+   */
   public TCPTransport(String host, int port, TransportListener listener) {
     this(host, port, false, listener);
   }
 
+  /**
+   * Creates new TCP transport instance with specified host, port and SSL enabled or disabled
+   *
+   * @param host       server host
+   * @param port       server port
+   * @param sslEnabled is SSL enabled or disabled
+   */
   public TCPTransport(String host, int port, boolean sslEnabled) {
     this(host, port, sslEnabled, null);
   }
 
+  /**
+   * Creates new TCP transport instance with specified host, port, socket listener and SSL enabled
+   * or disabled
+   *
+   * @param host       server host
+   * @param port       server port
+   * @param sslEnabled is SSL enabled or disabled
+   * @param listener   socket events listener
+   */
   public TCPTransport(String host, int port, boolean sslEnabled,
                       TransportListener listener) {
     this.closingTick = DEFAULT_CLOSING_TICK;
@@ -77,6 +121,7 @@ public class TCPTransport implements Transport {
     jsParser = new JSParser();
   }
 
+  @Override
   public boolean connect() {
     if (isConnected()) {
       if (socketListener != null) {
@@ -262,6 +307,7 @@ public class TCPTransport implements Transport {
     return null;
   }
 
+  @Override
   public void send(String message) {
     messageQueue.add(message);
     if (running) {
@@ -271,6 +317,7 @@ public class TCPTransport implements Transport {
     }
   }
 
+  @Override
   public void clearQueue() {
     messageQueue.clear();
   }
@@ -291,6 +338,7 @@ public class TCPTransport implements Transport {
     }
   }
 
+  @Override
   public void close(final boolean forced) {
     logger.trace("Public close transport");
     closing = true;
@@ -372,34 +420,74 @@ public class TCPTransport implements Transport {
     return host;
   }
 
+  /**
+   * Sets server host to specified host
+   *
+   * @param host specified host
+   */
   public void setHost(String host) {
     this.host = host;
   }
 
+  /**
+   * Gets server port
+   *
+   * @return server port
+   */
   public int getPort() {
     return port;
   }
 
+  /**
+   * Sets server port to specified port
+   *
+   * @param port specified port
+   */
   public void setPort(int port) {
     this.port = port;
   }
 
+  /**
+   * Checks if SSL is enabled
+   *
+   * @return true is SSL is enabled and false otherwise
+   */
   public boolean isSSLEnabled() {
     return sslEnabled;
   }
 
+  /**
+   * Sets SSL enabled or disabled
+   *
+   * @param sslEnabled true is SSL enabled and false otherwise
+   */
   public void setSSLEnabled(boolean sslEnabled) {
     this.sslEnabled = sslEnabled;
   }
 
+  /**
+   * Gets closing tick
+   *
+   * @return closing tick
+   */
   public long getClosingTick() {
     return closingTick;
   }
 
+  /**
+   * Sets closing tick to specified
+   *
+   * @param closingTick specified closing tick
+   */
   public void setClosingTick(long closingTick) {
     this.closingTick = closingTick;
   }
 
+  /**
+   * Gets closing timeout
+   *
+   * @return closing timeout
+   */
   public long getClosingTimeout() {
     return closingTimeout;
   }
@@ -409,6 +497,11 @@ public class TCPTransport implements Transport {
     socketListener = listener;
   }
 
+  /**
+   * Sets closing timeout to specified
+   *
+   * @param closingTimeout specified closing timeout
+   */
   public void setClosingTimeout(long closingTimeout) {
     this.closingTimeout = closingTimeout;
   }
