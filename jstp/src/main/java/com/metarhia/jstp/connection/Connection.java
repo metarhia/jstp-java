@@ -18,6 +18,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Connection that uses JSTP over specified transport to transmit data
+ */
 public class Connection implements
     Transport.TransportListener {
 
@@ -63,10 +66,23 @@ public class Connection implements
 
   private AtomicLong messageNumberCounter;
 
+  /**
+   * Creates connection instance over specified transport {@param transport}.
+   * and with {@link SessionRestorationPolicy} as default {@link SessionPolicy}.
+   *
+   * @param transport transport to be used for sending JSTP data
+   */
   public Connection(Transport transport) {
     this(transport, new SimpleSessionPolicy());
   }
 
+  /**
+   * Creates connection instance over specified transport with specified session policy
+   * (see {@link SessionPolicy})
+   *
+   * @param transport     transport to be used for sending JSTP messages
+   * @param sessionPolicy session policy
+   */
   public Connection(Transport transport, SessionPolicy sessionPolicy) {
     this.id = nextConnectionID.getAndIncrement();
     this.state = ConnectionState.AWAITING_HANDSHAKE;
@@ -84,6 +100,13 @@ public class Connection implements
     this.callHandlers = new ConcurrentHashMap<>();
   }
 
+  /**
+   * Changes transport used by a connection. It closes the previous transport if it was present,
+   * and establishes connection via {@link #connect(String)} if Application was provided
+   * before.
+   *
+   * @param transport new transport to be used for sending JSTP messages
+   */
   public void useTransport(Transport transport) {
     synchronized (stateLock) {
       if (this.transport != null) {
@@ -269,6 +292,17 @@ public class Connection implements
     }
   }
 
+  /**
+   * Sends a call message over the connection. If session is preserved this call is guaranteed
+   * to be received by the other party but this doesn't mean that you will always receive
+   * a callback.
+   *
+   * @param interfaceName name of an interface
+   * @param methodName    name of a method
+   * @param args          call arguments
+   * @param handler       callback that will be called when appropriate callback message is
+   *                      received
+   */
   public void call(String interfaceName,
                    String methodName,
                    List<?> args,
@@ -285,10 +319,23 @@ public class Connection implements
     sendBuffered(callMessage);
   }
 
+  /**
+   * Sends a callback message
+   *
+   * @param result callback result ({@link JSCallback#OK} or {@link JSCallback#ERROR})
+   * @param args   callback parameters
+   */
   public void callback(JSCallback result, List<?> args) {
     callback(result, args, null);
   }
 
+  /**
+   * Sends a callback message with a specific message number {@param messageNumber}
+   *
+   * @param result        callback result ({@link JSCallback#OK} or {@link JSCallback#ERROR})
+   * @param args          callback parameters
+   * @param messageNumber message number for callback
+   */
   public void callback(JSCallback result, List<?> args, Long messageNumber) {
     if (messageNumber == null) {
       messageNumber = getNextMessageNumber();
@@ -300,6 +347,12 @@ public class Connection implements
     send(callbackMessage);
   }
 
+  /**
+   * Sends an inspect message
+   *
+   * @param interfaceName interface name to inspect
+   * @param handler       callback handler
+   */
   public void inspect(String interfaceName, ManualHandler handler) {
     long messageNumber = getNextMessageNumber();
     Message inspectMessage = new Message(messageNumber, MessageType.INSPECT)
@@ -312,6 +365,13 @@ public class Connection implements
     sendBuffered(inspectMessage);
   }
 
+  /**
+   * Sends an event message
+   *
+   * @param interfaceName name of an interface
+   * @param eventName     name of the event
+   * @param args          event parameters
+   */
   public void event(String interfaceName, String eventName, List<?> args) {
     long messageNumber = getNextMessageNumber();
     Message eventMessage = new Message(messageNumber, MessageType.EVENT)
@@ -591,6 +651,14 @@ public class Connection implements
     }
   }
 
+  /**
+   * Sets call handler for incoming calls with interface name {@param interfaceName} and method
+   * name {@param methodName}
+   *
+   * @param interfaceName interface name of a method
+   * @param methodName    name of the method
+   * @param callHandler   handler for incoming call
+   */
   public void setCallHandler(String interfaceName, String methodName, ManualHandler callHandler) {
     Map<String, ManualHandler> interfaceHandlers = callHandlers.get(interfaceName);
     if (interfaceHandlers == null) {
@@ -600,6 +668,13 @@ public class Connection implements
     interfaceHandlers.put(methodName, callHandler);
   }
 
+  /**
+   * Removes call handler for incoming call with interface name {@param interfaceName} and method
+   * name {@param methodName}
+   *
+   * @param interfaceName interface name of the method
+   * @param methodName    name of the method
+   */
   public void removeCallHandler(String interfaceName, String methodName) {
     final Map<String, ManualHandler> interfaceHandlers = callHandlers.get(interfaceName);
     if (interfaceHandlers != null) {
@@ -607,6 +682,14 @@ public class Connection implements
     }
   }
 
+  /**
+   * Adds event handler for event with interface name {@param interfaceName} and name
+   * {@param eventName}
+   *
+   * @param interfaceName interface name of the event
+   * @param eventName     name of the event
+   * @param handler       event handler
+   */
   public void addEventHandler(String interfaceName, String eventName, ManualHandler handler) {
     Map<String, List<ManualHandler>> ehs = eventHandlers.get(interfaceName);
     if (ehs == null) {
@@ -622,6 +705,14 @@ public class Connection implements
     eventHandlers.add(handler);
   }
 
+  /**
+   * Removes event handler for event with interface name {@param interfaceName} and name
+   * {@param eventName}
+   *
+   * @param interfaceName interface name of the event
+   * @param eventName     name of the event
+   * @param handler       event handler
+   */
   public void removeEventHandler(String interfaceName, String eventName, ManualHandler handler) {
     Map<String, List<ManualHandler>> ehs = eventHandlers.get(interfaceName);
     if (ehs != null) {
@@ -632,6 +723,12 @@ public class Connection implements
     }
   }
 
+  /**
+   * Adds handler for message with number {@param messageNumber}
+   *
+   * @param messageNumber number of the message to handle
+   * @param handler       handler of the incoming message
+   */
   public void addHandler(long messageNumber, ManualHandler handler) {
     handlers.put(messageNumber, handler);
   }
@@ -671,10 +768,22 @@ public class Connection implements
     sessionPolicy.reset(app);
   }
 
+  /**
+   * Closes connection.
+   *
+   * @see #close(boolean)
+   */
   public void close() {
     close(false);
   }
 
+  /**
+   * Closes connection
+   *
+   * @param forced if true the connection should be closed immediately, otherwise it may perform
+   *               additional operations, such as writing messages remaining in the queue or
+   *               handling remaining incoming data
+   */
   public void close(boolean forced) {
     synchronized (stateLock) {
       if (state == ConnectionState.CLOSING) {
@@ -702,10 +811,22 @@ public class Connection implements
     return !(message.getByIndex(1) instanceof List);
   }
 
+  /**
+   * Wrapper method for {@link #setClientMethodNames(String, List)}
+   *
+   * @param interfaceName interface name of client methods
+   * @param names         client method names
+   */
   public void setClientMethodNames(String interfaceName, String... names) {
     setClientMethodNames(interfaceName, Arrays.asList(names));
   }
 
+  /**
+   * Sets client method names for incoming inspect messages
+   *
+   * @param interfaceName interface name of client methods
+   * @param names         client method names
+   */
   public void setClientMethodNames(String interfaceName, List<String> names) {
     List<String> methods = clientMethodNames.get(interfaceName);
     if (methods == null) {
@@ -717,18 +838,39 @@ public class Connection implements
     clientMethodNames.put(interfaceName, methods);
   }
 
+  /**
+   * Checks if connection is established
+   *
+   * @return true if connection is established (and handshake has been performed)
+   * and false otherwise
+   */
   public boolean isConnected() {
     return state == ConnectionState.CONNECTED;
   }
 
+  /**
+   * Checks if connection is closed
+   *
+   * @return true if connection is closed or closing and false otherwise
+   */
   public boolean isClosed() {
     return state == ConnectionState.CLOSED || state == ConnectionState.CLOSING;
   }
 
+  /**
+   * Gets connection ID
+   *
+   * @return connection ID
+   */
   public long getId() {
     return id;
   }
 
+  /**
+   * Adds listener to the connection events
+   *
+   * @param listener connection events listener
+   */
   public void addSocketListener(ConnectionListener listener) {
     this.connectionListeners.add(listener);
   }

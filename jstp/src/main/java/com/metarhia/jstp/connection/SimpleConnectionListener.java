@@ -3,7 +3,8 @@ package com.metarhia.jstp.connection;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 
 /**
- * Created by lundibundi on 2/22/17.
+ * Simple connection listener that overwrites all {@link ConnectionListener} methods to allow a
+ * user to only overwrite methods needed and avoid writing stubs for the other methods
  */
 public class SimpleConnectionListener implements ConnectionListener {
 

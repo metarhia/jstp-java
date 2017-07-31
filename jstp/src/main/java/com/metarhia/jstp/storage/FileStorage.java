@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Created by lundibundi on 3/3/17.
+ * File storage for {@link com.metarhia.jstp.connection.SessionPolicy}
  */
 public class FileStorage implements StorageInterface {
 
@@ -18,6 +18,11 @@ public class FileStorage implements StorageInterface {
 
   private String storageFolder;
 
+  /**
+   * Creates file storage instance in specified folder {@param storageFolder}
+   *
+   * @param storageFolder storage folder to store session data
+   */
   public FileStorage(String storageFolder) {
     this.storageFolder = storageFolder;
   }

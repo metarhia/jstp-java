@@ -11,6 +11,7 @@ public interface SessionPolicy {
    * @param numServerReceivedMessages number off messages received on the server side
    */
   void restore(long numServerReceivedMessages);
+
   /**
    * Reset current session counters and buffers
    *
@@ -22,7 +23,6 @@ public interface SessionPolicy {
   /**
    * Called when transport signalled that it has been connected
    * Should use one of Connection#handshake methods to connect to remote site
-   *
    */
   void onTransportAvailable();
 

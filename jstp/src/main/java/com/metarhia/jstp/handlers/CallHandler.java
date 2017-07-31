@@ -7,7 +7,7 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import java.util.List;
 
 /**
- * Created by lundibundi on 3/12/17.
+ * Handler for incoming call messages
  */
 public abstract class CallHandler implements ManualHandler {
 
@@ -25,8 +25,21 @@ public abstract class CallHandler implements ManualHandler {
     // ignore by default
   }
 
+  /**
+   * Handles incoming call message
+   *
+   * @param methodName name of the called method
+   * @param data       call data
+   */
   public abstract void handleCall(String methodName, List<?> data);
 
+  /**
+   * Sends callback message using connection {@param connection}
+   *
+   * @param connection connection to send callback on
+   * @param result     callback result (see {@link JSCallback})
+   * @param args       callback arguments
+   */
   public void callback(Connection connection, JSCallback result, List<?> args) {
     connection.callback(result, args, callbackNumber);
   }

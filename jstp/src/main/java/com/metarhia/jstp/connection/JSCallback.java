@@ -1,7 +1,7 @@
 package com.metarhia.jstp.connection;
 
 /**
- * Created by Lida on 14.07.16.
+ * Callback status
  */
 public enum JSCallback {
   OK("ok"),
@@ -22,6 +22,7 @@ public enum JSCallback {
     return null;
   }
 
+  @Override
   public String toString() {
     return value;
   }
