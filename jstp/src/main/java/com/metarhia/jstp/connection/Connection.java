@@ -5,7 +5,6 @@ import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
-import com.metarhia.jstp.handlers.StateHandler;
 import com.metarhia.jstp.storage.StorageInterface;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -37,7 +36,6 @@ public class Connection implements
   private static final String CALL = "call";
   private static final String CALLBACK = "callback";
   private static final String EVENT = "event";
-  private static final String STATE = "state";
   private static final String STREAM = "stream";
   private static final String INSPECT = "inspect";
   private static final String PING = "ping";
@@ -61,8 +59,6 @@ public class Connection implements
           Connection.class.getDeclaredMethod("eventMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(INSPECT,
           Connection.class.getDeclaredMethod("inspectMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(STATE,
-          Connection.class.getDeclaredMethod("stateMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(PING,
           Connection.class.getDeclaredMethod("pingMessageHandler", JSObject.class));
       METHOD_HANDLERS.put(PONG,
@@ -96,11 +92,6 @@ public class Connection implements
    * packages incoming to server.
    */
   private Map<Long, ManualHandler> handlers;
-
-  /**
-   * State handler
-   */
-  private StateHandler stateHandler;
 
   /**
    * Client method names for incoming inspect packages by interface
@@ -518,10 +509,6 @@ public class Connection implements
     }
   }
 
-  private void stateMessageHandler(JSObject message) {
-    stateHandler.onState(message);
-  }
-
   private void pingMessageHandler(JSObject message) {
     long pingNumber = getMessageNumber(message);
     Message streamMessage = new Message(pingNumber, PONG);
@@ -546,10 +533,6 @@ public class Connection implements
     if (interfaceHandlers != null) {
       interfaceHandlers.remove(methodName);
     }
-  }
-
-  public void setStateHandler(StateHandler stateHandler) {
-    this.stateHandler = stateHandler;
   }
 
   public void addEventHandler(String interfaceName, String eventName, ManualHandler handler) {
