@@ -1,10 +1,11 @@
 apply plugin: 'java'
+apply plugin: 'java-library'
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'maven'
 apply plugin: 'maven-publish'
 
-targetCompatibility = '1.7'
-sourceCompatibility = '1.7'
+targetCompatibility = JavaVersion.VERSION_1_7
+sourceCompatibility = JavaVersion.VERSION_1_7
 
 Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
@@ -20,7 +21,7 @@ publishing {
             groupId 'com.metarhia.jstp'
             artifactId packetName
             version compilerVersion
-            mavenDependency(pom, "com.squareup", "javapoet", "1.8.0")
+            addAllProjectDependenciesToPom(pom, configurations)
         }
     }
 }
@@ -45,14 +46,14 @@ bintray {
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile project(':jstp-core')
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
 
-    testCompile group: 'org.junit.platform', name: 'junit-platform-runner', version: '1.0.0-M4'
-    testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5.0.0-M4'
-    testRuntime group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.0.0-M4'
-    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.3.4'
+    compileOnly group: 'com.google.auto.service', name: 'auto-service', version: '1.0-rc1'
+    implementation group: 'com.squareup', name: 'javapoet', version: '1.9.0'
+    implementation group: 'com.metarhia.jstp', name: 'jstp', version: '0.8.5'
 
-    compile group: 'com.squareup', name: 'javapoet', version: '1.8.0'
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testImplementation group: 'org.junit.platform', name: 'junit-platform-runner', version: '1.0.2'
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5.0.2'
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.0.2'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '2.13.0'
 }

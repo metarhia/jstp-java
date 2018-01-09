@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module external.linked.project.id=":jstp-core:main" external.linked.project.path="$MODULE_DIR$/../../../jstp-core" external.root.project.path="$MODULE_DIR$/../../.." external.system.id="GRADLE" external.system.module.group="jstp-java" external.system.module.type="sourceSet" external.system.module.version="unspecified" type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_7">
-    <output url="file://$MODULE_DIR$/../../../jstp-core/build/classes/main" />
+    <output url="file://$MODULE_DIR$/../../../jstp-core/out/production/classes" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../../jstp-core/src/main">
       <sourceFolder url="file://$MODULE_DIR$/../../../jstp-core/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../../../jstp-core/src/main/resources" type="java-resource" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="1.7" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

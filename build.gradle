@@ -1,13 +1,17 @@
 buildscript {
     repositories {
         jcenter()
+        mavenCentral()
+        google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.1.2'
-        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.3'
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
-
+        classpath 'com.android.tools.build:gradle:3.0.1'
     }
+}
+
+plugins {
+    id "com.github.dcendents.android-maven" version "2.0" apply false
+    id "com.jfrog.bintray" version "1.7.3" apply false
 }
 
 allprojects {
@@ -21,18 +25,39 @@ task clean(type: Delete) {
     delete rootProject.buildDir
 }
 
-def mavenDependency(pom, groupIdName, artifactIdName, ver) {
+def mavenDependencies(pom, depsArr) {
     return pom.withXml {
-        asNode().children().last() + {
-            resolveStrategy = Closure.DELEGATE_FIRST
-            dependencies {
-                dependency {
-                    groupId groupIdName
-                    artifactId artifactIdName
-                    version ver
-                }
-            }
+        def root = asNode()
+        def dependenciesNode = root.dependencies
+        if (!dependenciesNode) dependenciesNode = root.appendNode('dependencies')
+        depsArr.each {
+            def (groupIdName, artifactIdName, ver) = it
+            addDependencyNodeToPom(dependenciesNode, null, groupIdName, artifactIdName, ver)
         }
     }
 }
 
+static def addDependencyNodeToPom(dependenciesNode, scope, group, artifact, version) {
+    def dependencyNode = dependenciesNode.appendNode('dependency')
+    if (scope) dependencyNode.appendNode("scope", scope)
+    dependencyNode.appendNode("groupId", group)
+    dependencyNode.appendNode("artifactId", artifact)
+    dependencyNode.appendNode("version", version)
+}
+
+def addAllProjectDependenciesToPom(pom, configurations) {
+    pom.withXml {
+        def root = asNode()
+        def dependenciesNode = root.dependencies
+        if (!dependenciesNode) dependenciesNode = root.appendNode('dependencies')
+        configurations.implementation.allDependencies.each {
+            // Ensure dependencies such as fileTree are not included.
+            if (it.name != 'unspecified' && it.version != 'unspecified') {
+                def dependencyNode = dependenciesNode.appendNode('dependency')
+                dependencyNode.appendNode('groupId', it.group)
+                dependencyNode.appendNode('artifactId', it.name)
+                dependencyNode.appendNode('version', it.version)
+            }
+        }
+    }
+}

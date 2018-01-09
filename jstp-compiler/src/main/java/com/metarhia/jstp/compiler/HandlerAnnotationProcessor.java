@@ -1,15 +1,18 @@
 package com.metarhia.jstp.compiler;
 
+import com.google.auto.service.AutoService;
 import com.metarhia.jstp.compiler.annotations.handlers.Handler;
 import com.metarhia.jstp.compiler.annotations.handlers.Receiver;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
+import javax.annotation.processing.Processor;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 
+@AutoService(Processor.class)
 public class HandlerAnnotationProcessor extends AnnotationProcessor {
 
   public HandlerAnnotationProcessor() {

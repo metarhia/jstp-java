@@ -2,10 +2,11 @@
   <artifact type="jar" build-on-make="true" name="jstp-compiler">
     <output-path>$PROJECT_DIR$/out/artifacts/jstp_compiler</output-path>
     <root id="archive" name="jstp-compiler.jar">
-      <element id="directory" name="META-INF">
-        <element id="dir-copy" path="$PROJECT_DIR$/jstp-compiler/src/main/resources/META-INF" />
-      </element>
       <element id="module-output" name="jstp-compiler_main" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/jstp-compiler/build/resources/main/META-INF/MANIFEST.MF" />
+        <element id="dir-copy" path="$PROJECT_DIR$/jstp-compiler/build/classes/java/main/META-INF" />
+      </element>
     </root>
   </artifact>
 </component>

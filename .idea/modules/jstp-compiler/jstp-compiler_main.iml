@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module external.linked.project.id=":jstp-compiler:main" external.linked.project.path="$MODULE_DIR$/../../../jstp-compiler" external.root.project.path="$MODULE_DIR$/../../.." external.system.id="GRADLE" external.system.module.group="jstp-java" external.system.module.type="sourceSet" external.system.module.version="unspecified" type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_7">
-    <output url="file://$MODULE_DIR$/../../../jstp-compiler/build/classes/main" />
+    <output url="file://$MODULE_DIR$/../../../jstp-compiler/out/production/classes" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../../jstp-compiler/src/main">
       <sourceFolder url="file://$MODULE_DIR$/../../../jstp-compiler/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../../../jstp-compiler/src/main/resources" type="java-resource" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="1.7" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="jstp-core_main" />
-    <orderEntry type="module" module-name="jstp_main" />
-    <orderEntry type="library" name="Gradle: com.squareup:javapoet:1.8.0" level="project" />
+    <orderEntry type="library" name="Gradle: com.squareup:javapoet:1.9.0" level="project" />
+    <orderEntry type="library" name="Gradle: com.metarhia.jstp:jstp:0.8.5" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Gradle: com.google.auto.service:auto-service:1.0-rc1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Gradle: com.google.guava:guava:16.0" level="project" />
+    <orderEntry type="library" name="Gradle: org.slf4j:slf4j-api:1.7.25" level="project" />
   </component>
 </module>
