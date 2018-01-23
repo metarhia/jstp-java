@@ -23,14 +23,11 @@ import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
 import com.metarhia.jstp.handlers.CallHandler;
-import com.metarhia.jstp.storage.FileStorage;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -125,7 +122,7 @@ public class ConnectionTest {
   }
 
   @Test
-  public void checkPingPong() throws Exception {
+  public void pingPong() throws Exception {
     String input = "{ping:[42]}" + Connection.TERMINATOR;
     String response = "{pong:[42]}" + Connection.TERMINATOR;
 
@@ -133,21 +130,6 @@ public class ConnectionTest {
 
     verify(transport, times(1))
         .send(argThat(new MessageMatcher(response)));
-  }
-
-  @Test
-  public void saveRestoreSession() throws Exception {
-    String folder = "/tmp";
-    FileStorage storage = new FileStorage(folder);
-
-    connection.saveSession(storage);
-
-    AbstractSocket socket = mock(AbstractSocket.class);
-    Connection anotherConn = new Connection(socket);
-
-    anotherConn.restoreSession(storage);
-
-    assertTrue(connection.getSessionData().equals(anotherConn.getSessionData()));
   }
 
   @Test
@@ -173,79 +155,22 @@ public class ConnectionTest {
     long messageNumber = 42;
     String methodName = "method";
     String interfaceName = "interfaceName";
-    final List<?> recvArgs = new ArrayList<>();
-    recvArgs.add(null);
+    final List<?> recvArgs = Collections.singletonList(null);
     final List<?> responseArgs = Arrays.asList(24, "whatever");
 
-    final String input =
-        String.format("{call:[%d,'%s'], %s:%s}", messageNumber, interfaceName,
-            methodName, JSSerializer.stringify(recvArgs));
-    JSObject callback = JSParser.parse(input);
-    connection.setCallHandler(interfaceName, "method", new CallHandler() {
+    final String input = String.format(TestConstants.TEMPLATE_CALL,
+        messageNumber, interfaceName, methodName, JSSerializer.stringify(recvArgs));
+    JSObject call = JSParser.parse(input);
+    connection.setCallHandler(interfaceName, methodName, new CallHandler() {
       @Override
       public void handleCallback(List<?> data) {
         assertEquals(data, recvArgs);
         callback(connection, JSCallback.OK, responseArgs);
       }
     });
-    connection.onMessageReceived(callback);
+    connection.onMessageReceived(call);
     verify(connection, times(1))
         .callback(JSCallback.OK, responseArgs, messageNumber);
-  }
-
-  @Test
-  public void restorationPolicyCheck() throws Exception {
-    final boolean[] success = {false, false};
-
-    AbstractSocket transport = mock(AbstractSocket.class);
-    when(transport.isConnected()).thenReturn(true);
-
-    Connection connection = spy(new Connection(transport, new RestorationPolicy() {
-      @Override
-      public boolean restore(Connection connection, Queue<Message> sendQueue) {
-        success[1] = true;
-        synchronized (ConnectionTest.this) {
-          ConnectionTest.this.notify();
-        }
-        return true;
-      }
-
-      @Override
-      public void onTransportAvailable(Connection connection, String appName,
-                                       String sessionID) {
-        connection.handshake(appName, new ManualHandler() {
-          @Override
-          public void handle(JSObject message) {
-            success[0] = true;
-          }
-        });
-      }
-    }));
-
-    doAnswer(new HandshakeAnswer(connection, TestConstants.MOCK_HANDSHAKE_RESPONSE, false))
-//        .when(transport).send(TestConstants.MOCK_HANDSHAKE_REQUEST);
-        .when(transport).send(anyString());
-    connection.connect("appName");
-
-    synchronized (ConnectionTest.this) {
-      ConnectionTest.this.wait(2000);
-    }
-
-    assertTrue(success[0] && !success[1],
-        "Without session restoration 'restore' must not be called");
-    success[0] = false;
-    connection.onConnectionClosed();
-
-    doAnswer(new HandshakeAnswer(connection, TestConstants.MOCK_HANDSHAKE_RESTORE, false))
-        .when(transport).send(anyString());
-    connection.onConnected();
-
-    synchronized (ConnectionTest.this) {
-      ConnectionTest.this.wait(2000);
-    }
-
-    assertTrue(success[0] && success[1],
-        "With session restoration both methods of Restoration policy must be called");
   }
 
   @Test
@@ -285,7 +210,7 @@ public class ConnectionTest {
 
     verify(listener, times(1))
         .onConnectionError(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR_CODE);
-    assertTrue(connection.getSessionID() == null);
+    assertTrue(connection.getSessionId() == null);
     assertFalse(connection.isConnected());
   }
 
@@ -301,7 +226,7 @@ public class ConnectionTest {
     connection.handshake(appName, sessionId, null);
 
     String request = String.format(
-        TestConstants.MOCK_HANDSHAKE_REQUEST_SESSION + Connection.TERMINATOR,
+        TestConstants.TEMPLATE_HANDSHAKE_RESTORE_REQUEST + Connection.TERMINATOR,
         appName, sessionId, 0);
     verify(transport, times(1))
         .send(request);
@@ -334,10 +259,10 @@ public class ConnectionTest {
   }
 
   @Test
-  void checkCall() throws Exception {
+  void call() throws Exception {
     for (BasicArguments ba : callMessages) {
       String args = JSSerializer.stringify(ba.args);
-      String callString = String.format(TestConstants.MOCK_CALL,
+      String callString = String.format(TestConstants.TEMPLATE_CALL,
           0, ba.interfaceName, ba.methodName, args);
 
       connection.call(ba.interfaceName, ba.methodName, ba.args, null);
@@ -348,11 +273,11 @@ public class ConnectionTest {
   }
 
   @Test
-  void checkCallHandling() throws Exception {
+  void callHandling() throws Exception {
     ManualHandler handler = spy(ManualHandler.class);
     for (BasicArguments ba : callMessages) {
       String args = JSSerializer.stringify(ba.args);
-      String callString = String.format(TestConstants.MOCK_CALL,
+      String callString = String.format(TestConstants.TEMPLATE_CALL,
           0, ba.interfaceName, ba.methodName, args);
       final JSObject message = JSParser.parse(callString);
 
@@ -365,10 +290,10 @@ public class ConnectionTest {
   }
 
   @Test
-  void checkEvent() throws Exception {
+  void event() throws Exception {
     for (BasicArguments ba : eventMessages) {
       String args = JSSerializer.stringify(ba.args);
-      String eventString = String.format(TestConstants.MOCK_EVENT,
+      String eventString = String.format(TestConstants.TEMPLATE_EVENT,
           0, ba.interfaceName, ba.methodName, args);
 
       connection.event(ba.interfaceName, ba.methodName, ba.args);
@@ -379,11 +304,11 @@ public class ConnectionTest {
   }
 
   @Test
-  void checkEventHandling() throws Exception {
+  void eventHandling() throws Exception {
     ManualHandler handler = spy(ManualHandler.class);
     for (BasicArguments ba : eventMessages) {
       String args = JSSerializer.stringify(ba.args);
-      String callString = String.format(TestConstants.MOCK_EVENT,
+      String callString = String.format(TestConstants.TEMPLATE_EVENT,
           0, ba.interfaceName, ba.methodName, args);
       final JSObject message = JSParser.parse(callString);
 
@@ -396,10 +321,10 @@ public class ConnectionTest {
   }
 
   @Test
-  void checkCallback() throws Exception {
+  void callback() throws Exception {
     for (CallbackArguments cba : callbackMessages) {
       String args = JSSerializer.stringify(cba.args);
-      String callbackString = String.format(TestConstants.MOCK_CALLBACK,
+      String callbackString = String.format(TestConstants.TEMPLATE_CALLBACK,
           cba.messageNumber, cba.callback, args);
 
       connection.callback(cba.callback, cba.args, cba.messageNumber);
@@ -410,11 +335,11 @@ public class ConnectionTest {
   }
 
   @Test
-  void checkCallbackHandling() throws Exception {
+  void callbackHandling() throws Exception {
     ManualHandler handler = spy(ManualHandler.class);
     for (CallbackArguments cba : callbackMessages) {
       String args = JSSerializer.stringify(cba.args);
-      String callString = String.format(TestConstants.MOCK_CALLBACK,
+      String callString = String.format(TestConstants.TEMPLATE_CALLBACK,
           cba.messageNumber, cba.callback, args);
       final JSObject message = JSParser.parse(callString);
 
@@ -426,12 +351,12 @@ public class ConnectionTest {
   }
 
   @Test
-  public void checkInspect() throws Exception {
+  public void inspect() throws Exception {
     for (InspectArguments ia : inspectMessages) {
 
       connection.inspect(ia.interfaceName, null);
 
-      String inspectRequest = String.format(TestConstants.MOCK_INSPECT,
+      String inspectRequest = String.format(TestConstants.TEMPLATE_INSPECT,
           ia.messageNumber, ia.interfaceName);
       verify(transport, times(1))
           .send(argThat(new MessageMatcherNoCount(inspectRequest)));
@@ -439,12 +364,12 @@ public class ConnectionTest {
   }
 
   @Test
-  public void checkInspectHandler() throws Exception {
+  public void inspectHandler() throws Exception {
     for (InspectArguments ia : inspectMessages) {
       if (ia.methods != null) {
         connection.setClientMethodNames(ia.interfaceName, ia.methods);
       }
-      String inspectRequest = String.format(TestConstants.MOCK_INSPECT,
+      String inspectRequest = String.format(TestConstants.TEMPLATE_INSPECT,
           ia.messageNumber, ia.interfaceName);
 
       connection.onMessageReceived(JSParser.<JSObject>parse(inspectRequest));
@@ -455,7 +380,7 @@ public class ConnectionTest {
         callback = JSCallback.ERROR;
         args = Collections.singletonList(Constants.ERR_INTERFACE_NOT_FOUND);
       }
-      String response = String.format(TestConstants.MOCK_CALLBACK,
+      String response = String.format(TestConstants.TEMPLATE_CALLBACK,
           ia.messageNumber, callback, JSSerializer.stringify(args));
       verify(transport, times(1))
           .send(argThat(new MessageMatcher(response)));
@@ -463,7 +388,7 @@ public class ConnectionTest {
   }
 
   @Test
-  public void checkHeartbeat() throws Exception {
+  public void heartbeat() throws Exception {
     JSObject heartbeat = new IndexedHashMap();
     ConnectionListener listener = mock(ConnectionListener.class);
 
@@ -504,7 +429,7 @@ public class ConnectionTest {
     connection.useTransport(anotherSocket);
 
     String request =
-        String.format(TestConstants.MOCK_HANDSHAKE_REQUEST + Connection.TERMINATOR, appName);
+        String.format(TestConstants.TEMPLATE_HANDSHAKE_REQUEST + Connection.TERMINATOR, appName);
     verify(anotherSocket, times(1))
         .send(request);
   }
@@ -519,7 +444,7 @@ public class ConnectionTest {
     connection.removeCallHandler(interfaceName, methodName);
 
     String callString =
-        String.format(TestConstants.MOCK_CALL, 13, interfaceName, methodName, "[]");
+        String.format(TestConstants.TEMPLATE_CALL, 13, interfaceName, methodName, "[]");
     connection.onMessageReceived(JSParser.<JSObject>parse(callString));
 
     verify(handler, times(0)).handle(any(JSObject.class));
@@ -535,7 +460,7 @@ public class ConnectionTest {
     connection.removeEventHandler(interfaceName, methodName, handler);
 
     String callString =
-        String.format(TestConstants.MOCK_EVENT, 13, interfaceName, methodName, "[]");
+        String.format(TestConstants.TEMPLATE_EVENT, 13, interfaceName, methodName, "[]");
     connection.onMessageReceived(JSParser.<JSObject>parse(callString));
 
     verify(handler, times(0)).handle(any(JSObject.class));

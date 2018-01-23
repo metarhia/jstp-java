@@ -7,9 +7,9 @@ import java.nio.charset.Charset;
  */
 public class Constants {
 
-  public static final String PACKAGE_PREFIX = "com.metarhia.jstp";
+  private static final String PACKAGE_PREFIX = "com.metarhia.jstp";
 
-  public static final String KEY_SESSION_DATA = PACKAGE_PREFIX + "sessionData";
+  public static final String KEY_SESSION = PACKAGE_PREFIX + ".SESSION";
 
   public static final String UTF_8_CHARSET_NAME = "UTF-8";
 

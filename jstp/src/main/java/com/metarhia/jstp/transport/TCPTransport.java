@@ -328,10 +328,9 @@ public class TCPTransport implements AbstractSocket {
   }
 
   private void closeInternal(boolean notify) {
-    int remainingMessages;
     try {
       synchronized (TCPTransport.this) {
-        remainingMessages = messageQueue.size();
+        messageQueue.size();
         closing = true;
         clearQueue();
         running = false;

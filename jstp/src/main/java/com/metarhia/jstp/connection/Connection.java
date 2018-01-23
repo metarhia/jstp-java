@@ -3,7 +3,6 @@ package com.metarhia.jstp.connection;
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
-import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import com.metarhia.jstp.storage.StorageInterface;
 import java.lang.reflect.InvocationTargetException;
@@ -14,9 +13,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,17 +28,7 @@ public class Connection implements
 
   private static final int DEFAULT_SEND_BUFFER_CAPACITY = 20;
 
-  // Package types
-  private static final String HANDSHAKE = "handshake";
-  private static final String CALL = "call";
-  private static final String CALLBACK = "callback";
-  private static final String EVENT = "event";
-  private static final String STREAM = "stream";
-  private static final String INSPECT = "inspect";
-  private static final String PING = "ping";
-  private static final String PONG = "pong";
-
-  private static final Map<String, Method> METHOD_HANDLERS = new HashMap<>(10);
+  private static final Map<MessageType, Method> METHOD_HANDLERS = new HashMap<>(10);
 
   private static final Logger logger = LoggerFactory.getLogger(Connection.class);
 
@@ -49,19 +36,19 @@ public class Connection implements
 
   static {
     try {
-      METHOD_HANDLERS.put(HANDSHAKE,
+      METHOD_HANDLERS.put(MessageType.HANDSHAKE,
           Connection.class.getDeclaredMethod("handshakeMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(CALL,
+      METHOD_HANDLERS.put(MessageType.CALL,
           Connection.class.getDeclaredMethod("callMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(CALLBACK,
+      METHOD_HANDLERS.put(MessageType.CALLBACK,
           Connection.class.getDeclaredMethod("callbackMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(EVENT,
+      METHOD_HANDLERS.put(MessageType.EVENT,
           Connection.class.getDeclaredMethod("eventMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(INSPECT,
+      METHOD_HANDLERS.put(MessageType.INSPECT,
           Connection.class.getDeclaredMethod("inspectMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(PING,
+      METHOD_HANDLERS.put(MessageType.PING,
           Connection.class.getDeclaredMethod("pingMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(PONG,
+      METHOD_HANDLERS.put(MessageType.PONG,
           Connection.class.getDeclaredMethod("pongMessageHandler", JSObject.class));
     } catch (NoSuchMethodException e) {
       throw new RuntimeException("Cannot create method handlers", e);
@@ -100,40 +87,29 @@ public class Connection implements
 
   private List<ConnectionListener> connectionListeners;
 
-  private RestorationPolicy restorationPolicy;
+  private SessionPolicy sessionPolicy;
 
-  private SessionData sessionData;
-
-  private Queue<Message> sendQueue;
-
-  private int sendBufferCapacity;
-
-  private NoConnBufferingPolicy noConnBufferingPolicy;
+  private long messageNumberCounter;
 
   public Connection(AbstractSocket transport) {
-    this(transport, new SessionRestorationPolicy());
+    this(transport, new SimpleSessionPolicy());
   }
 
-  public Connection(AbstractSocket transport, RestorationPolicy restorationPolicy) {
+  public Connection(AbstractSocket transport, SessionPolicy sessionPolicy) {
     this.id = nextConnectionID.getAndIncrement();
     this.state = ConnectionState.STATE_AWAITING_HANDSHAKE;
-    this.sessionData = new SessionData();
-    this.sendBufferCapacity = DEFAULT_SEND_BUFFER_CAPACITY;
-    this.sendQueue = new ConcurrentLinkedQueue<>();
 
     this.transport = transport;
     this.transport.setSocketListener(this);
     state = ConnectionState.STATE_AWAITING_HANDSHAKE;
 
-    this.restorationPolicy = restorationPolicy;
+    this.sessionPolicy = sessionPolicy;
 
     this.connectionListeners = new ArrayList<>();
     this.eventHandlers = new ConcurrentHashMap<>();
     this.clientMethodNames = new ConcurrentHashMap<>();
     this.handlers = new ConcurrentHashMap<>();
     this.callHandlers = new ConcurrentHashMap<>();
-
-    this.noConnBufferingPolicy = NoConnBufferingPolicy.BUFFER;
   }
 
   public void useTransport(AbstractSocket transport) {
@@ -146,20 +122,10 @@ public class Connection implements
     this.transport.setSocketListener(this);
     state = ConnectionState.STATE_AWAITING_HANDSHAKE;
 
-    if (sessionData.getAppName() != null) {
-      connect(sessionData.getAppName());
+    String appName = getAppName();
+    if (appName != null) {
+      connect(appName);
     }
-  }
-
-  private boolean restoreSession(long numServerReceivedMessages) {
-    long redundantMessages =
-        sendQueue.size() - (sessionData.getNumSentMessages() - numServerReceivedMessages);
-    sessionData.setNumSentMessages(numServerReceivedMessages);
-    while (redundantMessages-- > 0) {
-      sendQueue.poll();
-    }
-
-    return restorationPolicy != null && restorationPolicy.restore(this, sendQueue);
   }
 
   /**
@@ -181,10 +147,7 @@ public class Connection implements
     if (appName == null) {
       throw new RuntimeException("Application name must not be null");
     }
-    sessionData.setAppName(appName);
-    if (sessionID != null) {
-      sessionData.setSessionID(sessionID);
-    }
+    sessionPolicy.getSessionData().setParameters(appName, sessionID);
     if (!transport.isConnected()) {
       transport.connect();
     } else {
@@ -215,20 +178,19 @@ public class Connection implements
     if (appName == null) {
       throw new RuntimeException("Application name must not be null");
     }
-    sessionData.setAppName(appName);
-    sessionData.setSessionID(sessionID);
-    long packageCounter = 0;
+    sessionPolicy.getSessionData().setParameters(appName, sessionID);
+    messageNumberCounter = sessionPolicy.getSessionData().getNumSentMessages();
+    long messageNumber = 0;
     if (handler != null) {
-      handlers.put(packageCounter, handler);
+      handlers.put(messageNumber, handler);
     }
 
-    Message hm;
-    List<?> args = Arrays.asList(sessionID, sessionData.getNumReceivedMessages());
-    hm = new Message(packageCounter, HANDSHAKE)
-        .putArg("session", args);
+    Message hm = new Message(messageNumber, MessageType.HANDSHAKE)
+        .putArgs("session", sessionID,
+            sessionPolicy.getSessionData().getNumReceivedMessages());
     hm.addProtocolArg(appName);
 
-    send(hm, false);
+    send(hm);
   }
 
   /**
@@ -244,27 +206,28 @@ public class Connection implements
     if (appName == null) {
       throw new RuntimeException("Application name must not be null");
     }
-    sessionData.setAppName(appName);
-    long packageCounter = 0;
+    sessionPolicy.getSessionData().setAppName(appName);
+    messageNumberCounter = 0;
+    long messageNumber = getNextMessageNumber();
     if (handler != null) {
-      handlers.put(packageCounter, handler);
+      handlers.put(messageNumber, handler);
     }
 
-    Message hm = new Message(packageCounter, HANDSHAKE)
+    Message hm = new Message(messageNumber, MessageType.HANDSHAKE)
         .addProtocolArg(appName);
     if (username != null && password != null) {
       hm.putArg(username, password);
     }
 
-    send(hm, false);
+    send(hm);
   }
 
   public void call(String interfaceName,
                    String methodName,
                    List<?> args,
                    ManualHandler handler) {
-    long messageNumber = sessionData.getAndIncrementMessageCounter();
-    Message callMessage = new Message(messageNumber, CALL)
+    long messageNumber = getNextMessageNumber();
+    Message callMessage = new Message(messageNumber, MessageType.CALL)
         .putArg(methodName, args)
         .addProtocolArg(interfaceName);
 
@@ -272,7 +235,7 @@ public class Connection implements
       handlers.put(messageNumber, handler);
     }
 
-    send(callMessage);
+    sendBuffered(callMessage);
   }
 
   public void callback(JSCallback result, List<?> args) {
@@ -281,74 +244,61 @@ public class Connection implements
 
   public void callback(JSCallback result, List<?> args, Long messageNumber) {
     if (messageNumber == null) {
-      messageNumber = sessionData.getAndIncrementMessageCounter();
+      messageNumber = getNextMessageNumber();
     }
 
-    Message callbackMessage = new Message(messageNumber, CALLBACK)
+    Message callbackMessage = new Message(messageNumber, MessageType.CALLBACK)
         .putArg(result.toString(), args);
 
     send(callbackMessage);
   }
 
   public void inspect(String interfaceName, ManualHandler handler) {
-    long messageNumber = sessionData.getAndIncrementMessageCounter();
-    Message inspectMessage = new Message(messageNumber, INSPECT)
+    long messageNumber = getNextMessageNumber();
+    Message inspectMessage = new Message(messageNumber, MessageType.INSPECT)
         .addProtocolArg(interfaceName);
 
     if (handler != null) {
       handlers.put(messageNumber, handler);
     }
 
-    send(inspectMessage);
+    sendBuffered(inspectMessage);
   }
 
   public void event(String interfaceName, String eventName, List<?> args) {
-    long messageNumber = sessionData.getAndIncrementMessageCounter();
-    Message eventMessage = new Message(messageNumber, EVENT)
+    long messageNumber = getNextMessageNumber();
+    Message eventMessage = new Message(messageNumber, MessageType.EVENT)
         .putArg(eventName, args)
         .addProtocolArg(interfaceName);
 
-    send(eventMessage);
-  }
-
-  private void send(Message message) {
-    send(message, true);
-  }
-
-  private void send(Message message, boolean buffer) {
-    if (transport.isConnected() || noConnBufferingPolicy == NoConnBufferingPolicy.BUFFER) {
-      final String stringRepresentation =
-          JSSerializer.stringify(message.getMessage()) + TERMINATOR;
-      message.setStringRepresentation(stringRepresentation);
-      if (buffer) {
-        // policy can only be applied to messages that actually can be buffered
-        sendQueue.offer(message);
-        if (sendQueue.size() >= sendBufferCapacity) {
-          sendQueue.poll();
-        }
-      }
-    }
-
-    if (transport.isConnected()) {
-      // for now no buffering means no counting
-      send(message.getStringRepresentation(), buffer);
-    }
+    sendBuffered(eventMessage);
   }
 
   /**
-   * Should usually only be called in {@link RestorationPolicy}
+   * Should usually only be called in {@link SessionPolicy}
    *
-   * Sends message directly to the transport and increases number
-   * of sent messages if {@param count} is true
+   * Sends message that should be buffered if applicable
    *
    * @param message string to be passed to the transport
-   * @param count   if true increases number of sent messages by one
    */
-  public void send(String message, boolean count) {
-    if (count) {
-      sessionData.incrementNumSentMessages();
+  public void sendBuffered(Message message) {
+    sessionPolicy.onMessageSent(message);
+    send(message.stringify());
+  }
+
+  public void send(Message message) {
+    send(message.stringify());
+  }
+
+  /**
+   * Sends message directly to the transport if it's connected
+   *
+   * @param message string to be passed to the transport
+   */
+  public void send(String message) {
+    if (transport.isConnected()) {
+      transport.send(message + TERMINATOR);
     }
-    transport.send(message);
   }
 
   public void addSocketListener(ConnectionListener listener) {
@@ -358,24 +308,18 @@ public class Connection implements
   @Override
   public void onMessageReceived(JSObject message) {
     try {
-      boolean handshake = false;
       if (message.isEmpty()) {
         // heartbeat packet
         return;
       }
-      if (!(handshake = message.getKey(0).equals(HANDSHAKE))
-          && state != ConnectionState.STATE_CONNECTED) {
+      MessageType messageType = MessageType.fromString(message.getKey(0));
+      final Method handler = METHOD_HANDLERS.get(messageType);
+      if (messageType != MessageType.HANDSHAKE && state != ConnectionState.STATE_CONNECTED
+          || handler == null) {
         rejectMessage(message);
       } else {
-        final Method handler = METHOD_HANDLERS.get(message.getKey(0));
-        if (handler != null) {
-          handler.invoke(this, message);
-        } else {
-          rejectMessage(message);
-        }
-      }
-      if (!handshake) {
-        sessionData.incrementNumReceivedMessages();
+        handler.invoke(this, message);
+        sessionPolicy.onMessageReceived(message, messageType);
       }
     } catch (IllegalAccessException e) {
       throw new RuntimeException("Cannot find or access message handler method", e);
@@ -385,7 +329,7 @@ public class Connection implements
     }
   }
 
-  private void handshakeMessageHandler(JSObject<?> message) {
+  private void handshakeMessageHandler(JSObject message) {
     if (state == ConnectionState.STATE_CONNECTED) {
       rejectMessage(message);
       return;
@@ -402,9 +346,13 @@ public class Connection implements
       boolean restored = false;
       if (payload instanceof Double) {
         restored = processHandshakeRestoreResponse(message);
-        if (!restored) {
-          reset(sessionData.getAppName(), 1);
+        if (restored) {
+          messageNumberCounter = sessionPolicy.getSessionData().getNumSentMessages();
+        } else {
+          reset();
+          // count first handshake
         }
+        getNextMessageNumber();
       } else if (payload instanceof String) {
         processHandshakeResponse(message);
       }
@@ -413,11 +361,11 @@ public class Connection implements
   }
 
   private boolean processHandshakeRestoreResponse(JSObject message) {
-    if (sessionData.getMessageCounter().get() == 0) {
-      sessionData.getAndIncrementMessageCounter();
+    if (messageNumberCounter == 0) {
+      getNextMessageNumber();
     }
     long numServerReceivedMessages = ((Double) message.getByIndex(1)).longValue();
-    boolean restored = restoreSession(numServerReceivedMessages);
+    boolean restored = sessionPolicy.restore(this, numServerReceivedMessages);
 
     long receiverIndex = 0;
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
@@ -429,13 +377,14 @@ public class Connection implements
   }
 
   private void processHandshakeResponse(JSObject message) {
-    sessionData.setSessionID((String) message.getByIndex(1));
+    sessionPolicy.getSessionData().setSessionId((String) message.getByIndex(1));
     long receiverIndex = 0;
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
 
     // always reset connection on basic handshake
+    reset();
     // count first handshake
-    reset(sessionData.getAppName(), 1);
+    getNextMessageNumber();
 
     if (callbackHandler != null) {
       callbackHandler.handle(message);
@@ -444,7 +393,7 @@ public class Connection implements
 
   private void callMessageHandler(JSObject message) {
     String interfaceName = getInterfaceName(message);
-    if (!isSecondArray(message)) {
+    if (isSecondNotArray(message)) {
       rejectMessage(message);
       return;
     }
@@ -463,7 +412,7 @@ public class Connection implements
 
   private void callbackMessageHandler(JSObject message) {
     long receiverIndex = getMessageNumber(message);
-    if (!isSecondArray(message)) {
+    if (isSecondNotArray(message)) {
       rejectMessage(message);
       return;
     }
@@ -476,7 +425,7 @@ public class Connection implements
   private void eventMessageHandler(JSObject message) {
     String interfaceName = getInterfaceName(message);
 
-    if (!isSecondArray(message)) {
+    if (isSecondNotArray(message)) {
       rejectMessage(message);
       return;
     }
@@ -511,8 +460,8 @@ public class Connection implements
 
   private void pingMessageHandler(JSObject message) {
     long pingNumber = getMessageNumber(message);
-    Message streamMessage = new Message(pingNumber, PONG);
-    send(streamMessage);
+    Message pongMessage = new Message(pingNumber, MessageType.PONG);
+    sendBuffered(pongMessage);
   }
 
   private void pongMessageHandler(JSObject message) {
@@ -564,14 +513,34 @@ public class Connection implements
     handlers.put(messageNumber, manualHandler);
   }
 
+  public void saveSession(StorageInterface storageInterface) {
+    sessionPolicy.saveSession(storageInterface);
+  }
+
+  public SessionData getSessionData() {
+    return sessionPolicy.getSessionData();
+  }
+
+  public void saveSession(StorageInterface storageInterface, boolean storeBuffer) {
+    sessionPolicy.saveSession(storageInterface);
+  }
+
+  public void restoreSession(StorageInterface storageInterface) {
+    sessionPolicy.restoreSession(storageInterface);
+  }
+
+  private synchronized long getNextMessageNumber() {
+    return messageNumberCounter++;
+  }
+
   private void reset() {
     reset(null, 0);
   }
 
   private void reset(String appName, long messageCounter) {
-    sessionData = new SessionData(appName, messageCounter);
+    messageNumberCounter = messageCounter;
     handlers = new ConcurrentHashMap<>();
-    sendQueue.clear();
+    sessionPolicy.reset(appName);
   }
 
   public void close() {
@@ -598,12 +567,12 @@ public class Connection implements
     return JSTypesUtil.getMixed(message, 0.0, 1);
   }
 
-  private long getMessageNumber(JSObject message) {
+  public static long getMessageNumber(JSObject message) {
     return JSTypesUtil.<Double>getMixed(message, 0.0, 0).longValue();
   }
 
-  private boolean isSecondArray(JSObject message) {
-    return message.getByIndex(1) instanceof List;
+  private static boolean isSecondNotArray(JSObject message) {
+    return !(message.getByIndex(1) instanceof List);
   }
 
   public void setClientMethodNames(String interfaceName, String... names) {
@@ -629,37 +598,18 @@ public class Connection implements
     return state == ConnectionState.STATE_CLOSED;
   }
 
-  public String getSessionID() {
-    return sessionData.getSessionID();
-  }
-
-  SessionData getSessionData() {
-    return sessionData;
-  }
-
   public long getId() {
     return id;
   }
 
-  public void clearQueue() {
-    sendQueue.clear();
-    transport.clearQueue();
-  }
-
   @Override
   public void onConnected() {
-    if (sessionData.getAppName() == null
+    if (getAppName() == null
         || state != ConnectionState.STATE_AWAITING_RECONNECT
         && state != ConnectionState.STATE_AWAITING_HANDSHAKE) {
       return;
     }
-    if (restorationPolicy != null) {
-      restorationPolicy.onTransportAvailable(this,
-          sessionData.getAppName(), sessionData.getSessionID());
-    } else {
-      handshake(sessionData.getAppName(), null);
-      sendQueue.clear();
-    }
+    sessionPolicy.onTransportAvailable(this);
     // todo add calls and fields for username\password auth
   }
 
@@ -668,7 +618,7 @@ public class Connection implements
     if (state == ConnectionState.STATE_CLOSING) {
       state = ConnectionState.STATE_CLOSED;
       reportClosed();
-    } else if (sessionData.getAppName() != null) {
+    } else if (getAppName() != null) {
       state = ConnectionState.STATE_AWAITING_RECONNECT;
       reportClosed();
     } else {
@@ -680,15 +630,6 @@ public class Connection implements
   public void onError(Exception e) {
     // TODO: change signature of connectionError and pass it there
     logger.info("Transport error", e);
-  }
-
-  public void saveSession(StorageInterface storageInterface) {
-    storageInterface.putSerializable(Constants.KEY_SESSION_DATA, sessionData);
-  }
-
-  public void restoreSession(StorageInterface storageInterface) {
-    sessionData = (SessionData) storageInterface
-        .getSerializable(Constants.KEY_SESSION_DATA, sessionData);
   }
 
   private void reportClosed() {
@@ -716,27 +657,31 @@ public class Connection implements
     }
   }
 
+  protected long getMessageNumberCounter() {
+    return messageNumberCounter;
+  }
+
+  public String getAppName() {
+    return sessionPolicy.getSessionData().getAppName();
+  }
+
+  public String getSessionId() {
+    return sessionPolicy.getSessionData().getSessionId();
+  }
+
   public AbstractSocket getTransport() {
     return transport;
-  }
-
-  public int getSendBufferCapacity() {
-    return sendBufferCapacity;
-  }
-
-  public void setSendBufferCapacity(int sendBufferCapacity) {
-    this.sendBufferCapacity = sendBufferCapacity;
   }
 
   public ConnectionState getState() {
     return state;
   }
 
-  public RestorationPolicy getRestorationPolicy() {
-    return restorationPolicy;
+  public SessionPolicy getSessionPolicy() {
+    return sessionPolicy;
   }
 
-  public void setRestorationPolicy(RestorationPolicy restorationPolicy) {
-    this.restorationPolicy = restorationPolicy;
+  public void setSessionPolicy(SessionPolicy sessionPolicy) {
+    this.sessionPolicy = sessionPolicy;
   }
 }
