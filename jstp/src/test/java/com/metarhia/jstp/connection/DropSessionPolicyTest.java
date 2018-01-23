@@ -14,6 +14,9 @@ import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.handlers.CallHandler;
+import com.metarhia.jstp.storage.FileStorage;
+import java.io.File;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -97,5 +100,33 @@ class DropSessionPolicyTest {
 
     assertEquals(fullyResettedSessionData, sessionPolicy.getSessionData(),
         "Must set new app name upon reset if provided");
+  }
+
+  @Test
+  public void saveRestoreSession() throws Exception {
+    File currFile =
+        Paths.get("", "out", "test", "testSession2").toAbsolutePath().toFile();
+    currFile.mkdirs();
+
+    FileStorage storage = new FileStorage(currFile.getAbsolutePath());
+
+    DropSessionPolicy sessionPolicy = new DropSessionPolicy();
+    sessionPolicy.getSessionData().setAppName("appName");
+    sessionPolicy.getSessionData().setSessionId("sessionId");
+    sessionPolicy.getSessionData().setNumReceivedMessages(2);
+    sessionPolicy.getSessionData().setNumSentMessages(3);
+    Message testMessage = new Message(13, MessageType.CALL);
+    sessionPolicy.onMessageSent(testMessage);
+
+    sessionPolicy.saveSession(storage);
+
+    DropSessionPolicy restoredSessionPolicy = DropSessionPolicy.restoreFrom(storage);
+
+    assertEquals(sessionPolicy, restoredSessionPolicy);
+
+    for (File f : currFile.listFiles()) {
+      f.delete();
+    }
+    currFile.delete();
   }
 }

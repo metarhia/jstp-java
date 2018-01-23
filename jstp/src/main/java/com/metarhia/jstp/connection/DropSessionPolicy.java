@@ -1,9 +1,12 @@
 package com.metarhia.jstp.connection;
 
+import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.storage.StorageInterface;
+import java.io.Serializable;
+import java.util.Objects;
 
-public class DropSessionPolicy implements SessionPolicy {
+public class DropSessionPolicy implements SessionPolicy, Serializable {
 
   private SessionData sessionData;
 
@@ -12,6 +15,12 @@ public class DropSessionPolicy implements SessionPolicy {
   public DropSessionPolicy() {
     this.reconnectWhenTransportReady = true;
     this.sessionData = new SessionData();
+  }
+
+  public static DropSessionPolicy restoreFrom(StorageInterface storageInterface) {
+    DropSessionPolicy sessionPolicy = new DropSessionPolicy();
+    sessionPolicy.restoreSession(storageInterface);
+    return sessionPolicy;
   }
 
   @Override
@@ -52,12 +61,34 @@ public class DropSessionPolicy implements SessionPolicy {
 
   @Override
   public void saveSession(StorageInterface storageInterface) {
-    // ignore
+    storageInterface.putSerializable(
+        Constants.KEY_SESSION + DropSessionPolicy.class.getCanonicalName(), this);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DropSessionPolicy that = (DropSessionPolicy) o;
+    return reconnectWhenTransportReady == that.reconnectWhenTransportReady &&
+        Objects.equals(sessionData, that.sessionData);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(sessionData, reconnectWhenTransportReady);
   }
 
   @Override
   public void restoreSession(StorageInterface storageInterface) {
-    // ignore
+    DropSessionPolicy sessionPolicy = (DropSessionPolicy) storageInterface.getSerializable(
+        Constants.KEY_SESSION + DropSessionPolicy.class.getCanonicalName(), this);
+    reconnectWhenTransportReady = sessionPolicy.reconnectWhenTransportReady;
+    sessionData = sessionPolicy.sessionData;
   }
 
   public boolean isReconnectWhenTransportReady() {
