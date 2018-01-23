@@ -65,9 +65,7 @@ public abstract class AnnotationProcessor extends AbstractProcessor {
                                          Class<?> annotation) {
     try {
       handleAnnotation(annotatedElement, annotation);
-    } catch (RuntimeException e) {
-      errorWithStacktrace(e, "Cannot write class to file: " + e.getMessage());
-    } catch (IOException e) {
+    } catch (RuntimeException | IOException e) {
       errorWithStacktrace(e, "Cannot write class to file: " + e.getMessage());
     } catch (Exception e) {
       errorWithStacktrace(e, "Unexpected error: " + e.toString());

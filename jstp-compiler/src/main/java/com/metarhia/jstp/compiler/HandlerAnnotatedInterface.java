@@ -339,7 +339,7 @@ public class HandlerAnnotatedInterface {
       }
       if (strictJSType && !typeUtils.isSubtype(payloadType, JSTP_VALUE_TYPE)) {
         throw new ClassCastException(
-            "Cannot cast jstp message data to " + payloadType.toString());
+            "Cannot cast jstp message data to " + String.valueOf(payloadType));
       }
     } else {
       payloadType = typeUtils.getTypeElement(JSTP_VALUE_TYPE.getCanonicalName());

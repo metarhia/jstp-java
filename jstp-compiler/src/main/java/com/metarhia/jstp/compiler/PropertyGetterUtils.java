@@ -68,8 +68,8 @@ public final class PropertyGetterUtils {
       builder.add(TYPE_CAST_PATTERN, ClassName.get(JSObject.class));
     }
     builder.add(identifier);
-    for (int i = 0; i < properties.length; i++) {
-      builder.add(OBJECT_GETTER, properties[i]);
+    for (String property : properties) {
+      builder.add(OBJECT_GETTER, property);
     }
     return builder.build();
   }
@@ -81,8 +81,8 @@ public final class PropertyGetterUtils {
       builder.add(TYPE_CAST_PATTERN, ClassName.get(JSObject.class));
     }
     builder.add(identifier);
-    for (int i = 0; i < properties.length; i++) {
-      builder.add(OBJECT_GETTER, properties[i]);
+    for (String property : properties) {
+      builder.add(OBJECT_GETTER, property);
     }
     return builder.build();
   }
