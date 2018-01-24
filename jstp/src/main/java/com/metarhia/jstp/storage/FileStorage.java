@@ -52,9 +52,8 @@ public class FileStorage implements StorageInterface {
   }
 
   private Object readFromFile(String filepath) {
-    try {
-      FileInputStream fis = new FileInputStream(filepath);
-      ObjectInputStream ois = new ObjectInputStream(fis);
+    try (FileInputStream fis = new FileInputStream(filepath);
+        ObjectInputStream ois = new ObjectInputStream(fis)) {
       return ois.readObject();
     } catch (IOException | ClassNotFoundException e) {
       logger.info("Cannot write file", e);
