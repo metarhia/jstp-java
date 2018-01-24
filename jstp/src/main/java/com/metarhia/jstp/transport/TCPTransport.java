@@ -296,6 +296,7 @@ public class TCPTransport implements AbstractSocket {
   }
 
   public void close(final boolean forced) {
+    closing = true;
     new Thread(new Runnable() {
       @Override
       public void run() {
@@ -330,7 +331,6 @@ public class TCPTransport implements AbstractSocket {
   private void closeInternal(boolean notify) {
     try {
       synchronized (TCPTransport.this) {
-        messageQueue.size();
         closing = true;
         clearQueue();
         running = false;
