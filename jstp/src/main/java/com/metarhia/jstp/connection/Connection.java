@@ -4,6 +4,8 @@ import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
+import com.metarhia.jstp.exceptions.AlreadyConnectedException;
+import com.metarhia.jstp.exceptions.ConnectionException;
 import com.metarhia.jstp.storage.StorageInterface;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -59,6 +61,8 @@ public class Connection implements
 
   private ConnectionState state;
 
+  private final Object stateLock;
+
   /**
    * Transport to send/receive messages
    */
@@ -97,11 +101,11 @@ public class Connection implements
 
   public Connection(AbstractSocket transport, SessionPolicy sessionPolicy) {
     this.id = nextConnectionID.getAndIncrement();
-    this.state = ConnectionState.STATE_AWAITING_HANDSHAKE;
+    this.state = ConnectionState.AWAITING_HANDSHAKE;
+    this.stateLock = new Object();
 
     this.transport = transport;
     this.transport.setSocketListener(this);
-    state = ConnectionState.STATE_AWAITING_HANDSHAKE;
 
     this.sessionPolicy = sessionPolicy;
 
@@ -113,14 +117,16 @@ public class Connection implements
   }
 
   public void useTransport(AbstractSocket transport) {
-    if (this.transport != null) {
-      this.transport.setSocketListener(null);
-      this.transport.close(true);
-    }
+    synchronized (stateLock) {
+      if (this.transport != null) {
+        this.transport.setSocketListener(null);
+        this.transport.close(true);
+      }
 
-    this.transport = transport;
-    this.transport.setSocketListener(this);
-    state = ConnectionState.STATE_AWAITING_HANDSHAKE;
+      this.transport = transport;
+      this.transport.setSocketListener(this);
+      this.state = ConnectionState.AWAITING_HANDSHAKE;
+    }
 
     String appName = getAppName();
     if (appName != null) {
@@ -190,7 +196,7 @@ public class Connection implements
             sessionPolicy.getSessionData().getNumReceivedMessages());
     hm.addProtocolArg(appName);
 
-    send(hm);
+    sendHandshake(hm.stringify());
   }
 
   /**
@@ -218,8 +224,18 @@ public class Connection implements
     if (username != null && password != null) {
       hm.putArg(username, password);
     }
+    sendHandshake(hm.stringify());
+  }
 
-    send(hm);
+  private void sendHandshake(String handshake) {
+    synchronized (stateLock) {
+      if (transport.isConnected() &&
+          (state == ConnectionState.AWAITING_HANDSHAKE
+              || state == ConnectionState.AWAITING_RECONNECT)) {
+        state = ConnectionState.AWAITING_HANDSHAKE_RESPONSE;
+        transport.send(handshake + TERMINATOR);
+      }
+    }
   }
 
   public void call(String interfaceName,
@@ -301,10 +317,6 @@ public class Connection implements
     }
   }
 
-  public void addSocketListener(ConnectionListener listener) {
-    this.connectionListeners.add(listener);
-  }
-
   @Override
   public void onMessageReceived(JSObject message) {
     try {
@@ -314,7 +326,7 @@ public class Connection implements
       }
       MessageType messageType = MessageType.fromString(message.getKey(0));
       final Method handler = METHOD_HANDLERS.get(messageType);
-      if (messageType != MessageType.HANDSHAKE && state != ConnectionState.STATE_CONNECTED
+      if (messageType != MessageType.HANDSHAKE && state != ConnectionState.CONNECTED
           || handler == null) {
         rejectMessage(message);
       } else {
@@ -330,33 +342,43 @@ public class Connection implements
   }
 
   private void handshakeMessageHandler(JSObject message) {
-    if (state == ConnectionState.STATE_CONNECTED) {
-      rejectMessage(message);
-      return;
-    }
-
-    final String payloadKey = message.getKey(1);
-    final Object payload = message.get(payloadKey);
-    if (payloadKey.equals("error")) {
-      int errorCode = JSTypesUtil.<Double>getMixed(payload, 0).intValue();
-      reportError(errorCode);
-      close(true);
-    } else {
-      state = ConnectionState.STATE_CONNECTED;
-      boolean restored = false;
-      if (payload instanceof Double) {
-        restored = processHandshakeRestoreResponse(message);
-        if (restored) {
-          messageNumberCounter = sessionPolicy.getSessionData().getNumSentMessages();
-        } else {
-          reset();
-          // count first handshake
+    synchronized (stateLock) {
+      if (state != ConnectionState.AWAITING_HANDSHAKE_RESPONSE) {
+        // if transport is not connected it means that the connection was closed before
+        // this method was called so don't report this
+        if (transport.isConnected()) {
+          rejectMessage(message);
         }
-        getNextMessageNumber();
-      } else if (payload instanceof String) {
-        processHandshakeResponse(message);
+        return;
       }
-      reportConnected(restored);
+
+      final String payloadKey = message.getKey(1);
+      final Object payload = message.get(payloadKey);
+      if (payloadKey.equals("error")) {
+        int errorCode = JSTypesUtil.<Double>getMixed(payload, 0).intValue();
+        reportError(errorCode);
+        close(true);
+      } else if (transport.isConnected()) {
+        // make sure transport is still connected to avoid extra work
+        state = ConnectionState.CONNECTED;
+        boolean restored = false;
+        if (payload instanceof Double) {
+          restored = processHandshakeRestoreResponse(message);
+          if (restored) {
+            messageNumberCounter = sessionPolicy.getSessionData().getNumSentMessages();
+          } else {
+            reset();
+          }
+          // count first handshake or last message
+          getNextMessageNumber();
+        } else if (payload instanceof String) {
+          processHandshakeResponse(message);
+        } else {
+          rejectMessage(message);
+          return;
+        }
+        reportConnected(restored);
+      }
     }
   }
 
@@ -379,15 +401,15 @@ public class Connection implements
   private void processHandshakeResponse(JSObject message) {
     sessionPolicy.getSessionData().setSessionId((String) message.getByIndex(1));
     long receiverIndex = 0;
-    ManualHandler callbackHandler = handlers.remove(receiverIndex);
+    ManualHandler handshakeHandler = handlers.remove(receiverIndex);
 
     // always reset connection on basic handshake
     reset();
     // count first handshake
     getNextMessageNumber();
 
-    if (callbackHandler != null) {
-      callbackHandler.handle(message);
+    if (handshakeHandler != null) {
+      handshakeHandler.handle(message);
     }
   }
 
@@ -548,10 +570,15 @@ public class Connection implements
   }
 
   public void close(boolean forced) {
-    reset();
-    state = ConnectionState.STATE_CLOSING;
-    if (transport != null) {
-      transport.close(forced);
+    synchronized (stateLock) {
+      if (state == ConnectionState.CLOSING) {
+        return;
+      }
+      state = ConnectionState.CLOSING;
+      reset();
+      if (transport != null) {
+        transport.close(forced);
+      }
     }
   }
 
@@ -591,11 +618,11 @@ public class Connection implements
   }
 
   public boolean isConnected() {
-    return state == ConnectionState.STATE_CONNECTED;
+    return state == ConnectionState.CONNECTED;
   }
 
   public boolean isClosed() {
-    return state == ConnectionState.STATE_CLOSED;
+    return state == ConnectionState.CLOSED;
   }
 
   public long getId() {
@@ -604,32 +631,43 @@ public class Connection implements
 
   @Override
   public void onConnected() {
-    if (getAppName() == null
-        || state != ConnectionState.STATE_AWAITING_RECONNECT
-        && state != ConnectionState.STATE_AWAITING_HANDSHAKE) {
-      return;
+    synchronized (stateLock) {
+      if (getAppName() == null
+          || state != ConnectionState.AWAITING_RECONNECT
+          && state != ConnectionState.AWAITING_HANDSHAKE) {
+        return;
+      }
+      sessionPolicy.onTransportAvailable(this);
     }
-    sessionPolicy.onTransportAvailable(this);
     // todo add calls and fields for username\password auth
   }
 
   @Override
   public void onConnectionClosed() {
-    if (state == ConnectionState.STATE_CLOSING) {
-      state = ConnectionState.STATE_CLOSED;
-      reportClosed();
-    } else if (getAppName() != null) {
-      state = ConnectionState.STATE_AWAITING_RECONNECT;
-      reportClosed();
-    } else {
-      state = ConnectionState.STATE_AWAITING_HANDSHAKE;
+    synchronized (stateLock) {
+      if (state == ConnectionState.CLOSING) {
+        state = ConnectionState.CLOSED;
+        reportClosed();
+      } else if (getAppName() != null) {
+        state = ConnectionState.AWAITING_RECONNECT;
+        reportClosed();
+      } else {
+        state = ConnectionState.AWAITING_HANDSHAKE;
+      }
+      transport.clearQueue();
     }
   }
 
   @Override
   public void onError(Exception e) {
-    // TODO: change signature of connectionError and pass it there
     logger.info("Transport error", e);
+    if (!(e instanceof AlreadyConnectedException) && transport.isConnected()) {
+      transport.close(true);
+    }
+  }
+
+  public void addSocketListener(ConnectionListener listener) {
+    this.connectionListeners.add(listener);
   }
 
   private void reportClosed() {
@@ -645,8 +683,12 @@ public class Connection implements
   }
 
   private void reportError(int errorCode) {
+    reportError(new ConnectionException(errorCode));
+  }
+
+  private void reportError(ConnectionException error) {
     for (ConnectionListener listener : connectionListeners) {
-      listener.onConnectionError(errorCode);
+      listener.onConnectionError(error);
     }
   }
 

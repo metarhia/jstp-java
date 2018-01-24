@@ -1,22 +1,25 @@
 package com.metarhia.jstp.transport;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.connection.Connection;
 import com.metarhia.jstp.connection.HandshakeAnswer;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
+import com.metarhia.jstp.core.JSParser;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.mockito.Spy;
 
 /**
@@ -30,34 +33,33 @@ public class TCPTransportTest {
   private Connection connection;
 
   public TCPTransportTest() {
-    tcpTransport = new TCPTransport("", 0);
+    tcpTransport = spy(new TCPTransport("", 0));
     connection = spy(new Connection(tcpTransport));
-    doAnswer(new HandshakeAnswer(connection)).when(connection)
-        .handshake(anyString(), isA(ManualHandler.class));
-    doAnswer(new HandshakeAnswer(connection)).when(connection)
-        .handshake(anyString(), Mockito.<ManualHandler>isNull());
-    connection.handshake("", null);
+    when(tcpTransport.isConnected()).thenReturn(true);
+    doAnswer(new HandshakeAnswer(connection)).when(tcpTransport)
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
+    connection.handshake("appName", null);
+    assertTrue(connection.isConnected(), "Must be connected after handshake");
     // no idea why but transport has another instance of connection as listener so set this one
     tcpTransport.setSocketListener(connection);
   }
 
   @Test
   public void onMessageReceivedMultiple() throws Exception {
-    String packet = "{callback:[17],ok:[15703]}" + Connection.TERMINATOR
-        + "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}" + Connection.TERMINATOR;
+    String callbackMessage = "{callback:[17],ok:[15703]}";
+    String eventMessage = "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}";
+    String packet = callbackMessage + Connection.TERMINATOR + eventMessage + Connection.TERMINATOR;
 
     final byte[] packetBytes = packet.getBytes(TestConstants.UTF_8_CHARSET);
     final ByteArrayInputStream mockStream = new ByteArrayInputStream(packetBytes);
     final BufferedInputStream in = new BufferedInputStream(mockStream);
     final ByteArrayOutputStream baos = new ByteArrayOutputStream(100);
 
-    final Boolean[] success = {false, false};
-
     final Thread readThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
-          while (tcpTransport != null) {
+          while (in.available() > 0) {
             tcpTransport.processMessage(in, baos);
           }
           synchronized (TCPTransportTest.this) {
@@ -69,31 +71,11 @@ public class TCPTransportTest {
       }
     });
 
-    connection.addEventHandler("auth", "insert", new ManualHandler() {
-      @Override
-      public void handle(JSObject message) {
-        success[0] = true;
-        synchronized (readThread) {
-          if (success[1]) {
-            tcpTransport = null;
-            readThread.interrupt();
-          }
-        }
-      }
-    });
+    ManualHandler eventHandler = mock(ManualHandler.class);
+    connection.addEventHandler("auth", "insert", eventHandler);
 
-    connection.addHandler(17, new ManualHandler() {
-      @Override
-      public void handle(JSObject message) {
-        success[1] = true;
-        synchronized (readThread) {
-          if (success[0]) {
-            tcpTransport = null;
-            readThread.interrupt();
-          }
-        }
-      }
-    });
+    ManualHandler handler = mock(ManualHandler.class);
+    connection.addHandler(17, handler);
 
     readThread.start();
 
@@ -102,6 +84,9 @@ public class TCPTransportTest {
       readThread.interrupt();
     }
 
-    assertTrue(success[0] && success[1]);
+    verify(eventHandler, times(1))
+        .handle(JSParser.<JSObject>parse(eventMessage));
+    verify(handler, times(1))
+        .handle(JSParser.<JSObject>parse(callbackMessage));
   }
 }

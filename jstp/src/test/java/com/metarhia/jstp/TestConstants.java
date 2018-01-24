@@ -21,9 +21,7 @@ public class TestConstants {
   public static final String TEMPLATE_HANDSHAKE_RESTORE_RESPONSE = "{handshake:[0],ok:%d}";
   public static final String ANY_HANDSHAKE_RESTORE_RESPONSE = "\\{handshake:\\[0\\],ok:\\d+\\}";
 
-  public static final int MOCK_HANDSHAKE_RESPONSE_ERR_CODE = 16;
-  public static final String MOCK_HANDSHAKE_RESPONSE_ERR = "{handshake:[0],error:["
-      + MOCK_HANDSHAKE_RESPONSE_ERR_CODE + "]}";
+  public static final String MOCK_HANDSHAKE_RESPONSE_ERR = "{handshake:[0],error:[%d]}";
 
   public static final String TEMPLATE_CALL = "{call:[%d,'%s'],%s:%s}";
   public static final String ANY_CALL = "\\{call:\\[\\d+,'.+'],\\S+:\\[.*\\]\\}";

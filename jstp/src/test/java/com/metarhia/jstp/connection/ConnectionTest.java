@@ -6,9 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.anyString;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -22,6 +21,7 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
+import com.metarhia.jstp.exceptions.ConnectionException;
 import com.metarhia.jstp.handlers.CallHandler;
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,8 +31,8 @@ import java.util.Map;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -105,10 +105,8 @@ public class ConnectionTest {
     instance = this;
     transport = mock(AbstractSocket.class);
     connection = spy(new Connection(transport));
-    doAnswer(new HandshakeAnswer(connection)).when(connection)
-        .handshake(anyString(), isA(ManualHandler.class));
-    doAnswer(new HandshakeAnswer(connection)).when(connection)
-        .handshake(anyString(), Mockito.<ManualHandler>isNull());
+    doAnswer(new HandshakeAnswer(connection)).when(transport)
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
     when(transport.isConnected()).thenReturn(true);
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
   }
@@ -175,12 +173,12 @@ public class ConnectionTest {
 
   @Test
   public void handshakeSendRecv() throws Exception {
-    AbstractSocket socket = mock(AbstractSocket.class);
-    when(socket.isConnected()).thenReturn(true);
+    AbstractSocket transport = mock(AbstractSocket.class);
+    when(transport.isConnected()).thenReturn(true);
 
-    Connection connection = spy(new Connection(socket));
-    doAnswer(new HandshakeAnswer(connection)).when(connection)
-        .handshake(anyString(), Mockito.<ManualHandler>isNull());
+    Connection connection = spy(new Connection(transport));
+    doAnswer(new HandshakeAnswer(connection)).when(transport)
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
 
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
 
@@ -189,27 +187,34 @@ public class ConnectionTest {
 
   @Test
   public void handshakeError() throws Exception {
-    AbstractSocket socket = mock(AbstractSocket.class);
-    when(socket.isConnected()).thenReturn(true);
+    final int errorCode = 16;
+    AbstractSocket transport = mock(AbstractSocket.class);
+    when(transport.isConnected()).thenReturn(true);
 
-    final Connection connection = spy(new Connection(socket));
+    final Connection connection = spy(new Connection(transport));
     doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        JSObject errMessage =
-            JSParser.parse(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR);
+        String response = String.format(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR, errorCode);
+        JSObject errMessage = JSParser.parse(response);
         connection.onMessageReceived(errMessage);
         return null;
       }
-    }).when(connection).handshake(anyString(), Mockito.<ManualHandler>isNull());
+    }).when(transport)
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
 
     ConnectionListener listener = mock(ConnectionListener.class);
     connection.addSocketListener(listener);
 
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
 
-    verify(listener, times(1))
-        .onConnectionError(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR_CODE);
+    verify(listener, times(1)).onConnectionError(argThat(
+        new ArgumentMatcher<ConnectionException>() {
+          @Override
+          public boolean matches(ConnectionException error) {
+            return error.getErrorCode() == errorCode;
+          }
+        }));
     assertTrue(connection.getSessionId() == null);
     assertFalse(connection.isConnected());
   }
