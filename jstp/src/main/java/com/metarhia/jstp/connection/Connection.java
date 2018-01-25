@@ -544,10 +544,6 @@ public class Connection implements
     return sessionPolicy.getSessionData();
   }
 
-  public void saveSession(StorageInterface storageInterface, boolean storeBuffer) {
-    sessionPolicy.saveSession(storageInterface);
-  }
-
   public void restoreSession(StorageInterface storageInterface) {
     sessionPolicy.restoreSession(storageInterface);
   }
