@@ -93,7 +93,7 @@ public class Connection implements
 
   private SessionPolicy sessionPolicy;
 
-  private long messageNumberCounter;
+  private AtomicLong messageNumberCounter;
 
   public Connection(AbstractSocket transport) {
     this(transport, new SimpleSessionPolicy());
@@ -103,6 +103,7 @@ public class Connection implements
     this.id = nextConnectionID.getAndIncrement();
     this.state = ConnectionState.AWAITING_HANDSHAKE;
     this.stateLock = new Object();
+    this.messageNumberCounter = new AtomicLong(0);
 
     this.transport = transport;
     this.transport.setSocketListener(this);
@@ -185,7 +186,7 @@ public class Connection implements
       throw new RuntimeException("Application name must not be null");
     }
     sessionPolicy.getSessionData().setParameters(appName, sessionID);
-    messageNumberCounter = sessionPolicy.getSessionData().getNumSentMessages();
+    setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages());
     long messageNumber = 0;
     if (handler != null) {
       handlers.put(messageNumber, handler);
@@ -213,7 +214,7 @@ public class Connection implements
       throw new RuntimeException("Application name must not be null");
     }
     sessionPolicy.getSessionData().setAppName(appName);
-    messageNumberCounter = 0;
+    setMessageNumberCounter(0);
     long messageNumber = getNextMessageNumber();
     if (handler != null) {
       handlers.put(messageNumber, handler);
@@ -365,7 +366,7 @@ public class Connection implements
         if (payload instanceof Double) {
           restored = processHandshakeRestoreResponse(message);
           if (restored) {
-            messageNumberCounter = sessionPolicy.getSessionData().getNumSentMessages();
+            setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages());
           } else {
             reset();
           }
@@ -383,7 +384,7 @@ public class Connection implements
   }
 
   private boolean processHandshakeRestoreResponse(JSObject message) {
-    if (messageNumberCounter == 0) {
+    if (getMessageNumberCounter() == 0) {
       getNextMessageNumber();
     }
     long numServerReceivedMessages = ((Double) message.getByIndex(1)).longValue();
@@ -551,8 +552,13 @@ public class Connection implements
     sessionPolicy.restoreSession(storageInterface);
   }
 
-  private synchronized long getNextMessageNumber() {
-    return messageNumberCounter++;
+  private long getNextMessageNumber() {
+    return messageNumberCounter.getAndIncrement();
+  }
+
+  private long setMessageNumberCounter(long messageNumber) {
+    messageNumberCounter.set(messageNumber);
+    return messageNumber;
   }
 
   private void reset() {
@@ -560,7 +566,7 @@ public class Connection implements
   }
 
   private void reset(String appName, long messageCounter) {
-    messageNumberCounter = messageCounter;
+    setMessageNumberCounter(messageCounter);
     handlers = new ConcurrentHashMap<>();
     sessionPolicy.reset(appName);
   }
@@ -700,7 +706,7 @@ public class Connection implements
   }
 
   protected long getMessageNumberCounter() {
-    return messageNumberCounter;
+    return messageNumberCounter.get();
   }
 
   public String getAppName() {
