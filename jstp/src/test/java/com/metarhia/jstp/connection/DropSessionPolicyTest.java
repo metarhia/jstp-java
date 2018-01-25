@@ -81,22 +81,18 @@ class DropSessionPolicyTest {
     SessionData expectedSessionData = new SessionData(
         "appName", "sessionId", 2, 2);
 
-    SessionPolicy sessionPolicy = new DropSessionPolicy();
-    sessionPolicy.getSessionData().setAppName(expectedSessionData.getAppName());
-    sessionPolicy.getSessionData().setSessionId(expectedSessionData.getSessionId());
-    sessionPolicy.getSessionData().setNumReceivedMessages(2);
-    sessionPolicy.getSessionData().setNumSentMessages(2);
+    DropSessionPolicy sessionPolicy = new DropSessionPolicy();
+    sessionPolicy.setSessionData(expectedSessionData);
 
     sessionPolicy.reset(null);
-    SessionData resettedSessionData = new SessionData(expectedSessionData.getAppName(),
+    SessionData resettedSessionData = new SessionData(expectedSessionData.getAppData().getName(),
         expectedSessionData.getSessionId(), 0, 0);
 
     assertEquals(resettedSessionData, sessionPolicy.getSessionData(),
         "Must preserve app name upon reset if none was provided");
 
     sessionPolicy.reset(newAppName);
-    SessionData fullyResettedSessionData = new SessionData(newAppName,
-        expectedSessionData.getSessionId(), 0, 0);
+    SessionData fullyResettedSessionData = new SessionData(newAppName, null, 0, 0);
 
     assertEquals(fullyResettedSessionData, sessionPolicy.getSessionData(),
         "Must set new app name upon reset if provided");
@@ -111,10 +107,7 @@ class DropSessionPolicyTest {
     FileStorage storage = new FileStorage(currFile.getAbsolutePath());
 
     DropSessionPolicy sessionPolicy = new DropSessionPolicy();
-    sessionPolicy.getSessionData().setAppName("appName");
-    sessionPolicy.getSessionData().setSessionId("sessionId");
-    sessionPolicy.getSessionData().setNumReceivedMessages(2);
-    sessionPolicy.getSessionData().setNumSentMessages(3);
+    sessionPolicy.setSessionData(new SessionData("appName", "sessionId", 2, 3));
     Message testMessage = new Message(13, MessageType.CALL);
     sessionPolicy.onMessageSent(testMessage);
 

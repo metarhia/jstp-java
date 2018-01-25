@@ -29,9 +29,9 @@ public class DropSessionPolicy implements SessionPolicy, Serializable {
   }
 
   @Override
-  public void reset(String appName) {
-    if (appName != null) {
-      sessionData.setAppName(appName);
+  public void reset(String app) {
+    if (app != null) {
+      sessionData.setParameters(AppData.valueOf(app), null);
     }
     sessionData.resetCounters();
   }
@@ -41,7 +41,7 @@ public class DropSessionPolicy implements SessionPolicy, Serializable {
     if (!reconnectWhenTransportReady) {
       return;
     }
-    connection.handshake(sessionData.getAppName(), null);
+    connection.handshake(sessionData.getAppData(), null);
   }
 
   @Override
@@ -57,6 +57,10 @@ public class DropSessionPolicy implements SessionPolicy, Serializable {
   @Override
   public SessionData getSessionData() {
     return sessionData;
+  }
+
+  public void setSessionData(SessionData sessionData) {
+    this.sessionData = sessionData;
   }
 
   @Override

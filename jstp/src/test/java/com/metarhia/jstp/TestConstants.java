@@ -12,6 +12,8 @@ public class TestConstants {
   public static final String TEMPLATE_HANDSHAKE_REQUEST = "{handshake:[0,'%s']}";
   public static final String ANY_HANDSHAKE_REQUEST = "\\{handshake:\\[0,'.+'\\]\\}";
 
+  public static final String TEMPLATE_HANDSHAKE_VERSION_REQUEST = "{handshake:[0,'%s','%s']}";
+
   public static final String TEMPLATE_HANDSHAKE_RESPONSE = "{handshake:[0],ok:'%s'}";
   public static final String ANY_HANDSHAKE_RESPONSE = "\\{handshake:\\[0\\],ok:'\\S+'\\}";
 

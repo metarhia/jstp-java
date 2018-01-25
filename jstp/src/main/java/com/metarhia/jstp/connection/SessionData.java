@@ -8,29 +8,53 @@ import java.util.Objects;
  */
 public class SessionData implements Serializable {
 
-  private String appName;
+  /**
+   * Application data of a current session
+   */
+  private AppData appData;
 
+  /**
+   * Session id as uuid4
+   */
   private String sessionId;
 
+  /**
+   * Number of messages sent by this side of a connection
+   */
   private long numSentMessages;
 
+  /**
+   * Number of messages confirmed to be received on the other side
+   */
   private long numReceivedMessages;
 
   public SessionData() {
-    this(null);
   }
 
-  public SessionData(String appName) {
-    this(appName, null);
+  public SessionData(String app) {
+    this(app, null);
   }
 
-  public SessionData(String appName, String sessionId) {
-    this(appName, sessionId, 0, 0);
+  public SessionData(AppData appData) {
+    this(appData, null);
   }
 
-  public SessionData(String appName, String sessionId,
+  public SessionData(AppData appData, String sessionId) {
+    this(appData, sessionId, 0, 0);
+  }
+
+  public SessionData(String app, String sessionId) {
+    this(app, sessionId, 0, 0);
+  }
+
+  public SessionData(String app, String sessionId,
                      long numSentMessages, long numReceivedMessages) {
-    this(appName);
+    this(AppData.valueOf(app), sessionId, numSentMessages, numReceivedMessages);
+  }
+
+  public SessionData(AppData appData, String sessionId,
+                     long numSentMessages, long numReceivedMessages) {
+    this.appData = appData != null ? appData : new AppData();
     this.sessionId = sessionId;
     this.numSentMessages = numSentMessages;
     this.numReceivedMessages = numReceivedMessages;
@@ -60,21 +84,21 @@ public class SessionData implements Serializable {
     SessionData that = (SessionData) o;
     return numSentMessages == that.numSentMessages &&
         numReceivedMessages == that.numReceivedMessages &&
-        Objects.equals(appName, that.appName) &&
+        Objects.equals(appData, that.appData) &&
         Objects.equals(sessionId, that.sessionId);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(appName, sessionId, numSentMessages, numReceivedMessages);
+    return Objects.hash(appData, sessionId, numSentMessages, numReceivedMessages);
   }
 
-  public String getAppName() {
-    return appName;
+  public AppData getAppData() {
+    return appData;
   }
 
-  public void setAppName(String appName) {
-    this.appName = appName;
+  public void setAppData(AppData appData) {
+    this.appData = appData;
   }
 
   public String getSessionId() {
@@ -90,8 +114,11 @@ public class SessionData implements Serializable {
   }
 
   public void setNumSentMessages(long numSentMessages) {
-    if (numSentMessages < 0) this.numSentMessages = 0;
-    else this.numSentMessages = numSentMessages;
+    if (numSentMessages < 0) {
+      this.numSentMessages = 0;
+    } else {
+      this.numSentMessages = numSentMessages;
+    }
   }
 
   public long getNumReceivedMessages() {
@@ -102,10 +129,12 @@ public class SessionData implements Serializable {
     this.numReceivedMessages = numReceivedMessages;
   }
 
-  public void setParameters(String appName, String sessionId) {
-    this.appName = appName;
-    if (sessionId != null) {
-      this.sessionId = sessionId;
-    }
+  public void setParameters(String app, String sessionId) {
+    setParameters(AppData.valueOf(app), sessionId);
+  }
+
+  public void setParameters(AppData appData, String sessionId) {
+    this.appData = appData;
+    this.sessionId = sessionId;
   }
 }

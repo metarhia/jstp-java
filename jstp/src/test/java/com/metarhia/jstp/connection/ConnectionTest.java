@@ -238,16 +238,50 @@ public class ConnectionTest {
   }
 
   @Test
+  void handshakeWithVersion() {
+    AppData app = new AppData("appName", "1.0.0");
+
+    AbstractSocket transport = mock(AbstractSocket.class);
+    Connection connection = spy(new Connection(transport));
+    when(transport.isConnected()).thenReturn(true);
+
+    connection.handshake(app, null);
+
+    String request = String.format(
+        TestConstants.TEMPLATE_HANDSHAKE_VERSION_REQUEST + Connection.TERMINATOR,
+        app.getName(), app.getVersion());
+    verify(transport, times(1))
+        .send(request);
+  }
+
+  @Test
+  void handshakeWithVersionRange() {
+    AppData app = new AppData("appName", "^1.1.0");
+
+    AbstractSocket transport = mock(AbstractSocket.class);
+    Connection connection = spy(new Connection(transport));
+    when(transport.isConnected()).thenReturn(true);
+
+    connection.handshake(app, null);
+
+    String request = String.format(
+        TestConstants.TEMPLATE_HANDSHAKE_VERSION_REQUEST + Connection.TERMINATOR,
+        app.getName(), app.getVersion());
+    verify(transport, times(1))
+        .send(request);
+  }
+
+  @Test
   void connectNullApp() {
     Throwable exception = assertThrows(RuntimeException.class, new Executable() {
       @Override
       public void execute() throws Throwable {
         AbstractSocket abstractSocket = mock(AbstractSocket.class);
         Connection connection = new Connection(abstractSocket);
-        connection.connect(null);
+        connection.connect((AppData) null, null);
       }
     });
-    assertEquals(exception.getMessage(), "Application name must not be null");
+    assertEquals("Application must not be null", exception.getMessage());
   }
 
   @Test
@@ -257,10 +291,10 @@ public class ConnectionTest {
       public void execute() throws Throwable {
         AbstractSocket abstractSocket = mock(AbstractSocket.class);
         Connection connection = new Connection(abstractSocket);
-        connection.handshake(null, null);
+        connection.handshake((AppData) null, null);
       }
     });
-    assertEquals(exception.getMessage(), "Application name must not be null");
+    assertEquals("Application must not be null", exception.getMessage());
   }
 
   @Test

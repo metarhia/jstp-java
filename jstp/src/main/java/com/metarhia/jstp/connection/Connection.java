@@ -129,32 +129,54 @@ public class Connection implements
       this.state = ConnectionState.AWAITING_HANDSHAKE;
     }
 
-    String appName = getAppName();
-    if (appName != null) {
-      connect(appName);
+    if (getAppName() != null) {
+      connect(getAppData());
     }
   }
 
   /**
-   * Calls {@link #connect(String, String)} with {@param appName}
-   * and null for sessionID
+   * Calls {@link #connect(AppData)} with {@param app} parsed
+   * via {@link AppData#valueOf(String)} and null for sessionID
+   *
+   * @param app application to connect to as 'name' or 'name@version'
+   *            where version is a valid semver version or range
+   *            (must not be null)
    */
-  public void connect(String appName) {
-    connect(appName, null);
+  public void connect(String app) {
+    connect(AppData.valueOf(app));
+  }
+
+  /**
+   * Calls {@link #connect(AppData, String)} with null for sessionID
+   */
+  public void connect(AppData appData) {
+    connect(appData, null);
+  }
+
+  /**
+   * Calls {@link #connect(AppData, String)} with {@param app} parsed
+   * via {@link AppData#valueOf(String)} and null for sessionID
+   *
+   * @param app application to connect to as 'name' or 'name@version'
+   *            where version is a valid semver version or range
+   *            (must not be null)
+   */
+  public void connect(String app, String sessionID) {
+    connect(AppData.valueOf(app), sessionID);
   }
 
   /**
    * Checks if transport is connected, if it is not calls {@link AbstractSocket#connect()}
-   * else initiates a handshake
+   * otherwise initiates a handshake
    *
-   * @param appName   name of the application to use during handshake (must not be null)
+   * @param appData   data of the application to connect to (must not be null)
    * @param sessionID optional id to restore session
    */
-  public void connect(String appName, String sessionID) {
-    if (appName == null) {
-      throw new RuntimeException("Application name must not be null");
+  public void connect(AppData appData, String sessionID) {
+    if (appData == null) {
+      throw new RuntimeException("Application must not be null");
     }
-    sessionPolicy.getSessionData().setParameters(appName, sessionID);
+    sessionPolicy.getSessionData().setParameters(appData, sessionID);
     if (!transport.isConnected()) {
       transport.connect();
     } else {
@@ -165,55 +187,50 @@ public class Connection implements
   /**
    * Sends anonymous handshake message
    *
-   * @param appName application name to denote application on server
+   * @param app     application to connect to as 'name' or 'name@version'
+   *                where version is a valid semver version or range
+   *                (must not be null)
    * @param handler optional handler that will be called when response handshake message comes from
    *                the server
    */
-  public void handshake(String appName, ManualHandler handler) {
-    handshake(appName, null, null, handler);
+  public void handshake(String app, ManualHandler handler) {
+    handshake(AppData.valueOf(app), handler);
   }
 
   /**
-   * Tries to restores session with id {@param sessionID}
+   * Sends anonymous handshake message
    *
-   * @param appName   application name to denote application on server
-   * @param sessionID id of a session to restore
-   * @param handler   optional handler that will be called when response handshake message comes
-   *                  from the server
+   * @param appData data of the application to connect to (must not be null)
+   * @param handler optional handler that will be called when response handshake message comes from
+   *                the server
    */
-  public void handshake(String appName, String sessionID, ManualHandler handler) {
-    if (appName == null) {
-      throw new RuntimeException("Application name must not be null");
-    }
-    sessionPolicy.getSessionData().setParameters(appName, sessionID);
-    setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages());
-    long messageNumber = 0;
-    if (handler != null) {
-      handlers.put(messageNumber, handler);
-    }
-
-    Message hm = new Message(messageNumber, MessageType.HANDSHAKE)
-        .putArgs("session", sessionID,
-            sessionPolicy.getSessionData().getNumReceivedMessages());
-    hm.addProtocolArg(appName);
-
-    sendHandshake(hm.stringify());
+  public void handshake(AppData appData, ManualHandler handler) {
+    handshake(appData, null, null, handler);
   }
 
   /**
    * Sends handshake message with authorization
    *
-   * @param appName  application name to denote application on server
+   * @param app      application to connect to as 'name' or 'name@version'
+   *                 where version is a valid semver version or range
+   *                 (must not be null)
    * @param username login for authorization on server
    * @param password password for authorization on server
    * @param handler  optional handler that will be called when response handshake message comes from
    *                 the server
    */
-  public void handshake(String appName, String username, String password, ManualHandler handler) {
-    if (appName == null) {
-      throw new RuntimeException("Application name must not be null");
+  public void handshake(String app, String username, String password, ManualHandler handler) {
+    if (app == null) {
+      throw new RuntimeException("Application must not be null");
     }
-    sessionPolicy.getSessionData().setAppName(appName);
+    handshake(AppData.valueOf(app), username, password, handler);
+  }
+
+  public void handshake(AppData appData, String username, String password, ManualHandler handler) {
+    if (appData == null) {
+      throw new RuntimeException("Application must not be null");
+    }
+    sessionPolicy.getSessionData().setParameters(appData, null);
     setMessageNumberCounter(0);
     long messageNumber = getNextMessageNumber();
     if (handler != null) {
@@ -221,10 +238,57 @@ public class Connection implements
     }
 
     Message hm = new Message(messageNumber, MessageType.HANDSHAKE)
-        .addProtocolArg(appName);
+        .addProtocolArg(appData.getName());
+    if (appData.getVersion() != null) {
+      hm.addProtocolArg(appData.getVersion());
+    }
     if (username != null && password != null) {
       hm.putArg(username, password);
     }
+    sendHandshake(hm.stringify());
+  }
+
+  /**
+   * Tries to restore session with id {@param sessionID}
+   *
+   * @param app       application to connect to as 'name' or 'name@version'
+   *                  where version is a valid semver version or range
+   *                  (must not be null)
+   * @param sessionID id of a session to restore
+   * @param handler   optional handler that will be called when response handshake message comes
+   *                  from the server
+   */
+  public void handshake(String app, String sessionID, ManualHandler handler) {
+    if (app == null) {
+      throw new RuntimeException("Application must not be null");
+    }
+    handshake(AppData.valueOf(app), sessionID, handler);
+  }
+
+  /**
+   * Tries to restore session with {@param sessionID}
+   *
+   * @param appData   data of the application to connect to (must not be null)
+   * @param sessionID id of a session to restore
+   * @param handler   optional handler that will be called when response handshake message comes
+   *                  from the server
+   */
+  public void handshake(AppData appData, String sessionID, ManualHandler handler) {
+    sessionPolicy.getSessionData().setParameters(appData, sessionID);
+    setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages());
+    long messageNumber = 0;
+    if (handler != null) {
+      handlers.put(messageNumber, handler);
+    }
+
+    Message hm = new Message(messageNumber, MessageType.HANDSHAKE)
+        .addProtocolArg(appData.getName())
+        .putArgs("session", sessionID,
+            sessionPolicy.getSessionData().getNumReceivedMessages());
+    if (appData.getVersion() != null) {
+      hm.addProtocolArg(appData.getVersion());
+    }
+
     sendHandshake(hm.stringify());
   }
 
@@ -561,10 +625,10 @@ public class Connection implements
     reset(null, 0);
   }
 
-  private void reset(String appName, long messageCounter) {
+  private void reset(String app, long messageCounter) {
     setMessageNumberCounter(messageCounter);
     handlers = new ConcurrentHashMap<>();
-    sessionPolicy.reset(appName);
+    sessionPolicy.reset(app);
   }
 
   public void close() {
@@ -705,8 +769,12 @@ public class Connection implements
     return messageNumberCounter.get();
   }
 
+  public AppData getAppData() {
+    return sessionPolicy.getSessionData().getAppData();
+  }
+
   public String getAppName() {
-    return sessionPolicy.getSessionData().getAppName();
+    return sessionPolicy.getSessionData().getAppData().getName();
   }
 
   public String getSessionId() {

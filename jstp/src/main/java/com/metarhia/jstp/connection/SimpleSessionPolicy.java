@@ -51,9 +51,9 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
   }
 
   @Override
-  public void reset(String appName) {
-    if (appName != null) {
-      sessionData.setAppName(appName);
+  public void reset(String app) {
+    if (app != null) {
+      sessionData.setParameters(AppData.valueOf(app), null);
     }
     sessionData.resetCounters();
     data.clear();
@@ -74,9 +74,9 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
       return;
     }
     if (sessionData.getSessionId() != null) {
-      connection.handshake(sessionData.getAppName(), sessionData.getSessionId(), null);
+      connection.handshake(sessionData.getAppData(), sessionData.getSessionId(), null);
     } else {
-      connection.handshake(sessionData.getAppName(), null);
+      connection.handshake(sessionData.getAppData(), null);
     }
   }
 
@@ -151,6 +151,10 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
   @Override
   public SessionData getSessionData() {
     return sessionData;
+  }
+
+  public void setSessionData(SessionData sessionData) {
+    this.sessionData = sessionData;
   }
 
   public long getSendBufferCapacity() {

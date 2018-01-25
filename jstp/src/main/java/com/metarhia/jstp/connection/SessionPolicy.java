@@ -18,9 +18,10 @@ public interface SessionPolicy {
   /**
    * Reset current session counters and buffers
    *
-   * @param appName new application name if needed (if null it's ignored)
+   * @param app new application to connect to if needed (if null it should be ignored)
+   *            as 'name' or 'name@version' where version is a valid semver version or range
    */
-  void reset(String appName);
+  void reset(String app);
 
   /**
    * Called when transport signalled that it has been connected
