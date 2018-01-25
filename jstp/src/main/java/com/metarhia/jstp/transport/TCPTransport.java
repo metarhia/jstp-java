@@ -218,6 +218,7 @@ public class TCPTransport implements AbstractSocket {
     }
     messageBuilder.reset();
     if (b == -1) {
+      logger.trace("Remote host closed connection (Input steam closed)");
       closeInternal();
     }
   }
@@ -235,6 +236,7 @@ public class TCPTransport implements AbstractSocket {
 
       connected = socket != null && socket.isConnected();
       if (connected) {
+        logger.trace("Created socket: {}:{}", host, port);
         running = true;
         out = socket.getOutputStream();
         in = new BufferedInputStream(socket.getInputStream());
@@ -296,6 +298,7 @@ public class TCPTransport implements AbstractSocket {
   }
 
   public void close(final boolean forced) {
+    logger.trace("Public close transport");
     new Thread(new Runnable() {
       @Override
       public void run() {
@@ -328,6 +331,7 @@ public class TCPTransport implements AbstractSocket {
   }
 
   private void closeInternal(boolean notify) {
+    logger.trace("Internal close transport");
     int remainingMessages;
     try {
       synchronized (TCPTransport.this) {
@@ -357,7 +361,7 @@ public class TCPTransport implements AbstractSocket {
         socketListener.onConnectionClosed();
       }
     } catch (IOException e) {
-      logger.info("Socket close fail", e);
+      logger.info("Socket closing failure", e);
     }
   }
 
