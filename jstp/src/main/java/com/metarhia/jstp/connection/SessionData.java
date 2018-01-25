@@ -21,11 +21,11 @@ public class SessionData implements Serializable {
   }
 
   public SessionData(String appName) {
-    this(appName, 0);
+    this(appName, null);
   }
 
-  public SessionData(String appName, long messageCounter) {
-    this.appName = appName;
+  public SessionData(String appName, String sessionId) {
+    this(appName, sessionId, 0, 0);
   }
 
   public SessionData(String appName, String sessionId,
