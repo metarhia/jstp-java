@@ -37,13 +37,13 @@ class SimpleSessionPolicyTest {
     final Connection connection = spy(new Connection(transport, new SimpleSessionPolicy()));
 
     doAnswer(new CallbackAnswer(connection, JSCallback.OK, callbackArgs)).when(transport)
-        .send(matches(TestConstants.ANY_CALL + Connection.TERMINATOR));
+        .send(matches(TestConstants.ANY_CALL));
 
     doAnswer(new HandshakeAnswer(connection, numReceivedMessages)).when(transport)
-        .send(matches(TestConstants.ANY_HANDSHAKE_RESTORE_REQUEST + Connection.TERMINATOR));
+        .send(matches(TestConstants.ANY_HANDSHAKE_RESTORE_REQUEST));
 
     doAnswer(new HandshakeAnswer(connection, sessionId)).when(transport)
-        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
     connection.connect(appName);
 
     assertTrue(connection.isConnected(), "Must be connected after initial mock handshake");

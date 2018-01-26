@@ -106,7 +106,7 @@ public class ConnectionTest {
     transport = mock(AbstractSocket.class);
     connection = spy(new Connection(transport));
     doAnswer(new HandshakeAnswer(connection)).when(transport)
-        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
     when(transport.isConnected()).thenReturn(true);
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
   }
@@ -121,8 +121,8 @@ public class ConnectionTest {
 
   @Test
   public void pingPong() throws Exception {
-    String input = "{ping:[42]}" + Connection.TERMINATOR;
-    String response = "{pong:[42]}" + Connection.TERMINATOR;
+    String input = "{ping:[42]}";
+    String response = "{pong:[42]}";
 
     connection.onMessageReceived(JSParser.<JSObject>parse(input));
 
@@ -178,7 +178,7 @@ public class ConnectionTest {
 
     Connection connection = spy(new Connection(transport));
     doAnswer(new HandshakeAnswer(connection)).when(transport)
-        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
 
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
 
@@ -200,8 +200,7 @@ public class ConnectionTest {
         connection.onMessageReceived(errMessage);
         return null;
       }
-    }).when(transport)
-        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
+    }).when(transport).send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
 
     ConnectionListener listener = mock(ConnectionListener.class);
     connection.addSocketListener(listener);
@@ -220,7 +219,7 @@ public class ConnectionTest {
   }
 
   @Test
-  void handshakeWithSession() {
+  void handshakeWithSession() throws Exception {
     String appName = "testApp";
     String sessionId = "sessionId";
 
@@ -230,15 +229,14 @@ public class ConnectionTest {
 
     connection.handshake(appName, sessionId, null);
 
-    String request = String.format(
-        TestConstants.TEMPLATE_HANDSHAKE_RESTORE_REQUEST + Connection.TERMINATOR,
+    String request = String.format(TestConstants.TEMPLATE_HANDSHAKE_RESTORE_REQUEST,
         appName, sessionId, 0);
     verify(transport, times(1))
-        .send(request);
+        .send(argThat(new MessageMatcher(request)));
   }
 
   @Test
-  void handshakeWithVersion() {
+  void handshakeWithVersion() throws Exception {
     AppData app = new AppData("appName", "1.0.0");
 
     AbstractSocket transport = mock(AbstractSocket.class);
@@ -247,15 +245,14 @@ public class ConnectionTest {
 
     connection.handshake(app, null);
 
-    String request = String.format(
-        TestConstants.TEMPLATE_HANDSHAKE_VERSION_REQUEST + Connection.TERMINATOR,
+    String request = String.format(TestConstants.TEMPLATE_HANDSHAKE_VERSION_REQUEST,
         app.getName(), app.getVersion());
     verify(transport, times(1))
-        .send(request);
+        .send(argThat(new MessageMatcher(request)));
   }
 
   @Test
-  void handshakeWithVersionRange() {
+  void handshakeWithVersionRange() throws Exception {
     AppData app = new AppData("appName", "^1.1.0");
 
     AbstractSocket transport = mock(AbstractSocket.class);
@@ -264,11 +261,10 @@ public class ConnectionTest {
 
     connection.handshake(app, null);
 
-    String request = String.format(
-        TestConstants.TEMPLATE_HANDSHAKE_VERSION_REQUEST + Connection.TERMINATOR,
+    String request = String.format(TestConstants.TEMPLATE_HANDSHAKE_VERSION_REQUEST,
         app.getName(), app.getVersion());
     verify(transport, times(1))
-        .send(request);
+        .send(argThat(new MessageMatcher(request)));
   }
 
   @Test
@@ -453,7 +449,7 @@ public class ConnectionTest {
   }
 
   @Test
-  void useTransportConnected() {
+  void useTransportConnected() throws Exception {
     String appName = "testApp";
 
     AbstractSocket transport = mock(AbstractSocket.class);
@@ -467,10 +463,9 @@ public class ConnectionTest {
 
     connection.useTransport(anotherSocket);
 
-    String request =
-        String.format(TestConstants.TEMPLATE_HANDSHAKE_REQUEST + Connection.TERMINATOR, appName);
+    String request = String.format(TestConstants.TEMPLATE_HANDSHAKE_REQUEST, appName);
     verify(anotherSocket, times(1))
-        .send(request);
+        .send(argThat(new MessageMatcher(request)));
   }
 
   @Test

@@ -7,6 +7,11 @@ import java.nio.charset.Charset;
  */
 public class Constants {
 
+  /**
+   * Message separator
+   */
+  public static final char SEPARATOR = '\0';
+
   private static final String PACKAGE_PREFIX = "com.metarhia.jstp";
 
   public static final String KEY_SESSION = PACKAGE_PREFIX + ".SESSION";

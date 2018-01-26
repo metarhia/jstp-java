@@ -23,13 +23,6 @@ import org.slf4j.LoggerFactory;
 public class Connection implements
     AbstractSocket.AbstractSocketListener {
 
-  /**
-   * Package terminator
-   */
-  public static final String TERMINATOR = "\0";
-
-  private static final int DEFAULT_SEND_BUFFER_CAPACITY = 20;
-
   private static final Map<MessageType, Method> METHOD_HANDLERS = new HashMap<>(10);
 
   private static final Logger logger = LoggerFactory.getLogger(Connection.class);
@@ -298,7 +291,7 @@ public class Connection implements
           (state == ConnectionState.AWAITING_HANDSHAKE
               || state == ConnectionState.AWAITING_RECONNECT)) {
         state = ConnectionState.AWAITING_HANDSHAKE_RESPONSE;
-        transport.send(handshake + TERMINATOR);
+        transport.send(handshake);
       }
     }
   }
@@ -378,7 +371,7 @@ public class Connection implements
    */
   public void send(String message) {
     if (transport.isConnected()) {
-      transport.send(message + TERMINATOR);
+      transport.send(message);
     }
   }
 

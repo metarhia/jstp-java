@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.connection.Connection;
 import com.metarhia.jstp.connection.HandshakeAnswer;
@@ -37,7 +38,7 @@ public class TCPTransportTest {
     connection = spy(new Connection(tcpTransport));
     when(tcpTransport.isConnected()).thenReturn(true);
     doAnswer(new HandshakeAnswer(connection)).when(tcpTransport)
-        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
     connection.handshake("appName", null);
     assertTrue(connection.isConnected(), "Must be connected after handshake");
     // no idea why but transport has another instance of connection as listener so set this one
@@ -48,7 +49,7 @@ public class TCPTransportTest {
   public void onMessageReceivedMultiple() throws Exception {
     String callbackMessage = "{callback:[17],ok:[15703]}";
     String eventMessage = "{event:[18,'auth'],insert:['Marcus Aurelius','AE127095']}";
-    String packet = callbackMessage + Connection.TERMINATOR + eventMessage + Connection.TERMINATOR;
+    String packet = callbackMessage + Constants.SEPARATOR + eventMessage + Constants.SEPARATOR;
 
     final byte[] packetBytes = packet.getBytes(TestConstants.UTF_8_CHARSET);
     final ByteArrayInputStream mockStream = new ByteArrayInputStream(packetBytes);

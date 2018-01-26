@@ -37,10 +37,10 @@ class DropSessionPolicyTest {
     final Connection connection = spy(new Connection(transport, new DropSessionPolicy()));
 
     doAnswer(new CallbackAnswer(connection, JSCallback.OK, callbackArgs)).when(transport)
-        .send(matches(TestConstants.ANY_CALL + Connection.TERMINATOR));
+        .send(matches(TestConstants.ANY_CALL));
 
     doAnswer(new HandshakeAnswer(connection, sessionId)).when(transport)
-        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
     connection.connect(appName);
 
     assertTrue(connection.isConnected(), "Must be connected after initial mock handshake");
@@ -61,7 +61,7 @@ class DropSessionPolicyTest {
     }
 
     doAnswer(new HandshakeAnswer(connection, anotherSessionId)).when(transport)
-        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST + Connection.TERMINATOR));
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
 
     // connect transport
     when(transport.isConnected()).thenReturn(true);

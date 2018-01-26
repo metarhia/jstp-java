@@ -10,6 +10,11 @@ public interface AbstractSocket {
    */
   boolean connect();
 
+  /**
+   * Sends message and adds message separator after it.
+   *
+   * @param message string to be sent
+   */
   void send(String message);
 
   void pause();
