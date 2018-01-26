@@ -150,7 +150,6 @@ public class TCPTransport implements AbstractSocket {
     logger.trace("Sending message: {}", message);
 
     out.write(message.getBytes(Constants.UTF_8_CHARSET));
-    out.write(0);
     out.flush();
   }
 
