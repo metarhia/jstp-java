@@ -35,6 +35,7 @@ class SimpleSessionPolicyTest {
     AbstractSocket transport = mock(AbstractSocket.class);
     when(transport.isConnected()).thenReturn(true);
     final Connection connection = spy(new Connection(transport, new SimpleSessionPolicy()));
+    connection.getSessionPolicy().setConnection(connection);
 
     doAnswer(new CallbackAnswer(connection, JSCallback.OK, callbackArgs)).when(transport)
         .send(matches(TestConstants.ANY_CALL));

@@ -101,7 +101,7 @@ public class Connection implements
     this.transport = transport;
     this.transport.setSocketListener(this);
 
-    this.sessionPolicy = sessionPolicy;
+    setSessionPolicy(sessionPolicy);
 
     this.connectionListeners = new ArrayList<>();
     this.eventHandlers = new ConcurrentHashMap<>();
@@ -445,7 +445,7 @@ public class Connection implements
       getNextMessageNumber();
     }
     long numServerReceivedMessages = ((Double) message.getByIndex(1)).longValue();
-    boolean restored = sessionPolicy.restore(this, numServerReceivedMessages);
+    boolean restored = sessionPolicy.restore(numServerReceivedMessages);
 
     long receiverIndex = 0;
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
@@ -593,6 +593,10 @@ public class Connection implements
     handlers.put(messageNumber, manualHandler);
   }
 
+  public void removeHandler(long messageNumber) {
+    handlers.remove(messageNumber);
+  }
+
   public void saveSession(StorageInterface storageInterface) {
     sessionPolicy.saveSession(storageInterface);
   }
@@ -696,7 +700,7 @@ public class Connection implements
           && state != ConnectionState.AWAITING_HANDSHAKE) {
         return;
       }
-      sessionPolicy.onTransportAvailable(this);
+      sessionPolicy.onTransportAvailable();
     }
     // todo add calls and fields for username\password auth
   }
@@ -788,5 +792,6 @@ public class Connection implements
 
   public void setSessionPolicy(SessionPolicy sessionPolicy) {
     this.sessionPolicy = sessionPolicy;
+    this.sessionPolicy.setConnection(this);
   }
 }

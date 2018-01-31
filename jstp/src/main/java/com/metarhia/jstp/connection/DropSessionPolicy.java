@@ -12,6 +12,8 @@ public class DropSessionPolicy implements SessionPolicy, Serializable {
 
   private boolean reconnectWhenTransportReady;
 
+  transient private Connection connection;
+
   public DropSessionPolicy() {
     this.reconnectWhenTransportReady = true;
     this.sessionData = new SessionData();
@@ -24,7 +26,7 @@ public class DropSessionPolicy implements SessionPolicy, Serializable {
   }
 
   @Override
-  public boolean restore(Connection connection, long numServerReceivedMessages) {
+  public boolean restore(long numServerReceivedMessages) {
     return false;
   }
 
@@ -37,7 +39,7 @@ public class DropSessionPolicy implements SessionPolicy, Serializable {
   }
 
   @Override
-  public void onTransportAvailable(Connection connection) {
+  public void onTransportAvailable() {
     if (!reconnectWhenTransportReady) {
       return;
     }
@@ -93,6 +95,11 @@ public class DropSessionPolicy implements SessionPolicy, Serializable {
         Constants.KEY_SESSION + DropSessionPolicy.class.getCanonicalName(), this);
     reconnectWhenTransportReady = sessionPolicy.reconnectWhenTransportReady;
     sessionData = sessionPolicy.sessionData;
+  }
+
+  @Override
+  public void setConnection(Connection connection) {
+    this.connection = connection;
   }
 
   public boolean isReconnectWhenTransportReady() {

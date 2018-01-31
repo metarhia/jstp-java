@@ -105,6 +105,7 @@ public class ConnectionTest {
     instance = this;
     transport = mock(AbstractSocket.class);
     connection = spy(new Connection(transport));
+    connection.getSessionPolicy().setConnection(connection);
     doAnswer(new HandshakeAnswer(connection)).when(transport)
         .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
     when(transport.isConnected()).thenReturn(true);
@@ -117,6 +118,21 @@ public class ConnectionTest {
       instance.connection.close();
       instance.connection = null;
     }
+  }
+
+  private static ConnectionSpy createConnectionSpy() {
+    return createConnectionSpy(null, true);
+  }
+
+  private static ConnectionSpy createConnectionSpy(AbstractSocket transport,
+                                                   boolean transportConnected) {
+    if (transport == null) {
+      transport = mock(AbstractSocket.class);
+      when(transport.isConnected()).thenReturn(transportConnected);
+    }
+    Connection connection = spy(new Connection(transport));
+    connection.getSessionPolicy().setConnection(connection);
+    return new ConnectionSpy(connection, transport);
   }
 
   @Test
@@ -173,10 +189,10 @@ public class ConnectionTest {
 
   @Test
   public void handshakeSendRecv() throws Exception {
-    AbstractSocket transport = mock(AbstractSocket.class);
-    when(transport.isConnected()).thenReturn(true);
+    ConnectionSpy cs = createConnectionSpy();
+    AbstractSocket transport = cs.transport;
+    Connection connection = cs.connection;
 
-    Connection connection = spy(new Connection(transport));
     doAnswer(new HandshakeAnswer(connection)).when(transport)
         .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
 
@@ -188,10 +204,10 @@ public class ConnectionTest {
   @Test
   public void handshakeError() throws Exception {
     final int errorCode = 16;
-    AbstractSocket transport = mock(AbstractSocket.class);
-    when(transport.isConnected()).thenReturn(true);
+    ConnectionSpy cs = createConnectionSpy();
+    AbstractSocket transport = cs.transport;
+    final Connection connection = cs.connection;
 
-    final Connection connection = spy(new Connection(transport));
     doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
@@ -223,9 +239,9 @@ public class ConnectionTest {
     String appName = "testApp";
     String sessionId = "sessionId";
 
-    AbstractSocket transport = mock(AbstractSocket.class);
-    Connection connection = spy(new Connection(transport));
-    when(transport.isConnected()).thenReturn(true);
+    ConnectionSpy cs = createConnectionSpy();
+    AbstractSocket transport = cs.transport;
+    Connection connection = cs.connection;
 
     connection.handshake(appName, sessionId, null);
 
@@ -239,9 +255,9 @@ public class ConnectionTest {
   void handshakeWithVersion() throws Exception {
     AppData app = new AppData("appName", "1.0.0");
 
-    AbstractSocket transport = mock(AbstractSocket.class);
-    Connection connection = spy(new Connection(transport));
-    when(transport.isConnected()).thenReturn(true);
+    ConnectionSpy cs = createConnectionSpy();
+    AbstractSocket transport = cs.transport;
+    Connection connection = cs.connection;
 
     connection.handshake(app, null);
 
@@ -255,9 +271,9 @@ public class ConnectionTest {
   void handshakeWithVersionRange() throws Exception {
     AppData app = new AppData("appName", "^1.1.0");
 
-    AbstractSocket transport = mock(AbstractSocket.class);
-    Connection connection = spy(new Connection(transport));
-    when(transport.isConnected()).thenReturn(true);
+    ConnectionSpy cs = createConnectionSpy();
+    AbstractSocket transport = cs.transport;
+    Connection connection = cs.connection;
 
     connection.handshake(app, null);
 
@@ -436,9 +452,10 @@ public class ConnectionTest {
 
   @Test
   void useTransportNotConnected() {
-    AbstractSocket transport = mock(AbstractSocket.class);
-    Connection connection = spy(new Connection(transport));
-    when(transport.isConnected()).thenReturn(false);
+    ConnectionSpy cs = createConnectionSpy(null, false);
+    AbstractSocket transport = cs.transport;
+    Connection connection = cs.connection;
+
     connection.connect("testApp");
 
     AbstractSocket anotherTransport = mock(AbstractSocket.class);
@@ -452,9 +469,10 @@ public class ConnectionTest {
   void useTransportConnected() throws Exception {
     String appName = "testApp";
 
-    AbstractSocket transport = mock(AbstractSocket.class);
-    Connection connection = spy(new Connection(transport));
-    when(transport.isConnected()).thenReturn(false);
+    ConnectionSpy cs = createConnectionSpy(null, false);
+    AbstractSocket transport = cs.transport;
+    Connection connection = cs.connection;
+
     // to set app name
     connection.connect(appName);
 
@@ -539,4 +557,17 @@ public class ConnectionTest {
       this.methods = methods;
     }
   }
+
+  private static class ConnectionSpy {
+
+    public Connection connection;
+
+    public AbstractSocket transport;
+
+    public ConnectionSpy(Connection connection, AbstractSocket transport) {
+      this.connection = connection;
+      this.transport = transport;
+    }
+  }
+
 }

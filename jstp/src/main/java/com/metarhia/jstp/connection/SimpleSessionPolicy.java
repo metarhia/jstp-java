@@ -4,11 +4,9 @@ import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.storage.StorageInterface;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
@@ -16,18 +14,22 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
   private boolean reconnectWhenTransportReady;
 
-  private ConcurrentLinkedQueue<String> sentMessages;
+  private HashMap<Long, String> sentMessages;
+
+  private long lastDeliveredNumber;
 
   private HashMap<String, Serializable> data;
 
   private SessionData sessionData;
 
+  transient private Connection connection;
+
   public SimpleSessionPolicy() {
     this.reconnectWhenTransportReady = true;
-    this.sendBufferCapacity = 100;
+    this.sendBufferCapacity = 0;
     this.sessionData = new SessionData();
     this.data = new HashMap<>();
-    this.sentMessages = new ConcurrentLinkedQueue<>();
+    this.sentMessages = new HashMap<>();
   }
 
   public static SimpleSessionPolicy restoreFrom(StorageInterface storageInterface) {
@@ -37,16 +39,11 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
   }
 
   @Override
-  public boolean restore(Connection connection, long numServerReceivedMessages) {
-    long redundantMessages =
-        sentMessages.size() - (sessionData.getNumSentMessages() - numServerReceivedMessages);
-    while (redundantMessages-- > 0) {
-      sentMessages.poll();
-    }
-    for (String message : sentMessages) {
+  public boolean restore(long numServerReceivedMessages) {
+    removeBufferedMessages(numServerReceivedMessages);
+    for (String message : sentMessages.values()) {
       connection.send(message);
     }
-    sessionData.setNumReceivedMessages(numServerReceivedMessages);
     return true;
   }
 
@@ -55,6 +52,7 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
     if (app != null) {
       sessionData.setParameters(AppData.valueOf(app), null);
     }
+    lastDeliveredNumber = 0;
     sessionData.resetCounters();
     data.clear();
     sentMessages.clear();
@@ -62,14 +60,25 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
   @Override
   public void onMessageReceived(JSObject message, MessageType type) {
+    long messageNumber = Connection.getMessageNumber(message);
     if (type == MessageType.CALLBACK || type == MessageType.PONG) {
-      long messageNumber = Connection.getMessageNumber(message);
+      removeBufferedMessages(messageNumber);
+    }
+    if (messageNumber > sessionData.getNumReceivedMessages()) {
       sessionData.setNumReceivedMessages(messageNumber);
     }
   }
 
+  private void removeBufferedMessages(long lastDeliveredNumber) {
+    for (long i = this.lastDeliveredNumber + 1; i <= lastDeliveredNumber; ++i) {
+      sentMessages.remove(i);
+      connection.removeHandler(i);
+    }
+    this.lastDeliveredNumber = lastDeliveredNumber;
+  }
+
   @Override
-  public void onTransportAvailable(Connection connection) {
+  public void onTransportAvailable() {
     if (!reconnectWhenTransportReady) {
       return;
     }
@@ -87,9 +96,9 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
       msg = message.stringify();
     }
     sessionData.setNumSentMessages(message.getMessageNumber());
-    sentMessages.add(msg);
-    if (sentMessages.size() >= sendBufferCapacity) {
-      sentMessages.poll();
+    sentMessages.put(message.getMessageNumber(), msg);
+    if (sendBufferCapacity > 0 && sentMessages.size() >= sendBufferCapacity) {
+      removeBufferedMessages(lastDeliveredNumber + 1);
     }
   }
 
@@ -104,6 +113,7 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
         storageInterface.getSerializable(Constants.KEY_SESSION, this);
     sendBufferCapacity = sessionPolicy.sendBufferCapacity;
     reconnectWhenTransportReady = sessionPolicy.reconnectWhenTransportReady;
+    lastDeliveredNumber = sessionPolicy.lastDeliveredNumber;
     sentMessages = sessionPolicy.sentMessages;
     data = sessionPolicy.data;
     sessionData = sessionPolicy.sessionData;
@@ -120,16 +130,17 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
     SimpleSessionPolicy that = (SimpleSessionPolicy) o;
     return sendBufferCapacity == that.sendBufferCapacity &&
         reconnectWhenTransportReady == that.reconnectWhenTransportReady &&
-        sentMessages.containsAll(Arrays.asList(that.sentMessages.toArray())) &&
+        lastDeliveredNumber == that.lastDeliveredNumber &&
+        Objects.equals(sentMessages, that.sentMessages) &&
         Objects.equals(data, that.data) &&
         Objects.equals(sessionData, that.sessionData);
   }
 
   @Override
   public int hashCode() {
-
     return Objects
-        .hash(sendBufferCapacity, reconnectWhenTransportReady, sentMessages, data, sessionData);
+        .hash(sendBufferCapacity, reconnectWhenTransportReady, sentMessages,
+            sentMessages, data, sessionData);
   }
 
   public Serializable get(String o) {
@@ -144,13 +155,18 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
     return data;
   }
 
-  public ConcurrentLinkedQueue<String> getSentMessages() {
+  public HashMap<Long, String> getSentMessages() {
     return sentMessages;
   }
 
   @Override
   public SessionData getSessionData() {
     return sessionData;
+  }
+
+  @Override
+  public void setConnection(Connection connection) {
+    this.connection = connection;
   }
 
   public void setSessionData(SessionData sessionData) {

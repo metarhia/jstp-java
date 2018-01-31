@@ -8,12 +8,11 @@ public interface SessionPolicy {
   /**
    * Called after restoration handshake so that this client may resend buffered messages
    *
-   * @param connection                connection to work with
    * @param numServerReceivedMessages number off messages received on the server side
    *
    * @return true if session was restored, false otherwise
    */
-  boolean restore(Connection connection, long numServerReceivedMessages);
+  boolean restore(long numServerReceivedMessages);
 
   /**
    * Reset current session counters and buffers
@@ -27,9 +26,8 @@ public interface SessionPolicy {
    * Called when transport signalled that it has been connected
    * Should use one of Connection#handshake methods to connect to remote site
    *
-   * @param connection connection to work with
    */
-  void onTransportAvailable(Connection connection);
+  void onTransportAvailable();
 
   /**
    * Called by {@link Connection} upon each message available for buffering being send
@@ -64,4 +62,9 @@ public interface SessionPolicy {
    * @return session data
    */
   SessionData getSessionData();
+
+  /**
+   * Sets connection associated with this session
+   */
+  void setConnection(Connection connection);
 }
