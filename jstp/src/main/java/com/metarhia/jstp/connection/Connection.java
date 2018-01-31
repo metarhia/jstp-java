@@ -7,8 +7,6 @@ import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import com.metarhia.jstp.exceptions.ConnectionException;
 import com.metarhia.jstp.storage.StorageInterface;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,32 +21,9 @@ import org.slf4j.LoggerFactory;
 public class Connection implements
     AbstractSocket.AbstractSocketListener {
 
-  private static final Map<MessageType, Method> METHOD_HANDLERS = new HashMap<>(10);
-
   private static final Logger logger = LoggerFactory.getLogger(Connection.class);
 
   private static AtomicLong nextConnectionID = new AtomicLong(0);
-
-  static {
-    try {
-      METHOD_HANDLERS.put(MessageType.HANDSHAKE,
-          Connection.class.getDeclaredMethod("handshakeMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(MessageType.CALL,
-          Connection.class.getDeclaredMethod("callMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(MessageType.CALLBACK,
-          Connection.class.getDeclaredMethod("callbackMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(MessageType.EVENT,
-          Connection.class.getDeclaredMethod("eventMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(MessageType.INSPECT,
-          Connection.class.getDeclaredMethod("inspectMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(MessageType.PING,
-          Connection.class.getDeclaredMethod("pingMessageHandler", JSObject.class));
-      METHOD_HANDLERS.put(MessageType.PONG,
-          Connection.class.getDeclaredMethod("pongMessageHandler", JSObject.class));
-    } catch (NoSuchMethodException e) {
-      throw new RuntimeException("Cannot create method handlers", e);
-    }
-  }
 
   private long id;
 
@@ -383,20 +358,37 @@ public class Connection implements
         return;
       }
       MessageType messageType = MessageType.fromString(message.getKey(0));
-      final Method handler = METHOD_HANDLERS.get(messageType);
       if (messageType != MessageType.HANDSHAKE && state != ConnectionState.CONNECTED
-          || handler == null) {
+          || messageType == null) {
         rejectMessage(message);
-      } else {
-        if ((Boolean) handler.invoke(this, message)) {
-          sessionPolicy.onMessageReceived(message, messageType);
-        }
+      } else if (handleMessage(message, messageType)) {
+        sessionPolicy.onMessageReceived(message, messageType);
       }
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException("Cannot find or access message handler method", e);
-    } catch (ClassCastException | NullPointerException | InvocationTargetException e) {
+    } catch (ClassCastException | NullPointerException e) {
       // means message was ill formed
       rejectMessage(message);
+    }
+  }
+
+  private boolean handleMessage(JSObject message, MessageType type) {
+    switch (type) {
+      case HANDSHAKE:
+        return handshakeMessageHandler(message);
+      case CALL:
+        return callMessageHandler(message);
+      case CALLBACK:
+        return callbackMessageHandler(message);
+      case EVENT:
+        return eventMessageHandler(message);
+      case INSPECT:
+        return inspectMessageHandler(message);
+      case PING:
+        return pingMessageHandler(message);
+      case PONG:
+        return pongMessageHandler(message);
+      default:
+        rejectMessage(message);
+        return false;
     }
   }
 
