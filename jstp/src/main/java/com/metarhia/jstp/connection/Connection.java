@@ -388,8 +388,9 @@ public class Connection implements
           || handler == null) {
         rejectMessage(message);
       } else {
-        handler.invoke(this, message);
-        sessionPolicy.onMessageReceived(message, messageType);
+        if ((Boolean) handler.invoke(this, message)) {
+          sessionPolicy.onMessageReceived(message, messageType);
+        }
       }
     } catch (IllegalAccessException e) {
       throw new RuntimeException("Cannot find or access message handler method", e);
@@ -399,7 +400,7 @@ public class Connection implements
     }
   }
 
-  private void handshakeMessageHandler(JSObject message) {
+  private boolean handshakeMessageHandler(JSObject message) {
     synchronized (stateLock) {
       if (state != ConnectionState.AWAITING_HANDSHAKE_RESPONSE) {
         // if transport is not connected it means that the connection was closed before
@@ -407,7 +408,7 @@ public class Connection implements
         if (transport.isConnected()) {
           rejectMessage(message);
         }
-        return;
+        return false;
       }
 
       final String payloadKey = message.getKey(1);
@@ -433,11 +434,12 @@ public class Connection implements
           processHandshakeResponse(message);
         } else {
           rejectMessage(message);
-          return;
+          return false;
         }
         reportConnected(restored);
       }
     }
+    return true;
   }
 
   private boolean processHandshakeRestoreResponse(JSObject message) {
@@ -471,62 +473,65 @@ public class Connection implements
     }
   }
 
-  private void callMessageHandler(JSObject message) {
+  private boolean callMessageHandler(JSObject message) {
     String interfaceName = getInterfaceName(message);
     if (isSecondNotArray(message)) {
       rejectMessage(message);
-      return;
+      return false;
     }
     String methodName = message.getKey(1);
 
     final Map<String, ManualHandler> iface = callHandlers.get(interfaceName);
     if (iface == null) {
-      return;
+      return true;
     }
 
     ManualHandler handler = iface.get(methodName);
     if (handler != null) {
       handler.handle(message);
     }
+    return true;
   }
 
-  private void callbackMessageHandler(JSObject message) {
+  private boolean callbackMessageHandler(JSObject message) {
     long receiverIndex = getMessageNumber(message);
     if (isSecondNotArray(message)) {
       rejectMessage(message);
-      return;
+      return false;
     }
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
     if (callbackHandler != null) {
       callbackHandler.handle(message);
     }
+    return true;
   }
 
-  private void eventMessageHandler(JSObject message) {
+  private boolean eventMessageHandler(JSObject message) {
     String interfaceName = getInterfaceName(message);
 
     if (isSecondNotArray(message)) {
       rejectMessage(message);
-      return;
+      return false;
     }
 
     Map<String, List<ManualHandler>> interfaceHandlers = eventHandlers.get(interfaceName);
     if (interfaceHandlers == null) {
-      return;
+      return true;
     }
 
     String eventName = message.getKey(1);
     List<ManualHandler> eventHandlers = interfaceHandlers.get(eventName);
     if (eventHandlers == null) {
-      return;
+      return true;
     }
 
     for (ManualHandler eh : eventHandlers) {
       eh.handle(message);
     }
+    return true;
   }
 
-  private void inspectMessageHandler(JSObject message) {
+  private boolean inspectMessageHandler(JSObject message) {
     long messageCounter = getMessageNumber(message);
     String interfaceName = getInterfaceName(message);
     List<String> methods = clientMethodNames.get(interfaceName);
@@ -536,16 +541,18 @@ public class Connection implements
       callback(JSCallback.ERROR,
           Collections.singletonList(Constants.ERR_INTERFACE_NOT_FOUND), messageCounter);
     }
+    return true;
   }
 
-  private void pingMessageHandler(JSObject message) {
+  private boolean pingMessageHandler(JSObject message) {
     long pingNumber = getMessageNumber(message);
     Message pongMessage = new Message(pingNumber, MessageType.PONG);
     sendBuffered(pongMessage);
+    return true;
   }
 
-  private void pongMessageHandler(JSObject message) {
-    callbackMessageHandler(message);
+  private boolean pongMessageHandler(JSObject message) {
+    return callbackMessageHandler(message);
   }
 
   public void setCallHandler(String interfaceName, String methodName, ManualHandler callHandler) {
