@@ -360,13 +360,13 @@ public class Connection implements
       MessageType messageType = MessageType.fromString(message.getKey(0));
       if (messageType != MessageType.HANDSHAKE && state != ConnectionState.CONNECTED
           || messageType == null) {
-        rejectMessage(message);
+        rejectMessage(message, true);
       } else if (handleMessage(message, messageType)) {
         sessionPolicy.onMessageReceived(message, messageType);
       }
     } catch (ClassCastException | NullPointerException e) {
       // means message was ill formed
-      rejectMessage(message);
+      rejectMessage(message, true);
     }
   }
 
@@ -387,7 +387,7 @@ public class Connection implements
       case PONG:
         return pongMessageHandler(message);
       default:
-        rejectMessage(message);
+        rejectMessage(message, false);
         return false;
     }
   }
@@ -398,7 +398,7 @@ public class Connection implements
         // if transport is not connected it means that the connection was closed before
         // this method was called so don't report this
         if (transport.isConnected()) {
-          rejectMessage(message);
+          rejectMessage(message, true);
         }
         return false;
       }
@@ -425,7 +425,7 @@ public class Connection implements
         } else if (payload instanceof String) {
           processHandshakeResponse(message);
         } else {
-          rejectMessage(message);
+          rejectMessage(message, true);
           return false;
         }
         reportConnected(restored);
@@ -468,7 +468,7 @@ public class Connection implements
   private boolean callMessageHandler(JSObject message) {
     String interfaceName = getInterfaceName(message);
     if (isSecondNotArray(message)) {
-      rejectMessage(message);
+      rejectMessage(message, true);
       return false;
     }
     String methodName = message.getKey(1);
@@ -488,7 +488,7 @@ public class Connection implements
   private boolean callbackMessageHandler(JSObject message) {
     long receiverIndex = getMessageNumber(message);
     if (isSecondNotArray(message)) {
-      rejectMessage(message);
+      rejectMessage(message, true);
       return false;
     }
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
@@ -502,7 +502,7 @@ public class Connection implements
     String interfaceName = getInterfaceName(message);
 
     if (isSecondNotArray(message)) {
-      rejectMessage(message);
+      rejectMessage(message, true);
       return false;
     }
 
@@ -754,8 +754,10 @@ public class Connection implements
     }
   }
 
-  private void rejectMessage(JSObject message) {
-    close();
+  private void rejectMessage(JSObject message, boolean fatal) {
+    if (fatal) {
+      close();
+    }
     for (ConnectionListener listener : connectionListeners) {
       listener.onMessageRejected(message);
     }
