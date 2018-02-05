@@ -3,7 +3,6 @@ package com.metarhia.jstp.connection;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
-import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,7 +52,7 @@ public class Message implements Serializable {
   public Message(JSObject<Object> message, MessageType type) {
     this();
 
-    this.messageNumber = JSTypesUtil.<Double>getMixed(message, 0.0, 0).longValue();
+    this.messageNumber = Connection.getMessageNumber(message);
     this.type = type;
 
     this.protocolArgs = (List<Object>) message.getByIndex(0);

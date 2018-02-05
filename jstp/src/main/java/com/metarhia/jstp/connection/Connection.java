@@ -3,7 +3,6 @@ package com.metarhia.jstp.connection;
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
-import com.metarhia.jstp.core.JSTypes.JSTypesUtil;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import com.metarhia.jstp.exceptions.ConnectionException;
 import com.metarhia.jstp.storage.StorageInterface;
@@ -406,14 +405,14 @@ public class Connection implements
       final String payloadKey = message.getKey(1);
       final Object payload = message.get(payloadKey);
       if (payloadKey.equals("error")) {
-        int errorCode = JSTypesUtil.<Double>getMixed(payload, 0).intValue();
+        int errorCode = ((List<Integer>) payload).get(0);
         reportError(errorCode);
         close(true);
       } else if (transport.isConnected()) {
         // make sure transport is still connected to avoid extra work
         state = ConnectionState.CONNECTED;
         boolean restored = false;
-        if (payload instanceof Double) {
+        if (payload instanceof Number) {
           restored = processHandshakeRestoreResponse(message);
           if (restored) {
             setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages());
@@ -438,7 +437,7 @@ public class Connection implements
     if (getMessageNumberCounter() == 0) {
       getNextMessageNumber();
     }
-    long numServerReceivedMessages = ((Double) message.getByIndex(1)).longValue();
+    long numServerReceivedMessages = ((Number) message.getByIndex(1)).longValue();
     boolean restored = sessionPolicy.restore(numServerReceivedMessages);
 
     long receiverIndex = 0;
@@ -653,11 +652,11 @@ public class Connection implements
   }
 
   private String getInterfaceName(JSObject message) {
-    return JSTypesUtil.getMixed(message, 0.0, 1);
+    return (String) ((List<Object>) message.getByIndex(0)).get(1);
   }
 
   public static long getMessageNumber(JSObject message) {
-    return JSTypesUtil.<Double>getMixed(message, 0.0, 0).longValue();
+    return ((Number) ((List<Object>) message.getByIndex(0)).get(0)).longValue();
   }
 
   private static boolean isSecondNotArray(JSObject message) {

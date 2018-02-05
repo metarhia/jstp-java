@@ -29,7 +29,7 @@ class SimpleSessionPolicyTest {
     int expectedMessageCounter = numSentCalls + 1;
     String appName = "appName";
     String sessionId = "SessionId";
-    final List<Object> callArgs = Arrays.<Object>asList(24.0);
+    final List<Object> callArgs = Arrays.<Object>asList(24);
     final List<Object> callbackArgs = Arrays.<Object>asList(42.0);
 
     AbstractSocket transport = mock(AbstractSocket.class);
@@ -55,6 +55,7 @@ class SimpleSessionPolicyTest {
 
     // make call that should be repeated after connection is restored
     CallHandler callHandler = spy(new CallHandler() {
+
       @Override
       public void handleCallback(List<?> data) {
       }

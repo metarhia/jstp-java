@@ -2,6 +2,7 @@ package com.metarhia.jstp.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.metarhia.jstp.core.JSTypes.JSEntry;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
@@ -21,7 +22,7 @@ class JSParserTest {
 
   public static final TestData[] parseTestData = new TestData[]{
       new TestData<>("[,,0]", Arrays.asList(
-          JSUndefined.get(), JSUndefined.get(), 0.0)),
+          JSUndefined.get(), JSUndefined.get(), 0)),
       new TestData<>("{nickname: '\\n\\tnyaaaaaa\\'aaa\\'[((:’ –( :-)) :-| :~ =:O)],'}",
           TestUtils.mapOf(
               "nickname", "\n\tnyaaaaaa\'aaa\'[((:’ –( :-)) :-| :~ =:O)],")),
@@ -32,25 +33,32 @@ class JSParserTest {
           Arrays.asList("abs", "smth else", " or like this ",
               Arrays.asList("inside", "elsein"))),
       new TestData<>("{a: 1, b: 2.0, c: '5555'}", TestUtils.mapOf(
-          "a", 1.0,
+          "a", 1,
           "b", 2.0,
           "c", "5555")
       ),
-      new TestData<>("[1,,300]", Arrays.asList(1.0, JSUndefined.get(), 300.0)),
+      new TestData<>("[1,,300]", Arrays.asList(1, JSUndefined.get(), 300)),
+      new TestData<>("10.", 10.0),
+      new TestData<>(".10", .1),
+      new TestData<>("+Infinity", Double.POSITIVE_INFINITY),
 
-      new TestData<>("[1,2,'5555']", Arrays.asList(1.0, 2.0, "5555")),
+      new TestData<>("[1,2,'5555']", Arrays.asList(1, 2, "5555")),
       new TestData<>("true", true),
       new TestData<>("false", false),
-      new TestData<>("10", 10.0),
+      new TestData<>("10", 10),
       new TestData<>("63.52", 63.52),
+      new TestData<>("23051225940000",23051225940000L),
+      new TestData<>("NaN", Double.NaN),
+      new TestData<>("Infinity", Double.POSITIVE_INFINITY),
+      new TestData<>("-Infinity", Double.NEGATIVE_INFINITY),
       new TestData<>("undefined", JSUndefined.get()),
       new TestData<>("null", null),
       new TestData<>("{birth:-2051225940000}", TestUtils.mapOf(
-          "birth", -2051225940000.0)),
+          "birth", -2051225940000L)),
   };
 
   private static final TestData[] parseKeyValuePairTestData = new TestData[]{
-      new TestData<>("a: 4", new JSEntry<>("a", 4.0)),
+      new TestData<>("a: 4", new JSEntry<>("a", 4)),
       new TestData<>("55 : ['abc']", new JSEntry<>("55", Arrays.asList("abc")))
   };
 
@@ -80,9 +88,13 @@ class JSParserTest {
   @Test
   public void parseTest() throws Exception {
     for (TestData<String, Object> td : parseTestData) {
-      parser.setInput(td.input);
-      Object actual = parser.parse();
-      assertEquals(td.expected, actual, "Failed parsing: " + td.input);
+      try {
+        parser.setInput(td.input);
+        Object actual = parser.parse();
+        assertEquals(td.expected, actual, "Failed parsing: " + td.input);
+      } catch (JSParsingException e) {
+        fail("Cannot parse " + td.input, e);
+      }
     }
   }
 

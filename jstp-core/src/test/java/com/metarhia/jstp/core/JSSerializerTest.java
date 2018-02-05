@@ -22,12 +22,14 @@ class JSSerializerTest {
           new TestData<>("\'\\u{1F49A}ttt\\u{1F49B}\'", "'💚ttt💛'"),
           new TestData<>("'\\x20'", "' '"),
           new TestData<>("13", "13"),
-          new TestData<>("42.1", "42.1")
+          new TestData<>("42.1", "42.1"),
+          new TestData<>(".1", "0.1")
       ));
 
   static {
     final TestData[] parseTestData = JSParserTest.parseTestData;
-    for (int i = 7; i < parseTestData.length; i++) {
+    // 9 index is the first Data that must be reversible
+    for (int i = 9; i < parseTestData.length; i++) {
       String input = (String) parseTestData[i].input;
       stringifyTestData.add(new TestData<>(input, input));
     }
