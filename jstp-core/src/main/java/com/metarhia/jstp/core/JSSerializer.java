@@ -42,9 +42,6 @@ public class JSSerializer {
   }
 
   public static StringBuilder stringifyNumber(Number value, StringBuilder builder) {
-    if (value.doubleValue() == value.longValue()) {
-      return builder.append(value.longValue());
-    }
     return builder.append(value);
   }
 
