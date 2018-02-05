@@ -404,7 +404,7 @@ public class Connection implements
 
       final String payloadKey = message.getKey(1);
       final Object payload = message.get(payloadKey);
-      if (payloadKey.equals("error")) {
+      if (JSCallback.fromString(payloadKey) == JSCallback.ERROR) {
         int errorCode = ((List<Integer>) payload).get(0);
         reportError(errorCode);
         close(true);
@@ -437,7 +437,7 @@ public class Connection implements
     if (getMessageNumberCounter() == 0) {
       getNextMessageNumber();
     }
-    long numServerReceivedMessages = ((Number) message.getByIndex(1)).longValue();
+    long numServerReceivedMessages = ((Number) message.get(JSCallback.OK.toString())).longValue();
     boolean restored = sessionPolicy.restore(numServerReceivedMessages);
 
     long receiverIndex = 0;
@@ -450,7 +450,6 @@ public class Connection implements
   }
 
   private void processHandshakeResponse(JSObject message) {
-    sessionPolicy.getSessionData().setSessionId((String) message.getByIndex(1));
     long receiverIndex = 0;
     ManualHandler handshakeHandler = handlers.remove(receiverIndex);
 
@@ -458,6 +457,8 @@ public class Connection implements
     reset();
     // count first handshake
     getNextMessageNumber();
+
+    sessionPolicy.getSessionData().setSessionId((String) message.get(JSCallback.OK.toString()));
 
     if (handshakeHandler != null) {
       handshakeHandler.handle(message);

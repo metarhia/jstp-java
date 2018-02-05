@@ -13,6 +13,15 @@ public enum JSCallback {
     this.value = value;
   }
 
+  public static JSCallback fromString(String name) {
+    for (JSCallback t : JSCallback.values()) {
+      if (t.value.equals(name)) {
+        return t;
+      }
+    }
+    return null;
+  }
+
   public String toString() {
     return value;
   }
