@@ -16,6 +16,8 @@ import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.TestConstants;
+import com.metarhia.jstp.TestUtils;
+import com.metarhia.jstp.TestUtils.ConnectionSpy;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParser;
@@ -120,21 +122,6 @@ public class ConnectionTest {
     }
   }
 
-  private static ConnectionSpy createConnectionSpy() {
-    return createConnectionSpy(null, true);
-  }
-
-  private static ConnectionSpy createConnectionSpy(AbstractSocket transport,
-                                                   boolean transportConnected) {
-    if (transport == null) {
-      transport = mock(AbstractSocket.class);
-      when(transport.isConnected()).thenReturn(transportConnected);
-    }
-    Connection connection = spy(new Connection(transport));
-    connection.getSessionPolicy().setConnection(connection);
-    return new ConnectionSpy(connection, transport);
-  }
-
   @Test
   public void pingPong() throws Exception {
     String input = "{ping:[42]}";
@@ -189,7 +176,7 @@ public class ConnectionTest {
 
   @Test
   public void handshakeSendRecv() throws Exception {
-    ConnectionSpy cs = createConnectionSpy();
+    ConnectionSpy cs = TestUtils.createConnectionSpy();
     AbstractSocket transport = cs.transport;
     Connection connection = cs.connection;
 
@@ -204,7 +191,7 @@ public class ConnectionTest {
   @Test
   public void handshakeError() throws Exception {
     final int errorCode = 16;
-    ConnectionSpy cs = createConnectionSpy();
+    ConnectionSpy cs = TestUtils.createConnectionSpy();
     AbstractSocket transport = cs.transport;
     final Connection connection = cs.connection;
 
@@ -239,7 +226,7 @@ public class ConnectionTest {
     String appName = "testApp";
     String sessionId = "sessionId";
 
-    ConnectionSpy cs = createConnectionSpy();
+    ConnectionSpy cs = TestUtils.createConnectionSpy();
     AbstractSocket transport = cs.transport;
     Connection connection = cs.connection;
 
@@ -255,7 +242,7 @@ public class ConnectionTest {
   void handshakeWithVersion() throws Exception {
     AppData app = new AppData("appName", "1.0.0");
 
-    ConnectionSpy cs = createConnectionSpy();
+    ConnectionSpy cs = TestUtils.createConnectionSpy();
     AbstractSocket transport = cs.transport;
     Connection connection = cs.connection;
 
@@ -271,7 +258,7 @@ public class ConnectionTest {
   void handshakeWithVersionRange() throws Exception {
     AppData app = new AppData("appName", "^1.1.0");
 
-    ConnectionSpy cs = createConnectionSpy();
+    ConnectionSpy cs = TestUtils.createConnectionSpy();
     AbstractSocket transport = cs.transport;
     Connection connection = cs.connection;
 
@@ -452,7 +439,7 @@ public class ConnectionTest {
 
   @Test
   void useTransportNotConnected() {
-    ConnectionSpy cs = createConnectionSpy(null, false);
+    ConnectionSpy cs = TestUtils.createConnectionSpy(null, false);
     AbstractSocket transport = cs.transport;
     Connection connection = cs.connection;
 
@@ -469,7 +456,7 @@ public class ConnectionTest {
   void useTransportConnected() throws Exception {
     String appName = "testApp";
 
-    ConnectionSpy cs = createConnectionSpy(null, false);
+    ConnectionSpy cs = TestUtils.createConnectionSpy(null, false);
     AbstractSocket transport = cs.transport;
     Connection connection = cs.connection;
 
@@ -555,18 +542,6 @@ public class ConnectionTest {
       this.messageNumber = messageNumber;
       this.interfaceName = interfaceName;
       this.methods = methods;
-    }
-  }
-
-  private static class ConnectionSpy {
-
-    public Connection connection;
-
-    public AbstractSocket transport;
-
-    public ConnectionSpy(Connection connection, AbstractSocket transport) {
-      this.connection = connection;
-      this.transport = transport;
     }
   }
 
