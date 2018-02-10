@@ -53,14 +53,14 @@ class SimpleSessionPolicyTest {
     when(transport.isConnected()).thenReturn(false);
     connection.onConnectionClosed();
 
-    // make call that should be repeated after connection is restored
     CallHandler callHandler = spy(new CallHandler() {
 
       @Override
-      public void handleCallback(List<?> data) {
+      public void handleCall(String methodName, List<?> data) {
       }
     });
 
+    // make calls that should be repeated after connection is restored
     for (int i = 0; i < numSentCalls; ++i) {
       connection.call("interface", "method", callArgs, callHandler);
     }
@@ -69,7 +69,8 @@ class SimpleSessionPolicyTest {
     when(transport.isConnected()).thenReturn(true);
     connection.onConnected();
 
-    verify(callHandler, times(numSentCalls - numReceivedMessages)).handleCallback(callbackArgs);
+    verify(callHandler, times(numSentCalls - numReceivedMessages))
+        .handleCall("ok", callbackArgs);
     assertEquals(expectedMessageCounter, connection.getMessageNumberCounter(),
         "Must have correct message number");
     assertEquals(sessionId, connection.getSessionId());

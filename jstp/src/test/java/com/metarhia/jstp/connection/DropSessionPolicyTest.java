@@ -4,11 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,13 +51,13 @@ class DropSessionPolicyTest {
     when(transport.isConnected()).thenReturn(false);
     connection.onConnectionClosed();
 
-    // make call that should be repeated after connection is restored
     CallHandler callHandler = spy(new CallHandler() {
       @Override
-      public void handleCallback(List<?> data) {
+      public void handleCall(String methodName, List<?> data) {
       }
     });
 
+    // make calls that should be repeated after connection is restored
     for (int i = 0; i < numSentCalls; ++i) {
       connection.call("interface", "method", callArgs, callHandler);
     }
@@ -68,7 +69,8 @@ class DropSessionPolicyTest {
     when(transport.isConnected()).thenReturn(true);
     connection.onConnected();
 
-    verify(callHandler, times(0)).handleCallback(anyList());
+    verify(callHandler, never())
+        .handleCall(anyString(), anyList());
     assertEquals(1, connection.getMessageNumberCounter(),
         "Must have correct message number");
     assertNotEquals(sessionId, connection.getSessionId());

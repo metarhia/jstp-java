@@ -24,7 +24,6 @@ import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
 import com.metarhia.jstp.exceptions.ConnectionException;
-import com.metarhia.jstp.handlers.CallHandler;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -149,29 +148,6 @@ public class ConnectionTest {
         connection.handshake(TestConstants.MOCK_APP_NAME, null);
       }
     }
-  }
-
-  @Test
-  public void callbackHandler() throws Exception {
-    long messageNumber = 42;
-    String methodName = "method";
-    String interfaceName = "interfaceName";
-    final List<?> recvArgs = Collections.singletonList(null);
-    final List<?> responseArgs = Arrays.asList(24, "whatever");
-
-    final String input = String.format(TestConstants.TEMPLATE_CALL,
-        messageNumber, interfaceName, methodName, JSSerializer.stringify(recvArgs));
-    JSObject call = JSParser.parse(input);
-    connection.setCallHandler(interfaceName, methodName, new CallHandler() {
-      @Override
-      public void handleCallback(List<?> data) {
-        assertEquals(data, recvArgs);
-        callback(connection, JSCallback.OK, responseArgs);
-      }
-    });
-    connection.onMessageReceived(call);
-    verify(connection, times(1))
-        .callback(JSCallback.OK, responseArgs, messageNumber);
   }
 
   @Test
