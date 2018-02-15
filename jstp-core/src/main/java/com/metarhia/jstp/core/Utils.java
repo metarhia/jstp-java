@@ -1,7 +1,5 @@
 package com.metarhia.jstp.core;
 
-import java.text.ParseException;
-
 public final class Utils {
 
   private static final String[] CONTROL_CHARS = {
@@ -67,13 +65,13 @@ public final class Utils {
   }
 
   public static String unescapeString(char[] input, int fromIndex, int maxIndex)
-      throws ParseException {
+      throws JSParsingException {
     return unescapeString(input, fromIndex, maxIndex, new StringBuilder(30));
   }
 
   public static String unescapeString(char[] input, int fromIndex,
                                       int maxIndex, StringBuilder builder)
-      throws ParseException {
+      throws JSParsingException {
     int backslash = fromIndex;
     int index = indexOf(input, '\\', backslash, maxIndex);
     if (index < 0) {
@@ -94,7 +92,7 @@ public final class Utils {
   }
 
   public static int addControlChar(char[] input, int start, StringBuilder dst)
-      throws ParseException {
+      throws JSParsingException {
     int codePoint;
     switch (input[start]) {
       case '"':
@@ -142,7 +140,7 @@ public final class Utils {
           dst.append(Character.toChars(codePoint));
           return i + 3;
         } else {
-          throw new ParseException("Invalid Unicode escape sequence", start + 1);
+          throw new JSParsingException(start + 1, "Invalid Unicode escape sequence");
         }
       default:
         dst.append(input[start]);

@@ -5,7 +5,6 @@ import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import com.metarhia.jstp.core.Utils;
 import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.text.ParseException;
 
 public class Tokenizer implements Serializable {
 
@@ -92,20 +91,16 @@ public class Tokenizer implements Serializable {
         throw new JSParsingException(index - 1, "Unmatched quote");
       }
 
-      try {
-        str = Utils.unescapeString(input, index, lastIndex, cachedBuilder);
-      } catch (ParseException e) {
-        throw new JSParsingException(e);
-      }
+      str = Utils.unescapeString(input, index, lastIndex, cachedBuilder);
       index = lastIndex + 1; // skip quote
       return lastToken = Token.STRING;
     }
 
-    if (Character.isUnicodeIdentifierStart(ch)) {
+    if (isIdentifierStart(ch)) {
       // identifier
-      int lastIndex = getPastLastIdentifierIndex(input, index);
-      str = new String(input, index - 1, lastIndex - index + 1);
-      index = lastIndex;
+      int pastLastIndex = getPastLastIdentifierIndex(input, index - 1);
+      str = Utils.unescapeString(input, index - 1, pastLastIndex, cachedBuilder);
+      index = pastLastIndex;
 
       if (str.equals(NULL_STR)) {
         return lastToken = Token.NULL;
@@ -172,8 +167,27 @@ public class Tokenizer implements Serializable {
     return Utils.indexOf(input, ch, from, length);
   }
 
-  private int getPastLastIdentifierIndex(char[] input, int index) {
-    while (index < length && Character.isUnicodeIdentifierPart(input[index])) {
+  private int getPastLastIdentifierIndex(char[] input, int index) throws JSParsingException {
+    while (index < length) {
+      char ch = input[index];
+      if (ch == '\\'
+          && index + 1 < length
+          && input[index + 1] == 'u') {
+        int nextIndex = -1;
+        if (index + 2 < length
+            && input[index + 2] == '{') {
+          nextIndex = indexOf('}', index + 3);
+        } else if (index + 5 < length) {
+          nextIndex = index + 4;
+        }
+        if (nextIndex >= 0) {
+          index = nextIndex;
+        } else {
+          throw new JSParsingException(index, "Invalid unicode escape character sequence");
+        }
+      } else if (!isIdentifierPart(ch)) {
+        break;
+      }
       ++index;
     }
     return index;
@@ -193,6 +207,14 @@ public class Tokenizer implements Serializable {
       ++count;
     }
     return count;
+  }
+
+  private static boolean isIdentifierStart(char ch) {
+    return Character.isUnicodeIdentifierStart(ch) || ch == '_' || ch == '$' || ch == '\\';
+  }
+
+  private static boolean isIdentifierPart(char ch) {
+    return Character.isUnicodeIdentifierPart(ch) || ch == '_' || ch == '$';
   }
 
   public static boolean isLetter(char ch) {

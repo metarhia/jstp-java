@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.metarhia.jstp.core.JSTypes.JSEntry;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
+import com.metarhia.jstp.core.JSTypes.JSEntry;
 import com.metarhia.jstp.core.JSTypes.JSUndefined;
 import com.metarhia.jstp.core.TestUtils.TestData;
 import java.util.ArrayList;
@@ -47,7 +47,7 @@ class JSParserTest {
       new TestData<>("false", false),
       new TestData<>("10", 10),
       new TestData<>("63.52", 63.52),
-      new TestData<>("23051225940000",23051225940000L),
+      new TestData<>("23051225940000", 23051225940000L),
       new TestData<>("NaN", Double.NaN),
       new TestData<>("Infinity", Double.POSITIVE_INFINITY),
       new TestData<>("-Infinity", Double.NEGATIVE_INFINITY),
@@ -58,7 +58,11 @@ class JSParserTest {
   };
 
   private static final TestData[] parseKeyValuePairTestData = new TestData[]{
+      new TestData<>("\\u{0061}bc: 4", new JSEntry<>("abc", 4)),
+      new TestData<>("\\u0061bc: 4", new JSEntry<>("abc", 4)),
       new TestData<>("a: 4", new JSEntry<>("a", 4)),
+      new TestData<>("_a: 4", new JSEntry<>("_a", 4)),
+      new TestData<>("$a: 4", new JSEntry<>("$a", 4)),
       new TestData<>("55 : ['abc']", new JSEntry<>("55", Arrays.asList("abc")))
   };
 
