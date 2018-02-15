@@ -14,8 +14,12 @@ import javax.lang.model.element.Element;
 public final class PropertyGetterUtils {
 
   public static final String TYPE_CAST_PATTERN = "(($T) ";
-  public static final String OBJECT_GETTER = ").get($S)";
-  public static final String ARRAY_GETTER = ").get($L)";
+  public static final String OBJECT_GETTER = ".get($S)";
+  public static final String CASTED_OBJECT_GETTER = ")" + OBJECT_GETTER;
+  public static final String OBJECT_INDEX_GETTER = ".getByIndex($L)";
+  public static final String CASTED_OBJECT_INDEX_GETTER = ")" + OBJECT_GETTER;
+  public static final String ARRAY_GETTER = ".get($L)";
+  public static final String CASTED_ARRAY_GETTER = ")" + ARRAY_GETTER;
 
   private static final Pattern SIMPLE_DOUBLE_PATTERN = Pattern.compile("\\d+\\.?\\d*");
 
@@ -48,12 +52,14 @@ public final class PropertyGetterUtils {
 
   public static CodeBlock composeArrayGetter(CodeBlock identifier, int... indices) {
     CodeBlock.Builder builder = CodeBlock.builder();
-    for (int i = indices.length - 1; i >= 0; i--) {
+    // -2 because we don't need to cast for the last element and the identifier itself
+    for (int i = indices.length - 2; i >= 0; i--) {
       builder.add(TYPE_CAST_PATTERN, ClassName.get(List.class));
     }
     builder.add(identifier);
-    for (int i = 0; i < indices.length; i++) {
-      builder.add(ARRAY_GETTER, indices[i]);
+    builder.add(ARRAY_GETTER, indices[0]);
+    for (int i = 1; i < indices.length; i++) {
+      builder.add(CASTED_ARRAY_GETTER, indices[i]);
     }
     return builder.build();
   }
@@ -64,29 +70,17 @@ public final class PropertyGetterUtils {
 
   public static CodeBlock composeObjectGetter(CodeBlock identifier, String... properties) {
     CodeBlock.Builder builder = CodeBlock.builder();
-    for (int i = properties.length - 1; i >= 0; i--) {
+    // -2 because we don't need to cast for the last element and the identifier itself
+    for (int i = properties.length - 2; i >= 0; i--) {
       builder.add(TYPE_CAST_PATTERN, ClassName.get(JSObject.class));
     }
     builder.add(identifier);
-    for (String property : properties) {
-      builder.add(OBJECT_GETTER, property);
+    builder.add(OBJECT_GETTER, properties[0]);
+    for (int i = 1; i < properties.length; i++) {
+      builder.add(CASTED_OBJECT_GETTER, properties[i]);
     }
     return builder.build();
   }
-
-  public static CodeBlock composeObjectGetter(CodeBlock leftHandSide, CodeBlock identifier,
-      String... properties) {
-    CodeBlock.Builder builder = leftHandSide.toBuilder();
-    for (int i = properties.length - 1; i >= 0; i--) {
-      builder.add(TYPE_CAST_PATTERN, ClassName.get(JSObject.class));
-    }
-    builder.add(identifier);
-    for (String property : properties) {
-      builder.add(OBJECT_GETTER, property);
-    }
-    return builder.build();
-  }
-
 
   public static CodeBlock composeCustomGetter(String identifier, String... properties)
       throws PropertyFormatException {
@@ -100,26 +94,47 @@ public final class PropertyGetterUtils {
     for (int i = properties.length - 1; i >= 0; i--) {
       String property = properties[i];
       if (property.startsWith("[") && property.endsWith("]")
-          ||
-          (property.startsWith("{") && property.endsWith("}"))) {
-        ClassName type = ClassName.get(property.startsWith("[") ? List.class : JSObject.class);
+          || property.startsWith("{") && property.endsWith("}")) {
+        ClassName type;
+        String pattern;
+        boolean array = false;
+        if (property.startsWith("[")) {
+          type = ClassName.get(List.class);
+          pattern = CASTED_ARRAY_GETTER;
+          array = true;
+        } else /* if (property.startsWith("{")) */ {
+          type = ClassName.get(JSObject.class);
+          pattern = CASTED_OBJECT_INDEX_GETTER;
+          array = false;
+        }
         if (property.length() < 3) {
           throw new PropertyFormatException("Empty array of indices");
         }
         property = property.substring(1, property.length() - 1);
         String[] indices = property.split("[, ]+");
         for (int j = indices.length - 1; j >= 0; j--) {
-          builder.add(TYPE_CAST_PATTERN, type);
-          customProperties.addFirst(new CustomProperty(ARRAY_GETTER, indices[j]));
+          String currPattern = pattern;
+          if (i == 0 && j == 0) {
+            currPattern = array ? ARRAY_GETTER : OBJECT_INDEX_GETTER;
+          } else {
+            builder.add(TYPE_CAST_PATTERN, type);
+          }
+          java.lang.Object value = array ? indices[j] : Integer.valueOf(indices[j]);
+          customProperties.addFirst(new CustomProperty(currPattern, value));
         }
       } else {
-        builder.add(TYPE_CAST_PATTERN, ClassName.get(JSObject.class));
-        customProperties.addFirst(new CustomProperty(OBJECT_GETTER, property));
+        String pattern = CASTED_OBJECT_GETTER;
+        if (i == 0) {
+          pattern = OBJECT_GETTER;
+        } else {
+          builder.add(TYPE_CAST_PATTERN, ClassName.get(JSObject.class));
+        }
+        customProperties.addFirst(new CustomProperty(pattern, property));
       }
     }
     builder.add(identifier);
     for (CustomProperty cp : customProperties) {
-      builder.add(cp.pattern, cp.property);
+      builder.add(cp.pattern, cp.value);
     }
     return builder.build();
   }
@@ -127,11 +142,11 @@ public final class PropertyGetterUtils {
   private static class CustomProperty {
 
     public String pattern;
-    public String property;
+    public java.lang.Object value;
 
-    public CustomProperty(String pattern, String property) {
+    public CustomProperty(String pattern, java.lang.Object value) {
       this.pattern = pattern;
-      this.property = property;
+      this.value = value;
     }
   }
 }

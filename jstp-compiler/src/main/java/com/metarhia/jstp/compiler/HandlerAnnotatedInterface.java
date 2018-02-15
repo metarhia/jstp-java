@@ -2,6 +2,7 @@ package com.metarhia.jstp.compiler;
 
 import com.metarhia.jstp.compiler.annotations.handlers.ErrorHandler;
 import com.metarhia.jstp.compiler.annotations.handlers.Handler;
+import com.metarhia.jstp.compiler.annotations.handlers.Has;
 import com.metarhia.jstp.compiler.annotations.handlers.NoDefaultGet;
 import com.metarhia.jstp.compiler.annotations.handlers.NotNull;
 import com.metarhia.jstp.compiler.annotations.handlers.Receiver;
@@ -59,7 +60,7 @@ public class HandlerAnnotatedInterface {
   private TypeElement annotatedInterface;
 
   private List<ExecutableElement> errorHandlers;
-  private List<com.squareup.javapoet.MethodSpec> messageHandlers;
+  private List<MessageHandler> messageHandlers;
 
   private MethodSpec.Builder mainInvokeBuilder;
   private TypeSpec.Builder jstpClassBuilder;
@@ -169,7 +170,7 @@ public class HandlerAnnotatedInterface {
         } else {
           // create new invoke wrapper
           MethodSpec invokeMethod = createInvokeMethod(method, handlersName);
-          messageHandlers.add(invokeMethod);
+          messageHandlers.add(new MessageHandler(method, invokeMethod));
         }
       }
     }
@@ -178,9 +179,20 @@ public class HandlerAnnotatedInterface {
     if (errorHandlers.size() > 0) {
       mainInvokeBuilder.beginControlFlow("try ");
     }
-    for (MethodSpec ms : messageHandlers) {
-      mainInvokeBuilder.addStatement("$L($L)", ms.name, messageParameterName);
-      jstpClassBuilder.addMethod(ms);
+    for (MessageHandler mh : messageHandlers) {
+      Has hasAnnotation = mh.method.getAnnotation(Has.class);
+      if (hasAnnotation != null) {
+        CodeBlock getter = PropertyGetterUtils
+            .composeCustomGetter(messageParameterName, hasAnnotation.value());
+        mainInvokeBuilder.beginControlFlow("if ($L != null)", getter);
+      }
+
+      mainInvokeBuilder.addStatement("$L($L)", mh.handler.name, messageParameterName);
+      jstpClassBuilder.addMethod(mh.handler);
+
+      if (hasAnnotation != null) {
+        mainInvokeBuilder.endControlFlow();
+      }
     }
 
     if (errorHandlers.size() > 0) {
@@ -210,7 +222,11 @@ public class HandlerAnnotatedInterface {
 
     String payloadName = MESSAGE_PARAMETER_NAME;
 
-    TypeMirror payloadType = getClassFromTyped(method, true);
+    TypeMirror payloadType = getClassFromTyped(method);
+    if (typeUtils.isSameType(payloadType, Object.class)) {
+      // use List type by default
+      payloadType = typeUtils.getTypeMirror(List.class);
+    }
     CodeBlock payloadData = PropertyGetterUtils
         .composeGetterFromAnnotations(MESSAGE_PARAMETER_NAME, method);
     if (payloadData == null && method.getAnnotation(NoDefaultGet.class) == null) {
@@ -280,42 +296,27 @@ public class HandlerAnnotatedInterface {
         if (typeUtils.isSameType(payloadType, JSObject.class)) {
           getter = PropertyGetterUtils
               .composeCustomGetter(payloadNameBlock, String.format("{%d}", argCounter));
-          composeArgumentGetter(methodBuilder, parameter, getter, false);
+          putArgumentGetter(methodBuilder, parameter, getter, false);
         } else if (typeUtils.isSameType(payloadType, List.class)) {
+          // use List by default
           getter = PropertyGetterUtils.composeArrayGetter(payloadNameBlock, argCounter);
-          composeArgumentGetter(methodBuilder, parameter, getter, false);
+          putArgumentGetter(methodBuilder, parameter, getter, false);
         } else {
-          // don't know type, so check both (JSObject and JSArray)
-
-          // predeclare
-          methodBuilder.addStatement(VARIABLE_DECLARATION_NULL, parameter.asType(),
-              parameter.getSimpleName());
-
-          final ClassName objectClassName = ClassName.get(JSObject.class);
-          methodBuilder.beginControlFlow("if ($L instanceof $T)", payloadName, objectClassName);
-          getter = PropertyGetterUtils
-              .composeCustomGetter(payloadName, String.format("{%d}", argCounter));
-          composeArgumentGetter(methodBuilder, parameter, getter, true);
-
-          final ClassName arrayClassName = ClassName.get(List.class);
-          methodBuilder.nextControlFlow("else if ($L instanceof $T)", payloadName, arrayClassName);
-          getter = PropertyGetterUtils.composeArrayGetter(payloadName, argCounter);
-          composeArgumentGetter(methodBuilder, parameter, getter, true);
-
-          methodBuilder.endControlFlow();
+          throw new HandlerProcessorException(
+              "Unsupported payload type. Only JSObject and List are supported");
         }
       } else {
         if (getter == null) {
           getter = CodeBlock.of(payloadName);
         }
-        composeArgumentGetter(methodBuilder, parameter, getter, false);
+        putArgumentGetter(methodBuilder, parameter, getter, false);
       }
       ++argCounter;
     }
   }
 
-  private void composeArgumentGetter(MethodSpec.Builder methodBuilder, VariableElement parameter,
-                                     CodeBlock getter, boolean declared) {
+  private void putArgumentGetter(MethodSpec.Builder methodBuilder, VariableElement parameter,
+                                 CodeBlock getter, boolean declared) {
     TypeMirror parameterType = parameter.asType();
     String pattern = declared ? VARIABLE_ASSIGNMENT : VARIABLE_DEFINITION;
     if (typeUtils.isSameType(parameterType, Long.class)) {
@@ -324,7 +325,7 @@ public class HandlerAnnotatedInterface {
     methodBuilder.addStatement(pattern, parameterType, parameter.getSimpleName(), getter);
   }
 
-  private TypeMirror getClassFromTyped(ExecutableElement method, boolean strictJSType)
+  private TypeMirror getClassFromTyped(ExecutableElement method)
       throws ClassCastException {
     TypeMirror payloadType = null;
     if (method.getAnnotation(Typed.class) != null) {
@@ -333,10 +334,6 @@ public class HandlerAnnotatedInterface {
       } catch (MirroredTypeException e) {
         // intended ...
         payloadType = e.getTypeMirror();
-      }
-      if (strictJSType && !typeUtils.isSubtype(payloadType, JSTP_VALUE_TYPE)) {
-        throw new ClassCastException(
-            "Cannot cast jstp message data to " + String.valueOf(payloadType));
       }
     } else {
       payloadType = typeUtils.getTypeElement(JSTP_VALUE_TYPE.getCanonicalName());
@@ -454,5 +451,16 @@ public class HandlerAnnotatedInterface {
   private boolean checkFirstCast(List<? extends VariableElement> parameters, TypeMirror type) {
     return parameters.size() == 1
         && typeUtils.isAssignable(parameters.get(0).asType(), type);
+  }
+
+  private static class MessageHandler {
+
+    public final ExecutableElement method;
+    public final MethodSpec handler;
+
+    public MessageHandler(ExecutableElement method, MethodSpec handler) {
+      this.method = method;
+      this.handler = handler;
+    }
   }
 }
