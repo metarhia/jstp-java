@@ -5,6 +5,7 @@ import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import com.metarhia.jstp.exceptions.ConnectionException;
+import com.metarhia.jstp.exceptions.MessageHandlingException;
 import com.metarhia.jstp.storage.StorageInterface;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -363,7 +364,7 @@ public class Connection implements
       } else if (handleMessage(message, messageType)) {
         sessionPolicy.onMessageReceived(message, messageType);
       }
-    } catch (ClassCastException | NullPointerException e) {
+    } catch (ClassCastException | NullPointerException | MessageHandlingException e) {
       // means message was ill formed
       rejectMessage(message, true);
     }

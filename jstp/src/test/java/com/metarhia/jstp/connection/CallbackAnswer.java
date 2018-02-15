@@ -22,7 +22,7 @@ public class CallbackAnswer implements Answer<Void> {
     this(connection, JSCallback.OK, new ArrayList<>());
   }
 
-  public CallbackAnswer(Connection connection, JSCallback status, List<Object> args) {
+  public CallbackAnswer(Connection connection, JSCallback status, List<?> args) {
     this(connection, status, JSSerializer.stringify(args));
   }
 
