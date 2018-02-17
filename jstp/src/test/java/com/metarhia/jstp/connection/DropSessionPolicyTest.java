@@ -49,7 +49,7 @@ class DropSessionPolicyTest {
 
     // disconnect transport
     when(transport.isConnected()).thenReturn(false);
-    connection.onConnectionClosed();
+    connection.onSocketClosed();
 
     CallHandler callHandler = spy(new CallHandler() {
       @Override

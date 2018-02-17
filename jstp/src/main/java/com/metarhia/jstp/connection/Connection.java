@@ -639,8 +639,10 @@ public class Connection implements
       }
       state = ConnectionState.CLOSING;
       reset();
-      if (transport != null) {
+      if (transport != null && transport.isConnected()) {
         transport.close(forced);
+      } else {
+        onSocketClosed();
       }
     }
   }
@@ -706,7 +708,7 @@ public class Connection implements
   }
 
   @Override
-  public void onConnectionClosed() {
+  public void onSocketClosed() {
     synchronized (stateLock) {
       if (state == ConnectionState.CLOSING) {
         state = ConnectionState.CLOSED;
@@ -716,6 +718,7 @@ public class Connection implements
         reportClosed();
       } else {
         state = ConnectionState.AWAITING_HANDSHAKE;
+        // app name is null -> connection was not established yet, so don't report
       }
       transport.clearQueue();
     }
