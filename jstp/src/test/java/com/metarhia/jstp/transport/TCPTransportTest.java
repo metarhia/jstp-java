@@ -16,6 +16,7 @@ import com.metarhia.jstp.connection.HandshakeAnswer;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParser;
+import com.metarhia.jstp.handlers.OkErrorHandler;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -75,7 +76,7 @@ public class TCPTransportTest {
     ManualHandler eventHandler = mock(ManualHandler.class);
     connection.addEventHandler("auth", "insert", eventHandler);
 
-    ManualHandler handler = mock(ManualHandler.class);
+    OkErrorHandler handler = mock(OkErrorHandler.class);
     connection.addHandler(17, handler);
 
     readThread.start();
@@ -86,8 +87,8 @@ public class TCPTransportTest {
     }
 
     verify(eventHandler, times(1))
-        .handle(JSParser.<JSObject>parse(eventMessage));
+        .onMessage(JSParser.<JSObject>parse(eventMessage));
     verify(handler, times(1))
-        .handle(JSParser.<JSObject>parse(callbackMessage));
+        .onMessage(JSParser.<JSObject>parse(callbackMessage));
   }
 }

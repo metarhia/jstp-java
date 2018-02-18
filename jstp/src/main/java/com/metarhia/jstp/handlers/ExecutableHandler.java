@@ -10,13 +10,21 @@ public abstract class ExecutableHandler implements ManualHandler, Runnable {
 
   protected JSObject message;
 
+  protected Integer errorCode;
+
   public ExecutableHandler(Executor executor) {
     this.executor = executor;
   }
 
   @Override
-  public void handle(JSObject message) {
+  public void onMessage(JSObject message) {
     this.message = message;
+    executor.execute(this);
+  }
+
+  @Override
+  public void onError(int errorCode) {
+    this.errorCode = errorCode;
     executor.execute(this);
   }
 }

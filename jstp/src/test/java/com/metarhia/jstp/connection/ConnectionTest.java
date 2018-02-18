@@ -5,10 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -22,7 +27,7 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
-import com.metarhia.jstp.exceptions.ConnectionException;
+import com.metarhia.jstp.handlers.OkErrorHandler;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,7 +36,6 @@ import java.util.Map;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Spy;
 import org.mockito.invocation.InvocationOnMock;
@@ -169,6 +173,13 @@ public class ConnectionTest {
     ConnectionSpy cs = TestUtils.createConnectionSpy();
     AbstractSocket transport = cs.transport;
     final Connection connection = cs.connection;
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        connection.onSocketClosed();
+        return null;
+      }
+    }).when(transport).close(anyBoolean());
 
     doAnswer(new Answer<Void>() {
       @Override
@@ -181,17 +192,20 @@ public class ConnectionTest {
     }).when(transport).send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
 
     ConnectionListener listener = mock(ConnectionListener.class);
+    OkErrorHandler handler = spy(OkErrorHandler.class);
+
     connection.addSocketListener(listener);
 
-    connection.handshake(TestConstants.MOCK_APP_NAME, null);
+    connection.handshake(TestConstants.MOCK_APP_NAME, handler);
 
-    verify(listener, times(1)).onConnectionError(argThat(
-        new ArgumentMatcher<ConnectionException>() {
-          @Override
-          public boolean matches(ConnectionException error) {
-            return error.getErrorCode() == errorCode;
-          }
-        }));
+    verify(handler, times(1))
+        .handleError(eq(errorCode), anyList());
+    verify(handler, never())
+        .handleOk(anyList());
+
+    verify(listener, times(1))
+        .onConnectionClosed();
+
     assertTrue(connection.getSessionId() == null);
     assertFalse(connection.isConnected());
   }
@@ -298,7 +312,7 @@ public class ConnectionTest {
       connection.onMessageReceived(message);
       connection.removeCallHandler(ba.interfaceName, ba.methodName);
 
-      verify(handler, times(1)).handle(message);
+      verify(handler, times(1)).onMessage(message);
     }
   }
 
@@ -329,7 +343,7 @@ public class ConnectionTest {
       connection.onMessageReceived(message);
       connection.removeEventHandler(ba.interfaceName, ba.methodName, handler);
 
-      verify(handler, times(1)).handle(message);
+      verify(handler, times(1)).onMessage(message);
     }
   }
 
@@ -349,7 +363,7 @@ public class ConnectionTest {
 
   @Test
   void callbackHandling() throws Exception {
-    ManualHandler handler = spy(ManualHandler.class);
+    OkErrorHandler handler = spy(OkErrorHandler.class);
     for (CallbackArguments cba : callbackMessages) {
       String args = JSSerializer.stringify(cba.args);
       String callString = String.format(TestConstants.TEMPLATE_CALLBACK,
@@ -359,7 +373,7 @@ public class ConnectionTest {
       connection.addHandler(cba.messageNumber, handler);
       connection.onMessageReceived(message);
 
-      verify(handler, times(1)).handle(message);
+      verify(handler, times(1)).onMessage(message);
     }
   }
 
@@ -461,7 +475,7 @@ public class ConnectionTest {
         String.format(TestConstants.TEMPLATE_CALL, 13, interfaceName, methodName, "[]");
     connection.onMessageReceived(JSParser.<JSObject>parse(callString));
 
-    verify(handler, times(0)).handle(any(JSObject.class));
+    verify(handler, times(0)).onMessage(any(JSObject.class));
   }
 
   @Test
@@ -477,7 +491,7 @@ public class ConnectionTest {
         String.format(TestConstants.TEMPLATE_EVENT, 13, interfaceName, methodName, "[]");
     connection.onMessageReceived(JSParser.<JSObject>parse(callString));
 
-    verify(handler, times(0)).handle(any(JSObject.class));
+    verify(handler, times(0)).onMessage(any(JSObject.class));
   }
 
   private static class BasicArguments {

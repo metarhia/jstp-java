@@ -2,8 +2,8 @@ package com.metarhia.jstp.connection;
 
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
+import com.metarhia.jstp.core.JSTypes.JSElements;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
-import com.metarhia.jstp.exceptions.ConnectionException;
 import com.metarhia.jstp.exceptions.MessageHandlingException;
 import com.metarhia.jstp.storage.StorageInterface;
 import java.util.ArrayList;
@@ -402,20 +402,25 @@ public class Connection implements
         return false;
       }
 
+      ManualHandler handshakeHandler = handlers.remove(0L);
+
       final String payloadKey = message.getKey(1);
       final Object payload = message.get(payloadKey);
       if (JSCallback.fromString(payloadKey) == JSCallback.ERROR) {
         int errorCode = ((List<Integer>) payload).get(0);
-        reportError(errorCode);
         close(true);
+        if (handshakeHandler != null) {
+          handshakeHandler.onError(errorCode);
+        } else {
+          logger.info("Handshake failed with error {}", errorCode);
+        }
       } else if (transport.isConnected()) {
         // make sure transport is still connected to avoid extra work
         state = ConnectionState.CONNECTED;
         boolean restored = false;
         if (payload instanceof Number) {
-          processHandshakeRestoreResponse(message);
-          setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages() + 1);
           restored = true;
+          processHandshakeRestoreResponse(message);
         } else if (payload instanceof String) {
           processHandshakeResponse(message);
         } else {
@@ -423,40 +428,28 @@ public class Connection implements
           return false;
         }
         reportConnected(restored);
+
+        if (handshakeHandler != null) {
+          handshakeHandler.onMessage(JSElements.EMPTY_OBJECT);
+        }
       }
     }
     return true;
   }
 
   private void processHandshakeRestoreResponse(JSObject message) {
-    if (getMessageNumberCounter() == 0) {
-      getNextMessageNumber();
-    }
     long numServerReceivedMessages = ((Number) message.get(JSCallback.OK.toString())).longValue();
+    setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages() + 1);
     sessionPolicy.restore(numServerReceivedMessages);
-
-    long receiverIndex = 0;
-    ManualHandler callbackHandler = handlers.remove(receiverIndex);
-    if (callbackHandler != null) {
-      callbackHandler.handle(message);
-    }
-
   }
 
   private void processHandshakeResponse(JSObject message) {
-    long receiverIndex = 0;
-    ManualHandler handshakeHandler = handlers.remove(receiverIndex);
-
     // always reset connection on basic handshake
     reset();
-    // count first handshake
-    getNextMessageNumber();
-
-    sessionPolicy.getSessionData().setSessionId((String) message.get(JSCallback.OK.toString()));
-
-    if (handshakeHandler != null) {
-      handshakeHandler.handle(message);
-    }
+    String sessionId = (String) message.get(JSCallback.OK.toString());
+    sessionPolicy.getSessionData().setSessionId(sessionId);
+    handlers = new ConcurrentHashMap<>();
+    setMessageNumberCounter(1);
   }
 
   private boolean callMessageHandler(JSObject message) {
@@ -474,7 +467,7 @@ public class Connection implements
 
     ManualHandler handler = iface.get(methodName);
     if (handler != null) {
-      handler.handle(message);
+      handler.onMessage(message);
     }
     return true;
   }
@@ -487,7 +480,7 @@ public class Connection implements
     }
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
     if (callbackHandler != null) {
-      callbackHandler.handle(message);
+      callbackHandler.onMessage(message);
     }
     return true;
   }
@@ -512,7 +505,7 @@ public class Connection implements
     }
 
     for (ManualHandler eh : eventHandlers) {
-      eh.handle(message);
+      eh.onMessage(message);
     }
     return true;
   }
@@ -539,7 +532,12 @@ public class Connection implements
   }
 
   private boolean pongMessageHandler(JSObject message) {
-    return callbackMessageHandler(message);
+    long receiverIndex = getMessageNumber(message);
+    ManualHandler pongHandler = handlers.remove(receiverIndex);
+    if (pongHandler != null) {
+      pongHandler.onMessage(JSElements.EMPTY_OBJECT);
+    }
+    return true;
   }
 
   public void setCallHandler(String interfaceName, String methodName, ManualHandler callHandler) {
@@ -583,12 +581,12 @@ public class Connection implements
     }
   }
 
-  public void addHandler(long messageNumber, ManualHandler manualHandler) {
-    handlers.put(messageNumber, manualHandler);
+  public void addHandler(long messageNumber, ManualHandler handler) {
+    handlers.put(messageNumber, handler);
   }
 
-  public void removeHandler(long messageNumber) {
-    handlers.remove(messageNumber);
+  public ManualHandler removeHandler(long messageNumber) {
+    return handlers.remove(messageNumber);
   }
 
   public void saveSession(StorageInterface storageInterface) {
@@ -739,16 +737,6 @@ public class Connection implements
   private void reportConnected(boolean restored) {
     for (ConnectionListener listener : connectionListeners) {
       listener.onConnected(restored);
-    }
-  }
-
-  private void reportError(int errorCode) {
-    reportError(new ConnectionException(errorCode));
-  }
-
-  private void reportError(ConnectionException error) {
-    for (ConnectionListener listener : connectionListeners) {
-      listener.onConnectionError(error);
     }
   }
 

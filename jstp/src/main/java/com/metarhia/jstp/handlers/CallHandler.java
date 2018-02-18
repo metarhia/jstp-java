@@ -14,10 +14,15 @@ public abstract class CallHandler implements ManualHandler {
   private long callbackNumber;
 
   @Override
-  public void handle(JSObject message) {
+  public void onMessage(JSObject message) {
     callbackNumber = Connection.getMessageNumber(message);
     String methodName = message.getKey(1);
     handleCall(methodName, (List<?>) message.get(methodName));
+  }
+
+  @Override
+  public void onError(int errorCode) {
+    // ignore by default
   }
 
   public abstract void handleCall(String methodName, List<?> data);

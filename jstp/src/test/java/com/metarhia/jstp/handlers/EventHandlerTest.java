@@ -45,7 +45,7 @@ class EventHandlerTest {
         messageNumber, interfaceName, eventName, JSSerializer.stringify(eventArgs));
     JSObject eventMessage = JSParser.parse(rawEventData);
     EventHandler eventHandler = mock(EventHandler.class);
-    doCallRealMethod().when(eventHandler).handle(isA(JSObject.class));
+    doCallRealMethod().when(eventHandler).onMessage(isA(JSObject.class));
     connection.addEventHandler(interfaceName, eventName, eventHandler);
     connection.onMessageReceived(eventMessage);
 

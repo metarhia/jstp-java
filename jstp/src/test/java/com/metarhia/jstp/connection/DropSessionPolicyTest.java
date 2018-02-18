@@ -3,8 +3,7 @@ package com.metarhia.jstp.connection;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -14,7 +13,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.TestConstants;
-import com.metarhia.jstp.handlers.CallHandler;
+import com.metarhia.jstp.core.JSInterfaces.JSObject;
+import com.metarhia.jstp.handlers.OkErrorHandler;
 import com.metarhia.jstp.storage.FileStorage;
 import java.io.File;
 import java.nio.file.Paths;
@@ -51,15 +51,11 @@ class DropSessionPolicyTest {
     when(transport.isConnected()).thenReturn(false);
     connection.onSocketClosed();
 
-    CallHandler callHandler = spy(new CallHandler() {
-      @Override
-      public void handleCall(String methodName, List<?> data) {
-      }
-    });
+    OkErrorHandler handler = mock(OkErrorHandler.class);
 
     // make calls that should be repeated after connection is restored
     for (int i = 0; i < numSentCalls; ++i) {
-      connection.call("interface", "method", callArgs, callHandler);
+      connection.call("interface", "method", callArgs, handler);
     }
 
     doAnswer(new HandshakeAnswer(connection, anotherSessionId)).when(transport)
@@ -69,8 +65,9 @@ class DropSessionPolicyTest {
     when(transport.isConnected()).thenReturn(true);
     connection.onConnected();
 
-    verify(callHandler, never())
-        .handleCall(anyString(), anyList());
+    verify(handler, never())
+        .onMessage(any(JSObject.class));
+
     assertEquals(1, connection.getMessageNumberCounter(),
         "Must have correct message number");
     assertNotEquals(sessionId, connection.getSessionId());

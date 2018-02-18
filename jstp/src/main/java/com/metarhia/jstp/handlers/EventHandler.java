@@ -11,9 +11,14 @@ import java.util.List;
 public abstract class EventHandler implements ManualHandler {
 
   @Override
-  public void handle(JSObject message) {
+  public void onMessage(JSObject message) {
     String eventName = message.getKey(1);
     handleEvent(eventName, (List<?>) message.get(eventName));
+  }
+
+  @Override
+  public void onError(int errorCode) {
+    // ignore by default
   }
 
   public abstract void handleEvent(String eventName, List<?> data);
