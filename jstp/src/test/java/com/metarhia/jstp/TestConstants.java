@@ -28,6 +28,9 @@ public class TestConstants {
   public static final String TEMPLATE_CALL = "{call:[%d,'%s'],%s:%s}";
   public static final String ANY_CALL = "\\{call:\\[\\d+,'.+'],\\S+:\\[.*\\]\\}";
 
+  public static final String ANY_PING = "\\{ping:\\[\\d+]\\}";
+  public static final String ANY_PONG = "\\{pong:\\[\\d+]\\}";
+
   public static final String TEMPLATE_CALLBACK = "{callback:[%d],%s:%s}";
   public static final String TEMPLATE_EVENT = "{event:[%d,'%s'],%s:%s}";
   public static final String TEMPLATE_INSPECT = "{inspect:[%d,'%s']}";

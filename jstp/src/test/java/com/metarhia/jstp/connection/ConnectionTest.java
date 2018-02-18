@@ -126,13 +126,20 @@ public class ConnectionTest {
 
   @Test
   public void pingPong() throws Exception {
-    String input = "{ping:[42]}";
-    String response = "{pong:[42]}";
+    OkErrorHandler handler = mock(OkErrorHandler.class);
+    doCallRealMethod().when(handler)
+        .onMessage(any(JSObject.class));
 
-    connection.onMessageReceived(JSParser.<JSObject>parse(input));
+    Answer loopbackAnswer = new LoopbackAnswer(connection);
+    doAnswer(loopbackAnswer)
+        .when(transport).send(matches(TestConstants.ANY_PING));
+    doAnswer(loopbackAnswer)
+        .when(transport).send(matches(TestConstants.ANY_PONG));
 
-    verify(transport, times(1))
-        .send(argThat(new MessageMatcher(response)));
+    connection.ping(handler);
+
+    verify(handler, times(1))
+        .handleOk(Collections.EMPTY_LIST);
   }
 
   @Test

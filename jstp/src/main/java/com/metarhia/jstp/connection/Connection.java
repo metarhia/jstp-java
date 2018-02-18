@@ -322,6 +322,22 @@ public class Connection implements
     sendBuffered(eventMessage);
   }
 
+  public void ping(ManualHandler handler) {
+    long messageNumber = getNextMessageNumber();
+    Message pingMessage = new Message(messageNumber, MessageType.PING);
+
+    if (handler != null) {
+      handlers.put(messageNumber, handler);
+    }
+
+    sendBuffered(pingMessage);
+  }
+
+  public void pong(long messageNumber) {
+    Message pongMessage = new Message(messageNumber, MessageType.PONG);
+    send(pongMessage);
+  }
+
   /**
    * Should usually only be called in {@link SessionPolicy}
    *
@@ -526,8 +542,7 @@ public class Connection implements
 
   private boolean pingMessageHandler(JSObject message) {
     long pingNumber = getMessageNumber(message);
-    Message pongMessage = new Message(pingNumber, MessageType.PONG);
-    sendBuffered(pongMessage);
+    pong(pingNumber);
     return true;
   }
 
