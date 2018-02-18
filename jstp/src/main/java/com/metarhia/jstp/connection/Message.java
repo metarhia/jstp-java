@@ -86,7 +86,7 @@ public class Message implements Serializable {
     return this;
   }
 
-  public Message setMessageNumber(int messageNumber) {
+  public Message setMessageNumber(long messageNumber) {
     this.messageNumber = messageNumber;
     this.protocolArgs.set(0, this.messageNumber);
     return this;
