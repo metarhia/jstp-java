@@ -26,8 +26,8 @@ public class DropSessionPolicy implements SessionPolicy, Serializable {
   }
 
   @Override
-  public boolean restore(long numServerReceivedMessages) {
-    return false;
+  public void restore(long numServerReceivedMessages) {
+    // ignore
   }
 
   @Override

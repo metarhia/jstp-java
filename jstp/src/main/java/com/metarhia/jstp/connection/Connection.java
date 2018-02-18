@@ -413,14 +413,9 @@ public class Connection implements
         state = ConnectionState.CONNECTED;
         boolean restored = false;
         if (payload instanceof Number) {
-          restored = processHandshakeRestoreResponse(message);
-          if (restored) {
-            setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages());
-          } else {
-            reset();
-          }
-          // count first handshake or last message
-          getNextMessageNumber();
+          processHandshakeRestoreResponse(message);
+          setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages() + 1);
+          restored = true;
         } else if (payload instanceof String) {
           processHandshakeResponse(message);
         } else {
@@ -433,12 +428,12 @@ public class Connection implements
     return true;
   }
 
-  private boolean processHandshakeRestoreResponse(JSObject message) {
+  private void processHandshakeRestoreResponse(JSObject message) {
     if (getMessageNumberCounter() == 0) {
       getNextMessageNumber();
     }
     long numServerReceivedMessages = ((Number) message.get(JSCallback.OK.toString())).longValue();
-    boolean restored = sessionPolicy.restore(numServerReceivedMessages);
+    sessionPolicy.restore(numServerReceivedMessages);
 
     long receiverIndex = 0;
     ManualHandler callbackHandler = handlers.remove(receiverIndex);
@@ -446,7 +441,6 @@ public class Connection implements
       callbackHandler.handle(message);
     }
 
-    return restored;
   }
 
   private void processHandshakeResponse(JSObject message) {

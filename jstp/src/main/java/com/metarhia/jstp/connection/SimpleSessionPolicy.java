@@ -39,12 +39,11 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
   }
 
   @Override
-  public boolean restore(long numServerReceivedMessages) {
+  public void restore(long numServerReceivedMessages) {
     removeBufferedMessages(numServerReceivedMessages);
     for (String message : sentMessages.values()) {
       connection.send(message);
     }
-    return true;
   }
 
   @Override

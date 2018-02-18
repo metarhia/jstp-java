@@ -9,11 +9,8 @@ public interface SessionPolicy {
    * Called after restoration handshake so that this client may resend buffered messages
    *
    * @param numServerReceivedMessages number off messages received on the server side
-   *
-   * @return true if session was restored, false otherwise
    */
-  boolean restore(long numServerReceivedMessages);
-
+  void restore(long numServerReceivedMessages);
   /**
    * Reset current session counters and buffers
    *
