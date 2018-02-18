@@ -14,7 +14,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.TestUtils;
 import com.metarhia.jstp.TestUtils.ConnectionSpy;
@@ -392,7 +391,7 @@ public class ConnectionTest {
       List<?> args = ia.methods;
       if (args == null) {
         callback = JSCallback.ERROR;
-        args = Collections.singletonList(Constants.ERR_INTERFACE_NOT_FOUND);
+        args = Collections.singletonList(ConnectionError.INTERFACE_NOT_FOUND.getErrorCode());
       }
       String response = String.format(TestConstants.TEMPLATE_CALLBACK,
           ia.messageNumber, callback, JSSerializer.stringify(args));

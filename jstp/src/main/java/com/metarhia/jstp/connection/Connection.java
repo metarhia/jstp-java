@@ -1,6 +1,5 @@
 package com.metarhia.jstp.connection;
 
-import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
@@ -532,7 +531,8 @@ public class Connection implements
       callback(JSCallback.OK, methods, messageCounter);
     } else {
       callback(JSCallback.ERROR,
-          Collections.singletonList(Constants.ERR_INTERFACE_NOT_FOUND), messageCounter);
+          Collections.singletonList(ConnectionError.INTERFACE_NOT_FOUND.getErrorCode()),
+          messageCounter);
     }
     return true;
   }
