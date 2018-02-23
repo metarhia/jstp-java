@@ -7,6 +7,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 public class Message implements Serializable {
 
@@ -99,6 +100,23 @@ public class Message implements Serializable {
   public String stringify() {
     stringRepresentation = JSSerializer.stringify(message);
     return stringRepresentation;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Message message1 = (Message) o;
+    return Objects.equals(message, message1.message);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(message);
   }
 
   public long getMessageNumber() {
