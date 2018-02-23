@@ -32,10 +32,13 @@ public class AppData implements Serializable {
    */
   public static AppData valueOf(String app) {
     if (app == null || app.isEmpty()) {
-      throw new RuntimeException("Invalid(empty) app data to parse");
+      throw new IllegalArgumentException("Invalid(empty) app data to parse");
     }
     String[] appArgs = app.split("@");
     String appName = appArgs[0];
+    if (appName.isEmpty()) {
+      throw new IllegalArgumentException("Invalid(empty) application name");
+    }
     String appVersion = appArgs.length > 1 ? appArgs[1] : null;
     return new AppData(appName, appVersion);
   }
@@ -77,9 +80,12 @@ public class AppData implements Serializable {
   }
 
   /**
-   * @return application data as 'name@version'
+   * @return application data as 'name@version' or 'name' if version is null
    */
   public String getApp() {
-    return String.format("%s@%s", name, version);
+    if (version != null) {
+      return String.format("%s@%s", name, version);
+    }
+    return name;
   }
 }

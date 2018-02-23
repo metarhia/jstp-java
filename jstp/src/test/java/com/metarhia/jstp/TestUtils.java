@@ -35,4 +35,15 @@ public class TestUtils {
       this.transport = transport;
     }
   }
+
+  public static class TestData<T, F> {
+
+    public T input;
+    public F expected;
+
+    public TestData(T input, F expected) {
+      this.input = input;
+      this.expected = expected;
+    }
+  }
 }
