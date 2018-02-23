@@ -124,23 +124,27 @@ public final class Utils {
         dst.append(Character.toChars(codePoint));
         return 3;
       case 'u':
-        start++;
-        final char character = input[start];
-        if (isHex(character)) {
-          codePoint = Integer.parseInt(new String(input, start, 4), 16);
-          dst.append(Character.toChars(codePoint));
-          return 5;
-        } else if (character == '{') {
-          int i = ++start;
-          while (isHex(input[i])) {
-            i++;
+        try {
+          start++;
+          final char character = input[start];
+          if (isHex(character)) {
+            codePoint = Integer.parseInt(new String(input, start, 4), 16);
+            dst.append(Character.toChars(codePoint));
+            return 5;
+          } else if (character == '{') {
+            int i = ++start;
+            while (isHex(input[i])) {
+              i++;
+            }
+            i -= start;
+            codePoint = Integer.parseInt(new String(input, start, i), 16);
+            dst.append(Character.toChars(codePoint));
+            return i + 3;
+          } else {
+            throw new JSParsingException(start + 1, "Invalid Unicode escape sequence");
           }
-          i -= start;
-          codePoint = Integer.parseInt(new String(input, start, i), 16);
-          dst.append(Character.toChars(codePoint));
-          return i + 3;
-        } else {
-          throw new JSParsingException(start + 1, "Invalid Unicode escape sequence");
+        } catch (NumberFormatException e) {
+          throw new JSParsingException(start + 1, "Invalid Unicode escape sequence", e);
         }
       default:
         dst.append(input[start]);
