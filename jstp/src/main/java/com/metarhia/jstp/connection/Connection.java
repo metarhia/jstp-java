@@ -241,7 +241,7 @@ public class Connection implements
    */
   public void handshake(AppData appData, String sessionID, ManualHandler handler) {
     sessionPolicy.getSessionData().setParameters(appData, sessionID);
-    setMessageNumberCounter(sessionPolicy.getSessionData().getNumSentMessages());
+    setMessageNumberCounter(0);
     long messageNumber = 0;
     if (handler != null) {
       handlers.put(messageNumber, handler);
