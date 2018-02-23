@@ -105,12 +105,16 @@ class JSParserTest {
   @Test
   public void parseKeyValuePair() throws Exception {
     for (TestData<String, JSEntry> td : parseKeyValuePairTestData) {
-      parser.setInput(td.input);
-      JSEntry actual = parser.parseKeyValuePair();
-      assertEquals(td.expected.getKey(), actual.getKey(),
-          "Failed parsing(key): " + td.input);
-      assertEquals(td.expected.getValue(), actual.getValue(),
-          "Failed parsing(value): " + td.input);
+      try {
+        parser.setInput(td.input);
+        JSEntry actual = parser.parseKeyValuePair();
+        assertEquals(td.expected.getKey(), actual.getKey(),
+            "Failed parsing(key): " + td.input);
+        assertEquals(td.expected.getValue(), actual.getValue(),
+            "Failed parsing(value): " + td.input);
+      } catch (JSParsingException e) {
+        fail("Cannot parse " + td.input, e);
+      }
     }
   }
 
