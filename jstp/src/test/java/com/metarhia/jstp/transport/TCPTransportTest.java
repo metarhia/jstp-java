@@ -43,7 +43,7 @@ public class TCPTransportTest {
     connection.handshake("appName", null);
     assertTrue(connection.isConnected(), "Must be connected after handshake");
     // no idea why but transport has another instance of connection as listener so set this one
-    tcpTransport.setSocketListener(connection);
+    tcpTransport.setListener(connection);
   }
 
   @Test

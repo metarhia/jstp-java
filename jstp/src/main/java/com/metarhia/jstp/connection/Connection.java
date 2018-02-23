@@ -6,6 +6,7 @@ import com.metarhia.jstp.core.JSTypes.JSElements;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import com.metarhia.jstp.exceptions.MessageHandlingException;
 import com.metarhia.jstp.storage.StorageInterface;
+import com.metarhia.jstp.transport.Transport;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -18,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Connection implements
-    AbstractSocket.AbstractSocketListener {
+    Transport.TransportListener {
 
   private static final Logger logger = LoggerFactory.getLogger(Connection.class);
 
@@ -33,7 +34,7 @@ public class Connection implements
   /**
    * Transport to send/receive messages
    */
-  private AbstractSocket transport;
+  private Transport transport;
 
   /**
    * Call handlers table. Handlers are associated with names of methods they handle
@@ -62,18 +63,17 @@ public class Connection implements
 
   private AtomicLong messageNumberCounter;
 
-  public Connection(AbstractSocket transport) {
+  public Connection(Transport transport) {
     this(transport, new SimpleSessionPolicy());
   }
 
-  public Connection(AbstractSocket transport, SessionPolicy sessionPolicy) {
+  public Connection(Transport transport, SessionPolicy sessionPolicy) {
     this.id = nextConnectionID.getAndIncrement();
     this.state = ConnectionState.AWAITING_HANDSHAKE;
     this.stateLock = new Object();
     this.messageNumberCounter = new AtomicLong(0);
 
-    this.transport = transport;
-    this.transport.setSocketListener(this);
+    setTransport(transport);
 
     setSessionPolicy(sessionPolicy);
 
@@ -84,15 +84,14 @@ public class Connection implements
     this.callHandlers = new ConcurrentHashMap<>();
   }
 
-  public void useTransport(AbstractSocket transport) {
+  public void useTransport(Transport transport) {
     synchronized (stateLock) {
       if (this.transport != null) {
-        this.transport.setSocketListener(null);
+        this.transport.setListener(null);
         this.transport.close(true);
       }
 
-      this.transport = transport;
-      this.transport.setSocketListener(this);
+      setTransport(transport);
       this.state = ConnectionState.AWAITING_HANDSHAKE;
     }
 
@@ -133,7 +132,7 @@ public class Connection implements
   }
 
   /**
-   * Checks if transport is connected, if it is not calls {@link AbstractSocket#connect()}
+   * Checks if transport is connected, if it is not calls {@link Transport#connect()}
    * otherwise initiates a handshake
    *
    * @param appData   data of the application to connect to (must not be null)
@@ -147,7 +146,7 @@ public class Connection implements
     if (!transport.isConnected()) {
       transport.connect();
     } else {
-      onConnected();
+      onTransportConnected();
     }
   }
 
@@ -555,6 +554,43 @@ public class Connection implements
     return true;
   }
 
+  @Override
+  public void onTransportConnected() {
+    synchronized (stateLock) {
+      if (getAppData() == null
+          || state != ConnectionState.AWAITING_RECONNECT
+          && state != ConnectionState.AWAITING_HANDSHAKE) {
+        return;
+      }
+      sessionPolicy.onTransportAvailable();
+    }
+  }
+
+  @Override
+  public void onTransportClosed() {
+    synchronized (stateLock) {
+      if (state == ConnectionState.CLOSING) {
+        state = ConnectionState.CLOSED;
+        reportClosed();
+      } else if (getAppData() != null) {
+        state = ConnectionState.AWAITING_RECONNECT;
+        reportClosed();
+      } else {
+        state = ConnectionState.AWAITING_HANDSHAKE;
+        // app name is null -> connection was not established yet, so don't report
+      }
+      transport.clearQueue();
+    }
+  }
+
+  @Override
+  public void onTransportError(Exception e) {
+    logger.info("Transport error", e);
+    if (!(e instanceof AlreadyConnectedException) && transport.isConnected()) {
+      transport.close(true);
+    }
+  }
+
   public void setCallHandler(String interfaceName, String methodName, ManualHandler callHandler) {
     Map<String, ManualHandler> interfaceHandlers = callHandlers.get(interfaceName);
     if (interfaceHandlers == null) {
@@ -649,17 +685,9 @@ public class Connection implements
       if (transport != null && transport.isConnected()) {
         transport.close(forced);
       } else {
-        onSocketClosed();
+        onTransportClosed();
       }
     }
-  }
-
-  public void pause() {
-    transport.pause();
-  }
-
-  public void resume() {
-    transport.resume();
   }
 
   private String getInterfaceName(JSObject message) {
@@ -699,44 +727,6 @@ public class Connection implements
 
   public long getId() {
     return id;
-  }
-
-  @Override
-  public void onConnected() {
-    synchronized (stateLock) {
-      if (getAppName() == null
-          || state != ConnectionState.AWAITING_RECONNECT
-          && state != ConnectionState.AWAITING_HANDSHAKE) {
-        return;
-      }
-      sessionPolicy.onTransportAvailable();
-    }
-    // todo add calls and fields for username\password auth
-  }
-
-  @Override
-  public void onSocketClosed() {
-    synchronized (stateLock) {
-      if (state == ConnectionState.CLOSING) {
-        state = ConnectionState.CLOSED;
-        reportClosed();
-      } else if (getAppName() != null) {
-        state = ConnectionState.AWAITING_RECONNECT;
-        reportClosed();
-      } else {
-        state = ConnectionState.AWAITING_HANDSHAKE;
-        // app name is null -> connection was not established yet, so don't report
-      }
-      transport.clearQueue();
-    }
-  }
-
-  @Override
-  public void onError(Exception e) {
-    logger.info("Transport error", e);
-    if (!(e instanceof AlreadyConnectedException) && transport.isConnected()) {
-      transport.close(true);
-    }
   }
 
   public void addSocketListener(ConnectionListener listener) {
@@ -780,7 +770,7 @@ public class Connection implements
     return sessionPolicy.getSessionData().getSessionId();
   }
 
-  public AbstractSocket getTransport() {
+  public Transport getTransport() {
     return transport;
   }
 
@@ -790,6 +780,11 @@ public class Connection implements
 
   public SessionPolicy getSessionPolicy() {
     return sessionPolicy;
+  }
+
+  private void setTransport(Transport transport) {
+    this.transport = transport;
+    this.transport.setListener(this);
   }
 
   public void setSessionPolicy(SessionPolicy sessionPolicy) {

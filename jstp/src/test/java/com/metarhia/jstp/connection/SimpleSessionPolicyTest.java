@@ -16,9 +16,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.TestConstants;
+import com.metarhia.jstp.TestUtils;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.handlers.OkErrorHandler;
 import com.metarhia.jstp.storage.FileStorage;
+import com.metarhia.jstp.transport.Transport;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -38,9 +40,10 @@ class SimpleSessionPolicyTest {
     final List<Object> callArgs = Arrays.<Object>asList(24);
     final List<Object> callbackArgs = Arrays.<Object>asList(42.0);
 
-    AbstractSocket transport = mock(AbstractSocket.class);
+    Transport transport = mock(Transport.class);
     when(transport.isConnected()).thenReturn(true);
-    final Connection connection = spy(new Connection(transport, new SimpleSessionPolicy()));
+    final Connection connection = spy(new Connection(
+        transport, new SimpleSessionPolicy()));
     connection.getSessionPolicy().setConnection(connection);
 
     doAnswer(new CallbackAnswer(connection, JSCallback.OK, callbackArgs)).when(transport)
@@ -56,8 +59,7 @@ class SimpleSessionPolicyTest {
     assertTrue(connection.isConnected(), "Must be connected after initial mock handshake");
 
     // disconnect transport
-    when(transport.isConnected()).thenReturn(false);
-    connection.onSocketClosed();
+    TestUtils.simulateDisconnect(connection, transport);
 
     OkErrorHandler handler = mock(OkErrorHandler.class);
     doCallRealMethod().when(handler)
@@ -69,8 +71,7 @@ class SimpleSessionPolicyTest {
     }
 
     // connect transport
-    when(transport.isConnected()).thenReturn(true);
-    connection.onConnected();
+    TestUtils.simulateConnect(connection, transport);
 
     verify(handler, times(numSentCalls - numReceivedMessages))
         .handleOk(callbackArgs);

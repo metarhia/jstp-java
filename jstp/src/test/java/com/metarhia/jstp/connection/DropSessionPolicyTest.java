@@ -13,9 +13,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.TestConstants;
+import com.metarhia.jstp.TestUtils;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.handlers.OkErrorHandler;
 import com.metarhia.jstp.storage.FileStorage;
+import com.metarhia.jstp.transport.Transport;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -33,9 +35,10 @@ class DropSessionPolicyTest {
     final List<Object> callArgs = Arrays.<Object>asList(24.0);
     final List<Object> callbackArgs = Arrays.<Object>asList(42.0);
 
-    AbstractSocket transport = mock(AbstractSocket.class);
+    Transport transport = mock(Transport.class);
     when(transport.isConnected()).thenReturn(true);
-    final Connection connection = spy(new Connection(transport, new DropSessionPolicy()));
+    final Connection connection = spy(new Connection(
+        transport, new DropSessionPolicy()));
     connection.getSessionPolicy().setConnection(connection);
 
     doAnswer(new CallbackAnswer(connection, JSCallback.OK, callbackArgs)).when(transport)
@@ -48,8 +51,7 @@ class DropSessionPolicyTest {
     assertTrue(connection.isConnected(), "Must be connected after initial mock handshake");
 
     // disconnect transport
-    when(transport.isConnected()).thenReturn(false);
-    connection.onSocketClosed();
+    TestUtils.simulateDisconnect(connection, transport);
 
     OkErrorHandler handler = mock(OkErrorHandler.class);
 
@@ -62,8 +64,7 @@ class DropSessionPolicyTest {
         .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
 
     // connect transport
-    when(transport.isConnected()).thenReturn(true);
-    connection.onConnected();
+    TestUtils.simulateConnect(connection, transport);
 
     verify(handler, never())
         .onMessage(any(JSObject.class));

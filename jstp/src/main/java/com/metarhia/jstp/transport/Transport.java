@@ -1,8 +1,8 @@
-package com.metarhia.jstp.connection;
+package com.metarhia.jstp.transport;
 
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 
-public interface AbstractSocket {
+public interface Transport {
 
   /**
    * @return true if connect task was committed (it doesn't mean that connection was established)
@@ -17,32 +17,24 @@ public interface AbstractSocket {
    */
   void send(String message);
 
-  void pause();
-
-  void resume();
-
   void close(boolean forced);
 
   void clearQueue();
 
-  int getQueueSize();
-
-  void setSocketListener(AbstractSocketListener listener);
+  void setListener(TransportListener listener);
 
   boolean isConnected();
 
   boolean isClosed();
 
-  boolean isRunning();
+  interface TransportListener {
 
-  interface AbstractSocketListener {
-
-    void onConnected();
+    void onTransportConnected();
 
     void onMessageReceived(JSObject message);
 
-    void onSocketClosed();
+    void onTransportClosed();
 
-    void onError(Exception e);
+    void onTransportError(Exception e);
   }
 }

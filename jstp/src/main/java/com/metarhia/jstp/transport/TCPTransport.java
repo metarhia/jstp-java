@@ -1,7 +1,6 @@
 package com.metarhia.jstp.transport;
 
 import com.metarhia.jstp.Constants;
-import com.metarhia.jstp.connection.AbstractSocket;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSParsingException;
@@ -21,7 +20,7 @@ import javax.net.ssl.SSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TCPTransport implements AbstractSocket {
+public class TCPTransport implements Transport {
 
   public static final long DEFAULT_CLOSING_TICK = 1000;
   public static final long DEFAULT_CLOSING_TIMEOUT = 5000;
@@ -51,13 +50,13 @@ public class TCPTransport implements AbstractSocket {
   private long closingTick;
   private long closingTimeout;
 
-  private AbstractSocketListener socketListener;
+  private TransportListener socketListener;
 
   public TCPTransport(String host, int port) {
     this(host, port, null);
   }
 
-  public TCPTransport(String host, int port, AbstractSocket.AbstractSocketListener listener) {
+  public TCPTransport(String host, int port, TransportListener listener) {
     this(host, port, false, listener);
   }
 
@@ -66,9 +65,9 @@ public class TCPTransport implements AbstractSocket {
   }
 
   public TCPTransport(String host, int port, boolean sslEnabled,
-                      AbstractSocket.AbstractSocketListener listener) {
-    closingTick = DEFAULT_CLOSING_TICK;
-    closingTimeout = DEFAULT_CLOSING_TIMEOUT;
+                      TransportListener listener) {
+    this.closingTick = DEFAULT_CLOSING_TICK;
+    this.closingTimeout = DEFAULT_CLOSING_TIMEOUT;
 
     this.host = host;
     this.port = port;
@@ -81,7 +80,7 @@ public class TCPTransport implements AbstractSocket {
   public boolean connect() {
     if (isConnected()) {
       if (socketListener != null) {
-        socketListener.onError(new AlreadyConnectedException());
+        socketListener.onTransportError(new AlreadyConnectedException());
       }
       return false;
     }
@@ -210,7 +209,7 @@ public class TCPTransport implements AbstractSocket {
         } else {
           final String msg = "Unexpected message (expected JSObject): " +
               JSSerializer.stringify(parseResult);
-          socketListener.onError(new RuntimeException(msg));
+          socketListener.onTransportError(new RuntimeException(msg));
         }
       } catch (JSParsingException e) {
         logger.info("Message parsing failed", e);
@@ -245,7 +244,7 @@ public class TCPTransport implements AbstractSocket {
     }
     if (connected) {
       if (socketListener != null) {
-        socketListener.onConnected();
+        socketListener.onTransportConnected();
       }
       return true;
     }
@@ -274,11 +273,6 @@ public class TCPTransport implements AbstractSocket {
 
   public void clearQueue() {
     messageQueue.clear();
-  }
-
-  @Override
-  public int getQueueSize() {
-    return messageQueue.size();
   }
 
   public void pause() {
@@ -357,7 +351,7 @@ public class TCPTransport implements AbstractSocket {
         closing = false;
       }
       if (notify && socketListener != null) {
-        socketListener.onSocketClosed();
+        socketListener.onTransportClosed();
       }
     } catch (IOException e) {
       logger.info("Socket closing failure", e);
@@ -372,11 +366,6 @@ public class TCPTransport implements AbstractSocket {
   @Override
   public boolean isClosed() {
     return closing || socket == null || socket.isClosed();
-  }
-
-  @Override
-  public boolean isRunning() {
-    return isConnected() && running;
   }
 
   public String getHost() {
@@ -416,7 +405,7 @@ public class TCPTransport implements AbstractSocket {
   }
 
   @Override
-  public void setSocketListener(AbstractSocketListener listener) {
+  public void setListener(TransportListener listener) {
     socketListener = listener;
   }
 

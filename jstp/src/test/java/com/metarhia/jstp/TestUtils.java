@@ -4,19 +4,29 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import com.metarhia.jstp.connection.AbstractSocket;
+import com.metarhia.jstp.transport.Transport;
 import com.metarhia.jstp.connection.Connection;
 
 public class TestUtils {
+
+  public static void simulateConnect(Connection connection, Transport transport) {
+    when(transport.isConnected()).thenReturn(true);
+    connection.onTransportConnected();
+  }
+
+  public static void simulateDisconnect(Connection connection, Transport transport) {
+    when(transport.isConnected()).thenReturn(false);
+    connection.onTransportClosed();
+  }
 
   public static ConnectionSpy createConnectionSpy() {
     return createConnectionSpy(null, true);
   }
 
-  public static ConnectionSpy createConnectionSpy(AbstractSocket transport,
+  public static ConnectionSpy createConnectionSpy(Transport transport,
                                                   boolean transportConnected) {
     if (transport == null) {
-      transport = mock(AbstractSocket.class);
+      transport = mock(Transport.class);
       when(transport.isConnected()).thenReturn(transportConnected);
     }
     Connection connection = spy(new Connection(transport));
@@ -28,9 +38,9 @@ public class TestUtils {
 
     public Connection connection;
 
-    public AbstractSocket transport;
+    public Transport transport;
 
-    public ConnectionSpy(Connection connection, AbstractSocket transport) {
+    public ConnectionSpy(Connection connection, Transport transport) {
       this.connection = connection;
       this.transport = transport;
     }
