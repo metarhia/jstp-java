@@ -722,7 +722,7 @@ public class Connection implements
   }
 
   public boolean isClosed() {
-    return state == ConnectionState.CLOSED;
+    return state == ConnectionState.CLOSED || state == ConnectionState.CLOSING;
   }
 
   public long getId() {
