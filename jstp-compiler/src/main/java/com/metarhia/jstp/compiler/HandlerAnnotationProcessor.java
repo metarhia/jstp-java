@@ -2,7 +2,6 @@ package com.metarhia.jstp.compiler;
 
 import com.google.auto.service.AutoService;
 import com.metarhia.jstp.compiler.annotations.handlers.Handler;
-import com.metarhia.jstp.compiler.annotations.handlers.Receiver;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
@@ -36,13 +35,13 @@ public class HandlerAnnotationProcessor extends AnnotationProcessor {
 
   @Override
   protected List<Class<? extends Annotation>> getSupportedAnnotations() {
-    return Arrays.asList(Receiver.class, Handler.class);
+    return Arrays.<Class<? extends Annotation>>asList(Handler.class);
   }
 
   @Override
   protected List<String> getAvailableCompletions() {
     return Arrays.asList(
-        "Array", "Object", "Receiver", "Handler",
+        "Array", "Object", "Handler",
         "Mixed", "ErrorHandler", "NotNull", "Typed", "NoDefaultGet");
   }
 }

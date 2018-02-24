@@ -1,29 +1,31 @@
 package com.metarhia.jstp.compiler;
 
+import com.metarhia.jstp.compiler.annotations.handlers.Error;
 import com.metarhia.jstp.compiler.annotations.handlers.ErrorHandler;
 import com.metarhia.jstp.compiler.annotations.handlers.Handler;
 import com.metarhia.jstp.compiler.annotations.handlers.Has;
 import com.metarhia.jstp.compiler.annotations.handlers.NoDefaultGet;
 import com.metarhia.jstp.compiler.annotations.handlers.NotNull;
-import com.metarhia.jstp.compiler.annotations.handlers.Receiver;
 import com.metarhia.jstp.compiler.annotations.handlers.Typed;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
-import com.metarhia.jstp.handlers.ExecutableHandler;
+import com.metarhia.jstp.handlers.OkErrorHandler;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.MethodSpec.Builder;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.WildcardTypeName;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.Executor;
 import javax.annotation.processing.Filer;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -44,7 +46,6 @@ import javax.lang.model.util.Types;
 public class HandlerAnnotatedInterface {
 
   private static final String PREFIX = "JSTP";
-  private static final String MESSAGE_PARAMETER_NAME = "internalMessage";
   private static final String HANDLER_METHOD = "handle";
   private static final String VARIABLE_DECLARATION = "$1T $2L";
   private static final String VARIABLE_DECLARATION_NULL = VARIABLE_DECLARATION + " = null";
@@ -59,14 +60,8 @@ public class HandlerAnnotatedInterface {
   private final Class<?> annotation;
   private TypeElement annotatedInterface;
 
-  private List<ExecutableElement> errorHandlers;
-  private List<MessageHandler> messageHandlers;
-
-  private MethodSpec.Builder mainInvokeBuilder;
   private TypeSpec.Builder jstpClassBuilder;
   private TypeUtils typeUtils;
-  private String handlersName;
-  private String messageParameterName;
   private TypeName interfaceClassName;
   private TypeName interfaceTypeName;
   private Class<?> handlerClass;
@@ -76,8 +71,6 @@ public class HandlerAnnotatedInterface {
     this.annotation = annotation;
     annotatedInterface = typeElement;
     typeUtils = new TypeUtils(types, elements);
-    errorHandlers = new LinkedList<>();
-    messageHandlers = new LinkedList<>();
 
     interfaceClassName = ClassName.get(annotatedInterface.asType());
     interfaceTypeName = TypeName.get(annotatedInterface.asType());
@@ -85,32 +78,20 @@ public class HandlerAnnotatedInterface {
     handlerClass = ManualHandler.class;
 
     TypeMirror jstpHandlerClass = null;
-    handlersName = null;
-    if (annotation == Receiver.class) {
-      handlerClass = com.metarhia.jstp.core.Handlers.Handler.class;
-      handlersName = "handlers";
-    } else {
-      try {
-        annotatedInterface.getAnnotation(Handler.class).value();
-      } catch (MirroredTypeException e) {
-        // intended ...
-        jstpHandlerClass = e.getTypeMirror();
-      }
+    try {
+      annotatedInterface.getAnnotation(Handler.class).value();
+    } catch (MirroredTypeException e) {
+      // intended ...
+      jstpHandlerClass = e.getTypeMirror();
     }
 
-    if (jstpHandlerClass != null &&
-        typeUtils.isSubtype(jstpHandlerClass, ExecutableHandler.class)) {
-      handlerClass = ExecutableHandler.class;
-      mainInvokeBuilder = MethodSpec.methodBuilder("run")
-          .addAnnotation(Override.class)
-          .addModifiers(Modifier.PUBLIC);
-      messageParameterName = "message";
-    } else {
-      messageParameterName = MESSAGE_PARAMETER_NAME;
-      mainInvokeBuilder = MethodSpec.methodBuilder(HANDLER_METHOD)
-          .addAnnotation(Override.class)
-          .addModifiers(Modifier.PUBLIC)
-          .addParameter(JSTP_VALUE_TYPENAME, messageParameterName);
+    if (jstpHandlerClass != null) {
+      if (typeUtils.isSameType(jstpHandlerClass, OkErrorHandler.class)) {
+        handlerClass = OkErrorHandler.class;
+      } else if (!typeUtils.isSameType(jstpHandlerClass, ManualHandler.class)) {
+        throw new HandlerProcessorException(
+            "Not supported ManualHandler subtype: " + jstpHandlerClass.toString());
+      }
     }
   }
 
@@ -120,86 +101,15 @@ public class HandlerAnnotatedInterface {
       IOException, PropertyFormatException {
     String implementationClassName = PREFIX + annotatedInterface.getSimpleName();
 
-    if (handlersName == null) {
-      jstpClassBuilder = TypeSpec.classBuilder(implementationClassName)
-          .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
-          .addSuperinterface(interfaceTypeName);
+    jstpClassBuilder = TypeSpec.classBuilder(implementationClassName)
+        .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
+        .addSuperinterface(interfaceTypeName);
 
-      if (handlerClass != ExecutableHandler.class) {
-        jstpClassBuilder.addSuperinterface(handlerClass);
-      } else {
-        jstpClassBuilder.superclass(handlerClass);
-
-        final MethodSpec mainConstructor = MethodSpec.constructorBuilder()
-            .addModifiers(Modifier.PUBLIC)
-            .addParameter(ClassName.get(Executor.class), "executor")
-            .addStatement("super($N)", "executor")
-            .build();
-
-        jstpClassBuilder.addMethod(mainConstructor);
-      }
+    if (handlerClass == OkErrorHandler.class) {
+      generateOkErrorHandler();
     } else {
-      final ParameterizedTypeName handlerSuperclass =
-          ParameterizedTypeName.get(ClassName.get(handlerClass), interfaceTypeName);
-
-      jstpClassBuilder = TypeSpec.classBuilder(implementationClassName)
-          .addModifiers(Modifier.PUBLIC)
-          .superclass(handlerSuperclass);
-
-      final MethodSpec defaultConstructor = MethodSpec.constructorBuilder()
-          .addModifiers(Modifier.PUBLIC)
-          .addStatement("super()").build();
-
-      final MethodSpec mainConstructor = MethodSpec.constructorBuilder()
-          .addModifiers(Modifier.PUBLIC)
-          .addParameter(interfaceTypeName, "handler")
-          .addStatement("super($N)", "handler")
-          .build();
-
-      jstpClassBuilder.addMethod(defaultConstructor);
-      jstpClassBuilder.addMethod(mainConstructor);
+      generateManualHandler();
     }
-
-    // generate methods to enclose the ones in the interface
-    for (Element e : annotatedInterface.getEnclosedElements()) {
-      if (e.getKind() == ElementKind.METHOD) {
-        // check for error handler
-        ExecutableElement method = (ExecutableElement) e;
-        if (method.getAnnotation(ErrorHandler.class) != null) {
-          errorHandlers.add(method);
-        } else {
-          // create new invoke wrapper
-          MethodSpec invokeMethod = createInvokeMethod(method, handlersName);
-          messageHandlers.add(new MessageHandler(method, invokeMethod));
-        }
-      }
-    }
-
-    // generate main invocation function
-    if (errorHandlers.size() > 0) {
-      mainInvokeBuilder.beginControlFlow("try ");
-    }
-    for (MessageHandler mh : messageHandlers) {
-      Has hasAnnotation = mh.method.getAnnotation(Has.class);
-      if (hasAnnotation != null) {
-        CodeBlock getter = PropertyGetterUtils
-            .composeCustomGetter(messageParameterName, hasAnnotation.value());
-        mainInvokeBuilder.beginControlFlow("if ($L != null)", getter);
-      }
-
-      mainInvokeBuilder.addStatement("$L($L)", mh.handler.name, messageParameterName);
-      jstpClassBuilder.addMethod(mh.handler);
-
-      if (hasAnnotation != null) {
-        mainInvokeBuilder.endControlFlow();
-      }
-    }
-
-    if (errorHandlers.size() > 0) {
-      composeCatchClauses(mainInvokeBuilder, errorHandlers, handlersName);
-    }
-
-    jstpClassBuilder.addMethod(mainInvokeBuilder.build());
 
     // save to file
     JavaFile javaFile = JavaFile.builder(
@@ -213,30 +123,177 @@ public class HandlerAnnotatedInterface {
     javaFile.writeTo(filer);
   }
 
-  private MethodSpec createInvokeMethod(ExecutableElement method, String handlersName)
-      throws ClassCastException, PropertyFormatException {
-    final String name = HANDLER_METHOD + capitalize(method.getSimpleName().toString());
-    MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(name)
-        .addModifiers(Modifier.PRIVATE)
-        .addParameter(JSTP_VALUE_TYPENAME, MESSAGE_PARAMETER_NAME);
+  private void generateManualHandler()
+      throws PropertyFormatException, ExceptionHandlerInvokeException {
+    jstpClassBuilder.addSuperinterface(handlerClass);
 
-    String payloadName = MESSAGE_PARAMETER_NAME;
+    String messageParameterName = "internalMessageParameter";
+
+    List<ExecutableElement> exceptionHandlers = new LinkedList<>();
+    List<MessageHandler> messageHandlers = new LinkedList<>();
+    MethodSpec.Builder mainInvokeBuilder = MethodSpec.methodBuilder(HANDLER_METHOD)
+        .addAnnotation(Override.class)
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(JSTP_VALUE_TYPENAME, messageParameterName);
+
+    // generate methods to enclose the ones in the interface
+    for (Element e : annotatedInterface.getEnclosedElements()) {
+      if (e.getKind() == ElementKind.METHOD) {
+        // check for exception handler
+        ExecutableElement method = (ExecutableElement) e;
+        if (method.getAnnotation(ErrorHandler.class) != null) {
+          exceptionHandlers.add(method);
+        } else {
+          // create new handler wrapper
+          MethodSpec invokeMethod = createHandlerWrapper(method);
+          messageHandlers.add(new MessageHandler(method, invokeMethod));
+        }
+      }
+    }
+
+    // generate main invocation function
+    if (exceptionHandlers.size() > 0) {
+      mainInvokeBuilder.beginControlFlow("try ");
+    }
+
+    addHandlerInvocations(mainInvokeBuilder, messageHandlers, messageParameterName);
+
+    if (exceptionHandlers.size() > 0) {
+      composeCatchClauses(mainInvokeBuilder, exceptionHandlers);
+      mainInvokeBuilder.endControlFlow();
+    }
+
+    jstpClassBuilder.addMethod(mainInvokeBuilder.build());
+  }
+
+  private void generateOkErrorHandler()
+      throws PropertyFormatException, ExceptionHandlerInvokeException {
+    jstpClassBuilder.superclass(OkErrorHandler.class);
+
+    String messageParameterName = "data";
+    List<MessageHandler> okHandlers = new LinkedList<>();
+    List<MessageHandler> errorHandlers = new LinkedList<>();
+    List<ExecutableElement> exceptionHandlers = new LinkedList<>();
+    MethodSpec.Builder okHandlerBuilder = MethodSpec.methodBuilder("handleOk")
+        .addAnnotation(Override.class)
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(
+            ParameterizedTypeName.get(ClassName.get(List.class),
+                WildcardTypeName.subtypeOf(Object.class)),
+            messageParameterName);
+
+    String errorCodeParameterName = "errorCode";
+    MethodSpec.Builder errorHandlerBuilder = MethodSpec.methodBuilder("handleError")
+        .addAnnotation(Override.class)
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(TypeName.get(Integer.class), errorCodeParameterName)
+        .addParameter(
+            ParameterizedTypeName.get(ClassName.get(List.class),
+                WildcardTypeName.subtypeOf(Object.class)),
+            messageParameterName);
+
+    // generate methods to enclose the ones in the interface
+    for (Element e : annotatedInterface.getEnclosedElements()) {
+      if (e.getKind() != ElementKind.METHOD) {
+        continue;
+      }
+      // check for exception handler
+      ExecutableElement method = (ExecutableElement) e;
+      if (method.getAnnotation(ErrorHandler.class) != null) {
+        exceptionHandlers.add(method);
+      } else if (method.getAnnotation(Error.class) != null) {
+        // create new error wrapper
+        MethodSpec errorMethod = createErrorWrapper(method);
+        errorHandlers.add(new MessageHandler(method, errorMethod));
+      } else {
+        // create new invoke wrapper
+        MethodSpec invokeMethod = createOkWrapper(method);
+        okHandlers.add(new MessageHandler(method, invokeMethod));
+      }
+    }
+
+    if (exceptionHandlers.size() > 0) {
+      MethodSpec.Builder handlerMethod = MethodSpec.methodBuilder(HANDLER_METHOD)
+          .addAnnotation(Override.class)
+          .addModifiers(Modifier.PUBLIC)
+          .addParameter(JSTP_VALUE_TYPENAME, "message");
+      handlerMethod.beginControlFlow("try ");
+      handlerMethod.addStatement("super.$L($L)", HANDLER_METHOD, "message");
+      composeCatchClauses(handlerMethod, exceptionHandlers);
+      handlerMethod.endControlFlow();
+      jstpClassBuilder.addMethod(handlerMethod.build());
+    }
+
+    addHandlerInvocations(okHandlerBuilder, okHandlers, messageParameterName);
+
+    for (MessageHandler mh : errorHandlers) {
+      if (mh.method.getAnnotation(Has.class) != null) {
+        throw new HandlerProcessorException("'Has' annotation is not supported for error handlers");
+      }
+      int[] errors = mh.method.getAnnotation(Error.class).errors();
+      if (errors.length > 0) {
+        List<String> errorElements = new ArrayList<>();
+        for (int e : errors) {
+          errorElements.add(String.valueOf(e));
+        }
+        errorHandlerBuilder.beginControlFlow(composeCondition(
+            " || ", " == " + errorCodeParameterName, errorElements));
+      }
+
+      errorHandlerBuilder.addStatement("$L($L, $L)", mh.handler.name,
+          errorCodeParameterName, messageParameterName);
+      jstpClassBuilder.addMethod(mh.handler);
+
+      if (errors.length > 0) {
+        errorHandlerBuilder.endControlFlow();
+      }
+    }
+
+    jstpClassBuilder.addMethod(okHandlerBuilder.build());
+    jstpClassBuilder.addMethod(errorHandlerBuilder.build());
+  }
+
+  private void addHandlerInvocations(MethodSpec.Builder methodBuilder,
+                                     List<MessageHandler> handlers,
+                                     String parameterName) throws PropertyFormatException {
+    for (MessageHandler mh : handlers) {
+      Has hasAnnotation = mh.method.getAnnotation(Has.class);
+      if (hasAnnotation != null) {
+        CodeBlock getter = PropertyGetterUtils.composeCustomGetter(
+            parameterName, hasAnnotation.value());
+        methodBuilder.beginControlFlow("if ($L != null)", getter);
+      }
+
+      methodBuilder.addStatement("$L($L)", mh.handler.name, parameterName);
+      jstpClassBuilder.addMethod(mh.handler);
+
+      if (hasAnnotation != null) {
+        methodBuilder.endControlFlow();
+      }
+    }
+  }
+
+  private MethodSpec createOkWrapper(ExecutableElement method)
+      throws ClassCastException, PropertyFormatException {
+    final String methodName = HANDLER_METHOD + "Ok" + capitalize(method.getSimpleName().toString());
+    String dataParameterName = "dataParameter";
+
+    MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(methodName)
+        .addModifiers(Modifier.PRIVATE)
+        .addParameter(ParameterizedTypeName.get(ClassName.get(List.class),
+            WildcardTypeName.subtypeOf(Object.class)), dataParameterName);
+
+    String payloadName = dataParameterName;
 
     TypeMirror payloadType = getClassFromTyped(method);
     if (typeUtils.isSameType(payloadType, Object.class)) {
-      // use List type by default
       payloadType = typeUtils.getTypeMirror(List.class);
     }
-    CodeBlock payloadData = PropertyGetterUtils
-        .composeGetterFromAnnotations(MESSAGE_PARAMETER_NAME, method);
-    if (payloadData == null && method.getAnnotation(NoDefaultGet.class) == null) {
-      // no method annotation and no explicit denial of default getter
-      // so by default payload is second argument
-      payloadData = PropertyGetterUtils.composeCustomGetter(MESSAGE_PARAMETER_NAME, "{1}");
-    }
 
+    CodeBlock payloadData = PropertyGetterUtils
+        .composeGetterFromAnnotations(dataParameterName, method);
     if (payloadData != null) {
-      payloadName = "internalPayload";
+      payloadName = "internalPayloadParameter";
       methodBuilder.addStatement(VARIABLE_DEFINITION, payloadType, payloadName, payloadData);
       methodBuilder.beginControlFlow("if ($L == null)", payloadName)
           .addStatement("return")
@@ -250,26 +307,137 @@ public class HandlerAnnotatedInterface {
       payloadType = parameter.asType();
     }
 
-    composeArgumentGetters(method, methodBuilder, payloadType, payloadName);
+    composeArgumentGetters(method, methodBuilder, method.getParameters(), payloadType, payloadName);
 
+    addNotNullChecks(method, methodBuilder, parameters);
+
+    String methodCall = composeMethodCall(method.getSimpleName().toString(), parameters);
+
+    methodBuilder.addStatement(methodCall);
+
+    return methodBuilder.build();
+  }
+
+  private void addNotNullChecks(ExecutableElement method, Builder methodBuilder,
+                                List<? extends VariableElement> parameters) {
     Class notNullAnnotation = method.getAnnotation(NotNull.class) != null ? null : NotNull.class;
-    final String controlFlow = composeCondition(" || ", " == null", parameters, notNullAnnotation);
-    if (controlFlow != null) {
-      methodBuilder.beginControlFlow(controlFlow)
+
+    // filter elements with NotNull
+    List<String> notNullParameters = new ArrayList<>();
+    for (VariableElement ve : parameters) {
+      if (notNullAnnotation == null || ve.getAnnotation(notNullAnnotation) != null) {
+        notNullParameters.add(ve.getSimpleName().toString());
+      }
+    }
+
+    if (!notNullParameters.isEmpty()) {
+      methodBuilder.beginControlFlow(composeCondition(
+          " || ", " == null", notNullParameters))
+          .addStatement("return")
+          .endControlFlow();
+    }
+  }
+
+  private MethodSpec createErrorWrapper(ExecutableElement method)
+      throws ClassCastException, PropertyFormatException {
+    final String methodName =
+        HANDLER_METHOD + "Error" + capitalize(method.getSimpleName().toString());
+    String dataParameterName = "dataParameter";
+    String errorParameterName = "errorCodeParameter";
+    MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(methodName)
+        .addModifiers(Modifier.PRIVATE)
+        .addParameter(TypeName.get(Integer.class), errorParameterName)
+        .addParameter(
+            ParameterizedTypeName.get(ClassName.get(List.class),
+                WildcardTypeName.subtypeOf(Object.class)),
+            dataParameterName);
+
+    String payloadName = dataParameterName;
+
+    TypeMirror payloadType = getClassFromTyped(method);
+    if (typeUtils.isSameType(payloadType, Object.class)) {
+      payloadType = typeUtils.getTypeMirror(List.class);
+    }
+
+    CodeBlock payloadData = PropertyGetterUtils
+        .composeGetterFromAnnotations(dataParameterName, method);
+    if (payloadData != null) {
+      payloadName = "internalPayloadParameter";
+      methodBuilder.addStatement(VARIABLE_DEFINITION, payloadType, payloadName, payloadData);
+      methodBuilder.beginControlFlow("if ($L == null)", payloadName)
           .addStatement("return")
           .endControlFlow();
     }
 
+    final List<? extends VariableElement> parameters = new ArrayList<>(method.getParameters());
+    // remove first error code parameter
+    parameters.remove(0);
+
+    List<String> parameterNames = new ArrayList<>();
+    parameterNames.add(errorParameterName);
+    for (VariableElement ve : parameters) {
+      parameterNames.add(ve.getSimpleName().toString());
+    }
+
+    // only add getters for more than one parameter because first is always error code parameter
+    // >0 because error code parameter was removed beforehand
+    if (parameters.size() > 0) {
+      composeArgumentGetters(method, methodBuilder, parameters, payloadType, payloadName);
+
+      addNotNullChecks(method, methodBuilder, parameters);
+    }
+
+    methodBuilder.addStatement(composeMethodCallBase(
+        method.getSimpleName().toString(), parameterNames));
+
+    return methodBuilder.build();
+  }
+
+  private MethodSpec createHandlerWrapper(ExecutableElement method)
+      throws ClassCastException, PropertyFormatException {
+    String messageParameterName = "messageParameter";
+    final String name = "wrap" + capitalize(method.getSimpleName().toString());
+    MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(name)
+        .addModifiers(Modifier.PRIVATE)
+        .addParameter(JSTP_VALUE_TYPENAME, messageParameterName);
+
+    String payloadName = messageParameterName;
+
+    TypeMirror payloadType = getClassFromTyped(method);
+    if (typeUtils.isSameType(payloadType, Object.class)) {
+      // use List type by default
+      payloadType = typeUtils.getTypeMirror(List.class);
+    }
+    CodeBlock payloadData = PropertyGetterUtils
+        .composeGetterFromAnnotations(messageParameterName, method);
+    if (payloadData == null && method.getAnnotation(NoDefaultGet.class) == null) {
+      // no method annotation and no explicit denial of default getter
+      // so by default payload is second argument
+      payloadData = PropertyGetterUtils.composeCustomGetter(messageParameterName, "{1}");
+    }
+
+    if (payloadData != null) {
+      payloadName = "internalPayloadParameter";
+      methodBuilder.addStatement(VARIABLE_DEFINITION, payloadType, payloadName, payloadData);
+      methodBuilder.beginControlFlow("if ($L == null)", payloadName)
+          .addStatement("return")
+          .endControlFlow();
+    }
+
+    final List<? extends VariableElement> parameters = method.getParameters();
+
+    if (parameters.size() == 1) {
+      VariableElement parameter = parameters.get(0);
+      payloadType = parameter.asType();
+    }
+
+    composeArgumentGetters(method, methodBuilder, method.getParameters(), payloadType, payloadName);
+
+    addNotNullChecks(method, methodBuilder, parameters);
+
     String methodCall = composeMethodCall(method.getSimpleName().toString(), parameters);
 
-    if (handlersName != null) {
-      final String handlersForLoop = String.format("for ($T h : %s)", handlersName);
-      methodBuilder.beginControlFlow(handlersForLoop, interfaceTypeName)
-          .addStatement("h.$L", methodCall)
-          .endControlFlow();
-    } else {
-      methodBuilder.addStatement(methodCall);
-    }
+    methodBuilder.addStatement(methodCall);
 
     return methodBuilder.build();
   }
@@ -282,12 +450,12 @@ public class HandlerAnnotatedInterface {
   }
 
   private void composeArgumentGetters(ExecutableElement method, MethodSpec.Builder methodBuilder,
+                                      List<? extends VariableElement> parameters,
                                       TypeMirror payloadType, String payloadName)
       throws PropertyFormatException {
     int argCounter = 0;
     CodeBlock payloadNameBlock = CodeBlock.of(payloadName);
 
-    final List<? extends VariableElement> parameters = method.getParameters();
     for (VariableElement parameter : parameters) {
       CodeBlock getter = PropertyGetterUtils
           .composeGetterFromAnnotations(payloadNameBlock, parameter);
@@ -342,32 +510,35 @@ public class HandlerAnnotatedInterface {
   }
 
   private String composeCondition(String logic, String condition,
-                                  List<? extends VariableElement> parameters,
-                                  Class annotationClass) {
+                                  List<String> parameters) {
     StringBuilder builder = new StringBuilder("if (");
     int i = 0;
-    int j = 0;
-    for (VariableElement parameter : parameters) {
+    for (String parameter : parameters) {
       ++i;
-      if (annotationClass == null || parameter.getAnnotation(annotationClass) != null) {
-        ++j;
-        builder.append(parameter.getSimpleName())
-            .append(condition);
-        if (i < parameters.size()) {
-          builder.append(logic);
-        }
+      builder.append(parameter)
+          .append(condition);
+      if (i < parameters.size()) {
+        builder.append(logic);
       }
     }
     builder.append(')');
-    return j > 0 ? builder.toString() : null;
+    return builder.toString();
   }
 
   private String composeMethodCall(String methodName, List<? extends VariableElement> parameters) {
+    List<String> params = new ArrayList<>();
+    for (VariableElement ve : parameters) {
+      params.add(ve.getSimpleName().toString());
+    }
+    return composeMethodCallBase(methodName, params);
+  }
+
+  private String composeMethodCallBase(String methodName, List<String> parameters) {
     StringBuilder builder = new StringBuilder(methodName);
     builder.append('(');
     int i = 0;
-    for (VariableElement parameter : parameters) {
-      builder.append(parameter.getSimpleName());
+    for (String parameter : parameters) {
+      builder.append(parameter);
       if (++i < parameters.size()) {
         builder.append(", ");
       }
@@ -377,7 +548,7 @@ public class HandlerAnnotatedInterface {
   }
 
   private void composeCatchClauses(MethodSpec.Builder builder,
-                                   List<ExecutableElement> errorHandlers, String handlersName)
+                                   List<ExecutableElement> errorHandlers)
       throws ExceptionHandlerInvokeException {
     Map<TypeMirror, List<ExecutableElement>> exceptionHandlers = new TreeMap<>(
         new Comparator<TypeMirror>() {
@@ -416,23 +587,16 @@ public class HandlerAnnotatedInterface {
     }
 
     for (Map.Entry<TypeMirror, List<ExecutableElement>> me : exceptionHandlers.entrySet()) {
-      addCatchClause(builder, me.getKey(), me.getValue(), handlersName);
+      addCatchClause(builder, me.getKey(), me.getValue());
     }
-
-    builder.endControlFlow();
   }
 
   private void addCatchClause(MethodSpec.Builder builder, TypeMirror type,
-                              List<ExecutableElement> funcs, String handlersName)
+                              List<ExecutableElement> funcs)
       throws ExceptionHandlerInvokeException {
     builder.nextControlFlow("catch ($T e)", ClassName.get(type));
 
     String callPattern = "$L(e)";
-    if (handlersName != null) {
-      final String handlersForLoop = String.format("for ($T h : %s)", handlersName);
-      builder.beginControlFlow(handlersForLoop, interfaceClassName);
-      callPattern = "h.$L(e)";
-    }
 
     for (ExecutableElement func : funcs) {
       if (!checkFirstCast(func.getParameters(), type)) {
@@ -440,11 +604,6 @@ public class HandlerAnnotatedInterface {
             func.getSimpleName() + " cannot be called with " + type.toString());
       }
       builder.addStatement(callPattern, func.getSimpleName().toString());
-    }
-
-    if (handlersName != null) {
-      // finish cycle
-      builder.endControlFlow();
     }
   }
 

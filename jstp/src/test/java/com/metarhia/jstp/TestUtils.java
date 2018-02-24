@@ -4,8 +4,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import com.metarhia.jstp.transport.Transport;
 import com.metarhia.jstp.connection.Connection;
+import com.metarhia.jstp.connection.SessionPolicy;
+import com.metarhia.jstp.connection.SimpleSessionPolicy;
+import com.metarhia.jstp.transport.Transport;
 
 public class TestUtils {
 
@@ -29,8 +31,9 @@ public class TestUtils {
       transport = mock(Transport.class);
       when(transport.isConnected()).thenReturn(transportConnected);
     }
-    Connection connection = spy(new Connection(transport));
-    connection.getSessionPolicy().setConnection(connection);
+    SessionPolicy sessionPolicy = new SimpleSessionPolicy();
+    Connection connection = spy(new Connection(transport, sessionPolicy));
+    sessionPolicy.setConnection(connection);
     return new ConnectionSpy(connection, transport);
   }
 

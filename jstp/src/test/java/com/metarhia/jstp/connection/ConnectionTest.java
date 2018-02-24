@@ -108,12 +108,11 @@ public class ConnectionTest {
 
   public ConnectionTest() {
     instance = this;
-    transport = mock(Transport.class);
-    connection = spy(new Connection(transport));
-    connection.getSessionPolicy().setConnection(connection);
+    ConnectionSpy cs = TestUtils.createConnectionSpy();
+    transport = cs.transport;
+    connection = cs.connection;
     doAnswer(new HandshakeAnswer(connection)).when(transport)
         .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
-    when(transport.isConnected()).thenReturn(true);
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
   }
 
