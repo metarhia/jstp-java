@@ -4,16 +4,28 @@ import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import java.util.concurrent.Executor;
 
-public abstract class ExecutableHandler implements ManualHandler, Runnable {
+public class ExecutableHandler implements ManualHandler, Runnable {
 
   private Executor executor;
 
-  protected JSObject message;
+  private final ManualHandler handler;
 
-  protected Integer errorCode;
+  private JSObject message;
 
-  public ExecutableHandler(Executor executor) {
+  private Integer errorCode;
+
+  public ExecutableHandler(Executor executor, ManualHandler handler) {
     this.executor = executor;
+    this.handler = handler;
+  }
+
+  @Override
+  public void run() {
+    if (message != null) {
+      handler.onMessage(message);
+    } else {
+      handler.onError(errorCode);
+    }
   }
 
   @Override
