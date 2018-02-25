@@ -42,6 +42,6 @@ public class HandlerAnnotationProcessor extends AnnotationProcessor {
   protected List<String> getAvailableCompletions() {
     return Arrays.asList(
         "Array", "Object", "Handler",
-        "Mixed", "ErrorHandler", "NotNull", "Typed", "NoDefaultGet");
+        "Mixed", "ExceptionHandler", "NotNull", "Typed", "NoDefaultGet");
   }
 }

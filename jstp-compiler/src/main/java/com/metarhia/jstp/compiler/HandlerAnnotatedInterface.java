@@ -1,7 +1,7 @@
 package com.metarhia.jstp.compiler;
 
 import com.metarhia.jstp.compiler.annotations.handlers.Error;
-import com.metarhia.jstp.compiler.annotations.handlers.ErrorHandler;
+import com.metarhia.jstp.compiler.annotations.handlers.ExceptionHandler;
 import com.metarhia.jstp.compiler.annotations.handlers.Handler;
 import com.metarhia.jstp.compiler.annotations.handlers.Has;
 import com.metarhia.jstp.compiler.annotations.handlers.NoDefaultGet;
@@ -141,7 +141,7 @@ public class HandlerAnnotatedInterface {
       if (e.getKind() == ElementKind.METHOD) {
         // check for exception handler
         ExecutableElement method = (ExecutableElement) e;
-        if (method.getAnnotation(ErrorHandler.class) != null) {
+        if (method.getAnnotation(ExceptionHandler.class) != null) {
           exceptionHandlers.add(method);
         } else {
           // create new handler wrapper
@@ -199,7 +199,7 @@ public class HandlerAnnotatedInterface {
       }
       // check for exception handler
       ExecutableElement method = (ExecutableElement) e;
-      if (method.getAnnotation(ErrorHandler.class) != null) {
+      if (method.getAnnotation(ExceptionHandler.class) != null) {
         exceptionHandlers.add(method);
       } else if (method.getAnnotation(Error.class) != null) {
         // create new error wrapper
@@ -568,7 +568,7 @@ public class HandlerAnnotatedInterface {
     for (ExecutableElement ee : errorHandlers) {
       List<? extends TypeMirror> exceptions = null;
       try {
-        ee.getAnnotation(ErrorHandler.class).value();
+        ee.getAnnotation(ExceptionHandler.class).value();
       } catch (MirroredTypesException e) {
         // intended ...
         exceptions = e.getTypeMirrors();
