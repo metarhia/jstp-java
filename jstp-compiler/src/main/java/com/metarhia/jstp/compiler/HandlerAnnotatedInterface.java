@@ -46,7 +46,10 @@ import javax.lang.model.util.Types;
 public class HandlerAnnotatedInterface {
 
   private static final String PREFIX = "JSTP";
-  private static final String HANDLER_METHOD = "handle";
+
+  private static final String HANDLER_METHOD = "onMessage";
+  private static final String ERROR_METHOD = "onError";
+
   private static final String VARIABLE_DECLARATION = "$1T $2L";
   private static final String VARIABLE_DECLARATION_NULL = VARIABLE_DECLARATION + " = null";
   private static final String VARIABLE_DEFINITION = VARIABLE_DECLARATION + " = ($1T) $3L";
@@ -131,6 +134,7 @@ public class HandlerAnnotatedInterface {
 
     List<ExecutableElement> exceptionHandlers = new LinkedList<>();
     List<MessageHandler> messageHandlers = new LinkedList<>();
+    List<ExecutableElement> errorMethods = new LinkedList<>();
     MethodSpec.Builder mainInvokeBuilder = MethodSpec.methodBuilder(HANDLER_METHOD)
         .addAnnotation(Override.class)
         .addModifiers(Modifier.PUBLIC)
@@ -143,6 +147,8 @@ public class HandlerAnnotatedInterface {
         ExecutableElement method = (ExecutableElement) e;
         if (method.getAnnotation(ExceptionHandler.class) != null) {
           exceptionHandlers.add(method);
+        } else if (method.getAnnotation(Error.class) != null) {
+          errorMethods.add(method);
         } else {
           // create new handler wrapper
           MethodSpec invokeMethod = createHandlerWrapper(method);
@@ -163,7 +169,38 @@ public class HandlerAnnotatedInterface {
       mainInvokeBuilder.endControlFlow();
     }
 
+    // generate onError function
+    String errorCodeParameter = "errorCode";
+    MethodSpec.Builder errorMethodBuilder = MethodSpec.methodBuilder(ERROR_METHOD)
+        .addAnnotation(Override.class)
+        .addModifiers(Modifier.PUBLIC)
+        .addParameter(TypeName.INT, errorCodeParameter);
+    for (ExecutableElement method : errorMethods) {
+      int[] errors = method.getAnnotation(Error.class).errors();
+      if (errors.length > 0) {
+        addErrorCodeCheck(errorMethodBuilder, errorCodeParameter, errors);
+      }
+
+      errorMethodBuilder.addStatement("$L($L)",
+          method.getSimpleName().toString(), errorCodeParameter);
+
+      if (errors.length > 0) {
+        errorMethodBuilder.endControlFlow();
+      }
+    }
+
     jstpClassBuilder.addMethod(mainInvokeBuilder.build());
+    jstpClassBuilder.addMethod(errorMethodBuilder.build());
+  }
+
+  private void addErrorCodeCheck(Builder errorMethodBuilder, String errorCodeParameter,
+                                 int[] errors) {
+    List<String> errorElements = new ArrayList<>();
+    for (int e : errors) {
+      errorElements.add(String.valueOf(e));
+    }
+    errorMethodBuilder.beginControlFlow(composeCondition(
+        " || ", " == " + errorCodeParameter, errorElements));
   }
 
   private void generateOkErrorHandler()
@@ -232,12 +269,7 @@ public class HandlerAnnotatedInterface {
       }
       int[] errors = mh.method.getAnnotation(Error.class).errors();
       if (errors.length > 0) {
-        List<String> errorElements = new ArrayList<>();
-        for (int e : errors) {
-          errorElements.add(String.valueOf(e));
-        }
-        errorHandlerBuilder.beginControlFlow(composeCondition(
-            " || ", " == " + errorCodeParameterName, errorElements));
+        addErrorCodeCheck(errorHandlerBuilder, errorCodeParameterName, errors);
       }
 
       errorHandlerBuilder.addStatement("$L($L, $L)", mh.handler.name,
