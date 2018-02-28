@@ -68,7 +68,7 @@ public class Connection implements
 
   /**
    * Creates connection instance over specified transport {@param transport}.
-   * and with {@link SessionRestorationPolicy} as default {@link SessionPolicy}.
+   * and with {@link SimpleSessionPolicy} as default {@link SessionPolicy}.
    *
    * @param transport transport to be used for sending JSTP data
    */
