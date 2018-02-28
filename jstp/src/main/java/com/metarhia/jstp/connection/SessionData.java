@@ -32,6 +32,7 @@ public class SessionData implements Serializable {
    * Creates new empty session data instance
    */
   public SessionData() {
+    this(new AppData());
   }
 
   /**

@@ -2,6 +2,7 @@ package com.metarhia.jstp.connection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -431,6 +432,24 @@ public class ConnectionTest {
     // must not reject heartbeat packet
     verify(listener, times(0))
         .onMessageRejected(ArgumentMatchers.<JSObject>notNull());
+  }
+
+  @Test
+  void notNullAppData() {
+    Connection connection = TestUtils.createConnectionSpy().connection;
+
+    assertNotNull(connection.getAppData(), "AppData must not be null");
+  }
+
+  @Test
+  void useTransportNoHandshake() {
+    Connection connection = TestUtils.createConnectionSpy().connection;
+
+    Transport anotherTransport = mock(Transport.class);
+    when(anotherTransport.isConnected()).thenReturn(false);
+    connection.useTransport(anotherTransport);
+
+    verify(anotherTransport, never()).connect();
   }
 
   @Test

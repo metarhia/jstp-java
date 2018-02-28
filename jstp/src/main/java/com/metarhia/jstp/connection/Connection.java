@@ -617,7 +617,7 @@ public class Connection implements
   @Override
   public void onTransportConnected() {
     synchronized (stateLock) {
-      if (getAppData() == null
+      if (getAppName() == null
           || state != ConnectionState.AWAITING_RECONNECT
           && state != ConnectionState.AWAITING_HANDSHAKE) {
         return;
@@ -632,7 +632,7 @@ public class Connection implements
       if (state == ConnectionState.CLOSING) {
         state = ConnectionState.CLOSED;
         reportClosed();
-      } else if (getAppData() != null) {
+      } else if (getAppName() != null) {
         state = ConnectionState.AWAITING_RECONNECT;
         reportClosed();
       } else {
@@ -905,7 +905,7 @@ public class Connection implements
   }
 
   public String getAppName() {
-    return sessionPolicy.getSessionData().getAppData().getName();
+    return getAppData().getName();
   }
 
   public String getSessionId() {
