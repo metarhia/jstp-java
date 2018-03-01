@@ -749,7 +749,7 @@ public class Connection implements
     sessionPolicy.restoreSession(storageInterface);
   }
 
-  private long getNextMessageNumber() {
+  public long getNextMessageNumber() {
     return messageNumberCounter.getAndIncrement();
   }
 
