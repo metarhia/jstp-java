@@ -1,9 +1,22 @@
 package com.metarhia.jstp.connection;
 
+import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.storage.StorageInterface;
+import java.util.Map;
 
 public interface SessionPolicy {
+
+  /**
+   * Called upon new connection to the remote site (not restore), hence Policy must take
+   * appropriate actions to adapt, such as setting new app data,
+   * resetting session data and counters.
+   *
+   * @param app         application that have been connected
+   * @param sessionId   new session id
+   * @param oldHandlers handlers of the previous session
+   */
+  void onNewConnection(AppData app, String sessionId, Map<Long, ManualHandler> oldHandlers);
 
   /**
    * Called after restoration handshake so that this client may resend buffered messages
@@ -13,18 +26,12 @@ public interface SessionPolicy {
   void restore(long numServerReceivedMessages);
 
   /**
-   * Reset current session counters and buffers
-   *
-   * @param app new application to connect to if needed (if null it should be ignored)
-   *            as 'name' or 'name@version' where version is a valid semver version or range
-   */
-  void reset(String app);
-
-  /**
    * Called when transport signalled that it has been connected
    * Should use one of Connection#handshake methods to connect to remote site
    */
   void onTransportAvailable();
+
+  void onConnectionClosed();
 
   /**
    * Called by {@link Connection} upon each message available for buffering being send

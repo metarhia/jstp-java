@@ -519,12 +519,11 @@ public class Connection implements
   }
 
   private void processHandshakeResponse(JSObject message) {
-    // always reset connection on basic handshake
-    reset();
     String sessionId = (String) message.get(JSCallback.OK.toString());
-    sessionPolicy.getSessionData().setSessionId(sessionId);
-    handlers = new ConcurrentHashMap<>();
     setMessageNumberCounter(1);
+    Map<Long, ManualHandler> oldHandlers = handlers;
+    handlers = new ConcurrentHashMap<>();
+    sessionPolicy.onNewConnection(getAppData(), sessionId, oldHandlers);
   }
 
   private boolean callMessageHandler(JSObject message) {
@@ -639,6 +638,7 @@ public class Connection implements
         state = ConnectionState.AWAITING_HANDSHAKE;
         // app name is null -> connection was not established yet, so don't report
       }
+      sessionPolicy.onConnectionClosed();
       transport.clearQueue();
     }
   }
@@ -758,16 +758,6 @@ public class Connection implements
     return messageNumber;
   }
 
-  private void reset() {
-    reset(null, 0);
-  }
-
-  private void reset(String app, long messageCounter) {
-    setMessageNumberCounter(messageCounter);
-    handlers = new ConcurrentHashMap<>();
-    sessionPolicy.reset(app);
-  }
-
   /**
    * Closes connection.
    *
@@ -790,7 +780,6 @@ public class Connection implements
         return;
       }
       state = ConnectionState.CLOSING;
-      reset();
       if (transport != null && transport.isConnected()) {
         transport.close(forced);
       } else {

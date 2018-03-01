@@ -1,6 +1,7 @@
 package com.metarhia.jstp.connection;
 
 import com.metarhia.jstp.Constants;
+import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.storage.StorageInterface;
 import java.io.Serializable;
@@ -47,12 +48,10 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
   }
 
   @Override
-  public void reset(String app) {
-    if (app != null) {
-      sessionData.setParameters(AppData.valueOf(app), null);
-    }
-    lastDeliveredNumber = 0;
+  public void onNewConnection(AppData app, String sessionId, Map<Long, ManualHandler> oldHandlers) {
     sessionData.resetCounters();
+    sessionData.setParameters(app, sessionId);
+    lastDeliveredNumber = 0;
     data.clear();
     sentMessages.clear();
   }
@@ -86,6 +85,11 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
     } else {
       connection.handshake(sessionData.getAppData(), null);
     }
+  }
+
+  @Override
+  public void onConnectionClosed() {
+    // ignore for now
   }
 
   @Override

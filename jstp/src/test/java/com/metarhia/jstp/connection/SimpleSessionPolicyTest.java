@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.TestUtils;
+import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.handlers.OkErrorHandler;
 import com.metarhia.jstp.storage.FileStorage;
@@ -25,6 +26,7 @@ import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -84,29 +86,6 @@ class SimpleSessionPolicyTest {
   }
 
   @Test
-  void reset() {
-    String newAppName = "newAppName";
-    SessionData expectedSessionData = new SessionData(
-        "appName", "sessionId", 2, 2);
-
-    SimpleSessionPolicy sessionPolicy = new SimpleSessionPolicy();
-    sessionPolicy.setSessionData(expectedSessionData);
-
-    sessionPolicy.reset(null);
-    SessionData resettedSessionData = new SessionData(expectedSessionData.getAppData().getName(),
-        expectedSessionData.getSessionId(), 0, 0);
-
-    assertEquals(resettedSessionData, sessionPolicy.getSessionData(),
-        "Must preserve app name upon reset if none was provided");
-
-    sessionPolicy.reset(newAppName);
-    SessionData fullyResettedSessionData = new SessionData(newAppName, null, 0, 0);
-
-    assertEquals(fullyResettedSessionData, sessionPolicy.getSessionData(),
-        "Must set new app name upon reset if provided");
-  }
-
-  @Test
   public void saveRestoreSession() throws Exception {
     File currFile =
         Paths.get("", "out", "test", "testSession2").toAbsolutePath().toFile();
@@ -132,4 +111,24 @@ class SimpleSessionPolicyTest {
     currFile.delete();
   }
 
+  @Test
+  void onNewConnection() {
+    SessionPolicy sessionPolicy = new SimpleSessionPolicy();
+
+    sessionPolicy.getSessionData().setParameters("app", "session");
+    sessionPolicy.getSessionData().setNumSentMessages(13);
+    sessionPolicy.getSessionData().setNumReceivedMessages(42);
+
+    SessionPolicy expectedSessionPolicy = new SimpleSessionPolicy();
+    expectedSessionPolicy.getSessionData().setParameters(
+        "anotherApp", "anotherSessionId");
+
+    sessionPolicy.onNewConnection(expectedSessionPolicy.getSessionData().getAppData(),
+        expectedSessionPolicy.getSessionData().getSessionId(),
+        new HashMap<Long, ManualHandler>());
+
+
+    assertEquals(expectedSessionPolicy, sessionPolicy,
+        "must have correct values after onNewConnection");
+  }
 }

@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.TestUtils;
+import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.handlers.OkErrorHandler;
 import com.metarhia.jstp.storage.FileStorage;
@@ -21,6 +22,7 @@ import com.metarhia.jstp.transport.Transport;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -77,29 +79,6 @@ class DropSessionPolicyTest {
 
 
   @Test
-  void reset() {
-    String newAppName = "newAppName";
-    SessionData expectedSessionData = new SessionData(
-        "appName", "sessionId", 2, 2);
-
-    DropSessionPolicy sessionPolicy = new DropSessionPolicy();
-    sessionPolicy.setSessionData(expectedSessionData);
-
-    sessionPolicy.reset(null);
-    SessionData resettedSessionData = new SessionData(expectedSessionData.getAppData().getName(),
-        expectedSessionData.getSessionId(), 0, 0);
-
-    assertEquals(resettedSessionData, sessionPolicy.getSessionData(),
-        "Must preserve app name upon reset if none was provided");
-
-    sessionPolicy.reset(newAppName);
-    SessionData fullyResettedSessionData = new SessionData(newAppName, null, 0, 0);
-
-    assertEquals(fullyResettedSessionData, sessionPolicy.getSessionData(),
-        "Must set new app name upon reset if provided");
-  }
-
-  @Test
   public void saveRestoreSession() throws Exception {
     File currFile =
         Paths.get("", "out", "test", "testSession2").toAbsolutePath().toFile();
@@ -122,5 +101,26 @@ class DropSessionPolicyTest {
       f.delete();
     }
     currFile.delete();
+  }
+
+  @Test
+  void onNewConnection() {
+    SessionPolicy sessionPolicy = new DropSessionPolicy();
+
+    sessionPolicy.getSessionData().setParameters("app", "session");
+    sessionPolicy.getSessionData().setNumSentMessages(13);
+    sessionPolicy.getSessionData().setNumReceivedMessages(42);
+
+    SessionPolicy expectedSessionPolicy = new DropSessionPolicy();
+    expectedSessionPolicy.getSessionData().setParameters(
+        "anotherApp", "anotherSessionId");
+
+    sessionPolicy.onNewConnection(expectedSessionPolicy.getSessionData().getAppData(),
+        expectedSessionPolicy.getSessionData().getSessionId(),
+        new HashMap<Long, ManualHandler>());
+
+
+    assertEquals(expectedSessionPolicy, sessionPolicy,
+        "must have correct values after onNewConnection");
   }
 }
