@@ -12,8 +12,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
-  private long sendBufferCapacity;
-
   private boolean reconnectWhenTransportReady;
 
   private Map<Long, Message> sentMessages;
@@ -28,7 +26,6 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
   public SimpleSessionPolicy() {
     this.reconnectWhenTransportReady = true;
-    this.sendBufferCapacity = 0;
     this.sessionData = new SessionData();
     this.data = new HashMap<>();
     this.sentMessages = new ConcurrentSkipListMap<>();
@@ -102,9 +99,6 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
     long messageNumber = message.getMessageNumber();
     sessionData.setNumSentMessages(messageNumber);
     sentMessages.put(messageNumber, message);
-    if (sendBufferCapacity > 0 && sentMessages.size() >= sendBufferCapacity) {
-      removeBufferedMessages(lastDeliveredNumber + 1);
-    }
   }
 
   @Override
@@ -116,7 +110,6 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
   public void restoreSession(StorageInterface storageInterface) {
     SimpleSessionPolicy sessionPolicy = (SimpleSessionPolicy)
         storageInterface.getSerializable(Constants.KEY_SESSION, this);
-    sendBufferCapacity = sessionPolicy.sendBufferCapacity;
     reconnectWhenTransportReady = sessionPolicy.reconnectWhenTransportReady;
     lastDeliveredNumber = sessionPolicy.lastDeliveredNumber;
     sentMessages = sessionPolicy.sentMessages;
@@ -133,8 +126,7 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
       return false;
     }
     SimpleSessionPolicy that = (SimpleSessionPolicy) o;
-    return sendBufferCapacity == that.sendBufferCapacity &&
-        reconnectWhenTransportReady == that.reconnectWhenTransportReady &&
+    return reconnectWhenTransportReady == that.reconnectWhenTransportReady &&
         lastDeliveredNumber == that.lastDeliveredNumber &&
         Objects.equals(sentMessages, that.sentMessages) &&
         Objects.equals(data, that.data) &&
@@ -143,9 +135,8 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
   @Override
   public int hashCode() {
-    return Objects
-        .hash(sendBufferCapacity, reconnectWhenTransportReady, sentMessages,
-            sentMessages, data, sessionData);
+    return Objects.hash(reconnectWhenTransportReady, sentMessages, lastDeliveredNumber,
+        data, sessionData);
   }
 
   public Serializable get(String o) {
@@ -176,14 +167,6 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
   public void setSessionData(SessionData sessionData) {
     this.sessionData = sessionData;
-  }
-
-  public long getSendBufferCapacity() {
-    return sendBufferCapacity;
-  }
-
-  public void setSendBufferCapacity(long sendBufferCapacity) {
-    this.sendBufferCapacity = sendBufferCapacity;
   }
 
   public boolean isReconnectWhenTransportReady() {
