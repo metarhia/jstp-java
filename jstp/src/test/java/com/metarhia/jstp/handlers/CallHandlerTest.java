@@ -54,7 +54,7 @@ class CallHandlerTest {
       }
     });
 
-    connection.onMessageReceived(call);
+    connection.onMessageParsed(call);
     verify(connection, times(1))
         .callback(JSCallback.OK, responseArgs, messageNumber);
   }

@@ -28,8 +28,10 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParser;
 import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.core.JSTypes.IndexedHashMap;
+import com.metarhia.jstp.core.JSTypes.JSElements;
 import com.metarhia.jstp.handlers.OkErrorHandler;
 import com.metarhia.jstp.transport.Transport;
+import com.metarhia.jstp.transport.Transport.TransportListener;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -152,7 +154,7 @@ public class ConnectionTest {
       for (String messageString : illList.getValue()) {
         parser.setInput(messageString);
         final JSObject message = parser.parse();
-        connection.onMessageReceived(message);
+        connection.onMessageParsed(message);
 
         verify(listener, times(1)).onMessageRejected(message);
 
@@ -194,7 +196,7 @@ public class ConnectionTest {
       public Void answer(InvocationOnMock invocation) throws Throwable {
         String response = String.format(TestConstants.MOCK_HANDSHAKE_RESPONSE_ERR, errorCode);
         JSObject errMessage = JSParser.parse(response);
-        connection.onMessageReceived(errMessage);
+        connection.onMessageParsed(errMessage);
         return null;
       }
     }).when(transport).send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
@@ -317,7 +319,7 @@ public class ConnectionTest {
       final JSObject message = JSParser.parse(callString);
 
       connection.setCallHandler(ba.interfaceName, ba.methodName, handler);
-      connection.onMessageReceived(message);
+      connection.onMessageParsed(message);
       connection.removeCallHandler(ba.interfaceName, ba.methodName);
 
       verify(handler, times(1)).onMessage(message);
@@ -348,7 +350,7 @@ public class ConnectionTest {
       final JSObject message = JSParser.parse(callString);
 
       connection.addEventHandler(ba.interfaceName, ba.methodName, handler);
-      connection.onMessageReceived(message);
+      connection.onMessageParsed(message);
       connection.removeEventHandler(ba.interfaceName, ba.methodName, handler);
 
       verify(handler, times(1)).onMessage(message);
@@ -379,7 +381,7 @@ public class ConnectionTest {
       final JSObject message = JSParser.parse(callString);
 
       connection.addHandler(cba.messageNumber, handler);
-      connection.onMessageReceived(message);
+      connection.onMessageParsed(message);
 
       verify(handler, times(1)).onMessage(message);
     }
@@ -407,7 +409,7 @@ public class ConnectionTest {
       String inspectRequest = String.format(TestConstants.TEMPLATE_INSPECT,
           ia.messageNumber, ia.interfaceName);
 
-      connection.onMessageReceived(JSParser.<JSObject>parse(inspectRequest));
+      connection.onMessageParsed(JSParser.<JSObject>parse(inspectRequest));
 
       JSCallback callback = JSCallback.OK;
       List<?> args = ia.methods;
@@ -427,7 +429,7 @@ public class ConnectionTest {
     JSObject heartbeat = new IndexedHashMap();
     ConnectionListener listener = mock(ConnectionListener.class);
 
-    connection.onMessageReceived(heartbeat);
+    connection.onMessageParsed(heartbeat);
 
     // must not reject heartbeat packet
     verify(listener, times(0))
@@ -499,7 +501,7 @@ public class ConnectionTest {
 
     String callString =
         String.format(TestConstants.TEMPLATE_CALL, 13, interfaceName, methodName, "[]");
-    connection.onMessageReceived(JSParser.<JSObject>parse(callString));
+    connection.onMessageParsed(JSParser.<JSObject>parse(callString));
 
     verify(handler, times(0)).onMessage(any(JSObject.class));
   }
@@ -515,9 +517,26 @@ public class ConnectionTest {
 
     String callString =
         String.format(TestConstants.TEMPLATE_EVENT, 13, interfaceName, methodName, "[]");
-    connection.onMessageReceived(JSParser.<JSObject>parse(callString));
+    connection.onMessageParsed(JSParser.<JSObject>parse(callString));
 
     verify(handler, times(0)).onMessage(any(JSObject.class));
+  }
+
+  @Test
+  void messageHandler() throws Exception {
+    OkErrorHandler handler = mock(OkErrorHandler.class);
+    connection.addHandler(13, handler);
+
+    ((TransportListener) connection).onMessageReceived("{pong:[13]}");
+
+    synchronized (ConnectionTest.this) {
+      // messages are parsed in a separate thread so wait a bit to make sure
+      // we have finished parsing
+      wait(500);
+    }
+
+    verify(handler, times(1))
+        .onMessage(JSElements.EMPTY_OBJECT);
   }
 
   private static class BasicArguments {

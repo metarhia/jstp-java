@@ -32,7 +32,7 @@ public class HandshakeAnswer implements Answer<Void> {
   @Override
   public Void answer(InvocationOnMock invocation) throws Throwable {
     final JSObject handshakeAnswer = JSParser.parse(response);
-    connection.onMessageReceived(handshakeAnswer);
+    connection.onMessageParsed(handshakeAnswer);
     return null;
   }
 }

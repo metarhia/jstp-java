@@ -6,6 +6,8 @@ import com.metarhia.jstp.core.JSTypes.JSElements;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import com.metarhia.jstp.exceptions.MessageHandlingException;
 import com.metarhia.jstp.storage.StorageInterface;
+import com.metarhia.jstp.messagehandling.MessageHandler;
+import com.metarhia.jstp.messagehandling.MessageHandlerImpl;
 import com.metarhia.jstp.transport.Transport;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,7 +24,8 @@ import org.slf4j.LoggerFactory;
  * Connection that uses JSTP over specified transport to transmit data
  */
 public class Connection implements
-    Transport.TransportListener {
+    Transport.TransportListener,
+    MessageHandler.MessageHandlerListener {
 
   private static final Logger logger = LoggerFactory.getLogger(Connection.class);
 
@@ -64,11 +67,14 @@ public class Connection implements
 
   private SessionPolicy sessionPolicy;
 
+  private MessageHandler messageHandler;
+
   private AtomicLong messageNumberCounter;
 
   /**
    * Creates connection instance over specified transport {@param transport}.
-   * and with {@link SimpleSessionPolicy} as default {@link SessionPolicy}.
+   * and with {@link SimpleSessionPolicy} as default {@link SessionPolicy},
+   * and {@link MessageHandlerImpl} as default {@link MessageHandler}.
    *
    * @param transport transport to be used for sending JSTP data
    */
@@ -78,18 +84,25 @@ public class Connection implements
 
   /**
    * Creates connection instance over specified transport with specified session policy
-   * (see {@link SessionPolicy})
+   * and {@link MessageHandlerImpl} as default {@link MessageHandler}.
    *
    * @param transport     transport to be used for sending JSTP messages
    * @param sessionPolicy session policy
    */
   public Connection(Transport transport, SessionPolicy sessionPolicy) {
+    this(transport, sessionPolicy, new MessageHandlerImpl());
+  }
+
+  public Connection(Transport transport, SessionPolicy sessionPolicy,
+                    MessageHandler messageHandler) {
     this.id = nextConnectionID.getAndIncrement();
     this.state = ConnectionState.AWAITING_HANDSHAKE;
     this.stateLock = new Object();
     this.messageNumberCounter = new AtomicLong(0);
 
     setTransport(transport);
+
+    setMessageHandler(messageHandler);
 
     setSessionPolicy(sessionPolicy);
 
@@ -220,6 +233,7 @@ public class Connection implements
       throw new RuntimeException("Application must not be null");
     }
     sessionPolicy.getSessionData().setParameters(appData, null);
+    messageHandler.clearQueue();
     setMessageNumberCounter(0);
     long messageNumber = getNextMessageNumber();
     if (handler != null) {
@@ -264,7 +278,6 @@ public class Connection implements
    */
   public void handshake(AppData appData, String sessionID, ManualHandler handler) {
     sessionPolicy.getSessionData().setParameters(appData, sessionID);
-    setMessageNumberCounter(0);
     long messageNumber = 0;
     if (handler != null) {
       handlers.put(messageNumber, handler);
@@ -425,7 +438,7 @@ public class Connection implements
   }
 
   @Override
-  public void onMessageReceived(JSObject message) {
+  public void onMessageParsed(JSObject message) {
     try {
       if (message.isEmpty()) {
         // heartbeat packet
@@ -442,6 +455,15 @@ public class Connection implements
       // means message was ill formed
       rejectMessage(message, true);
     }
+  }
+
+  @Override
+  public void onHandlingError(MessageHandlingException e) {
+    logger.info("Message handling error", e);
+    if (transport.isConnected()) {
+      transport.close(true);
+    }
+    messageHandler.clearQueue();
   }
 
   private boolean handleMessage(JSObject message, MessageType type) {
@@ -623,6 +645,11 @@ public class Connection implements
       }
       sessionPolicy.onTransportAvailable();
     }
+  }
+
+  @Override
+  public void onMessageReceived(String message) {
+    messageHandler.post(message);
   }
 
   @Override
@@ -911,6 +938,25 @@ public class Connection implements
 
   public SessionPolicy getSessionPolicy() {
     return sessionPolicy;
+  }
+
+  public MessageHandler getMessageHandler() {
+    return messageHandler;
+  }
+
+  /**
+   * Changes message handler used by the connection to {@param messageHandler} while disregarding
+   * previously used one. Be aware that this method makes no guarantees that all of the messages
+   * of the previous message handler have been processed.
+   *
+   * @param messageHandler new message handler
+   */
+  public void setMessageHandler(MessageHandler messageHandler) {
+    if (this.messageHandler != null) {
+      this.messageHandler.setListener(null);
+    }
+    this.messageHandler = messageHandler;
+    this.messageHandler.setListener(this);
   }
 
   private void setTransport(Transport transport) {

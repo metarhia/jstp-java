@@ -47,7 +47,7 @@ class EventHandlerTest {
     EventHandler eventHandler = mock(EventHandler.class);
     doCallRealMethod().when(eventHandler).onMessage(isA(JSObject.class));
     connection.addEventHandler(interfaceName, eventName, eventHandler);
-    connection.onMessageReceived(eventMessage);
+    connection.onMessageParsed(eventMessage);
 
     verify(eventHandler, times(1))
         .handleEvent(eventName, eventArgs);

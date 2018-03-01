@@ -19,7 +19,7 @@ public class LoopbackAnswer implements Answer<Void> {
   @Override
   public Void answer(InvocationOnMock invocation) throws Throwable {
     JSObject call = JSParser.parse((String) invocation.getArgument(0));
-    connection.onMessageReceived(call);
+    connection.onMessageParsed(call);
     return null;
   }
 }

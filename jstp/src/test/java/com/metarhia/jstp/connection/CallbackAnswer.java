@@ -50,7 +50,7 @@ public class CallbackAnswer implements Answer<Void> {
     String response = String.format(TestConstants.TEMPLATE_CALLBACK,
         messageNumber, status.toString(), args);
     final JSObject callbackMessage = JSParser.parse(response);
-    connection.onMessageReceived(callbackMessage);
+    connection.onMessageParsed(callbackMessage);
     return null;
   }
 }

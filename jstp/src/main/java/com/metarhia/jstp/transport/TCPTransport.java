@@ -1,10 +1,6 @@
 package com.metarhia.jstp.transport;
 
 import com.metarhia.jstp.Constants;
-import com.metarhia.jstp.core.JSInterfaces.JSObject;
-import com.metarhia.jstp.core.JSParser;
-import com.metarhia.jstp.core.JSParsingException;
-import com.metarhia.jstp.core.JSSerializer;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -58,8 +54,6 @@ public class TCPTransport implements Transport {
 
   private OutputStream out;
   private BufferedInputStream in;
-
-  private JSParser jsParser;
 
   private long closingTick;
   private long closingTimeout;
@@ -117,8 +111,7 @@ public class TCPTransport implements Transport {
     this.port = port;
     this.sslEnabled = sslEnabled;
     this.socketListener = listener;
-    messageQueue = new ConcurrentLinkedQueue<>();
-    jsParser = new JSParser();
+    this.messageQueue = new ConcurrentLinkedQueue<>();
   }
 
   @Override
@@ -246,19 +239,7 @@ public class TCPTransport implements Transport {
 
       logger.trace("Received message: {}", message);
 
-      jsParser.setInput(message);
-      try {
-        final Object parseResult = jsParser.parse();
-        if (parseResult instanceof JSObject) {
-          socketListener.onMessageReceived((JSObject) parseResult);
-        } else {
-          final String msg = "Unexpected message (expected JSObject): " +
-              JSSerializer.stringify(parseResult);
-          socketListener.onTransportError(new RuntimeException(msg));
-        }
-      } catch (JSParsingException e) {
-        logger.info("Message parsing failed", e);
-      }
+      socketListener.onMessageReceived(message);
     }
     messageBuilder.reset();
     if (b == -1) {

@@ -1,16 +1,17 @@
 package com.metarhia.jstp.transport;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.TestConstants;
+import com.metarhia.jstp.TestUtils;
 import com.metarhia.jstp.connection.Connection;
 import com.metarhia.jstp.connection.HandshakeAnswer;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
@@ -22,7 +23,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
-import org.mockito.Spy;
 
 /**
  * Created by lundibundi on 2/18/17.
@@ -31,19 +31,15 @@ public class TCPTransportTest {
 
   private TCPTransport tcpTransport;
 
-  @Spy
   private Connection connection;
 
   public TCPTransportTest() {
     tcpTransport = spy(new TCPTransport("", 0));
-    connection = spy(new Connection(tcpTransport));
-    when(tcpTransport.isConnected()).thenReturn(true);
+    connection = TestUtils.createConnectionSpy(tcpTransport, true).connection;
     doAnswer(new HandshakeAnswer(connection)).when(tcpTransport)
         .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
-    connection.handshake("appName", null);
+    connection.connect("appName");
     assertTrue(connection.isConnected(), "Must be connected after handshake");
-    // no idea why but transport has another instance of connection as listener so set this one
-    tcpTransport.setListener(connection);
   }
 
   @Test
@@ -64,11 +60,8 @@ public class TCPTransportTest {
           while (in.available() > 0) {
             tcpTransport.processMessage(in, baos);
           }
-          synchronized (TCPTransportTest.this) {
-            TCPTransportTest.this.notify();
-          }
         } catch (IOException e) {
-          e.printStackTrace();
+          fail("Unexpected error during message feed", e);
         }
       }
     });
@@ -82,8 +75,7 @@ public class TCPTransportTest {
     readThread.start();
 
     synchronized (TCPTransportTest.this) {
-      wait(3000);
-      readThread.interrupt();
+      wait(1000);
     }
 
     verify(eventHandler, times(1))

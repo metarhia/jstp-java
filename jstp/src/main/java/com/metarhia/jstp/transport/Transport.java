@@ -1,7 +1,5 @@
 package com.metarhia.jstp.transport;
 
-import com.metarhia.jstp.core.JSInterfaces.JSObject;
-
 /**
  * Interface for JSTP transport
  */
@@ -70,7 +68,7 @@ public interface Transport {
      *
      * @param message message received over the connection
      */
-    void onMessageReceived(JSObject message);
+    void onMessageReceived(String message);
 
     /**
      * Called when connection gets closed

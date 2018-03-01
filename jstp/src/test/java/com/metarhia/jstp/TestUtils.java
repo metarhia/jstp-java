@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 import com.metarhia.jstp.connection.Connection;
 import com.metarhia.jstp.connection.SessionPolicy;
 import com.metarhia.jstp.connection.SimpleSessionPolicy;
+import com.metarhia.jstp.messagehandling.MessageHandler;
+import com.metarhia.jstp.messagehandling.MessageHandlerImpl;
 import com.metarhia.jstp.transport.Transport;
 
 public class TestUtils {
@@ -29,11 +31,14 @@ public class TestUtils {
                                                   boolean transportConnected) {
     if (transport == null) {
       transport = mock(Transport.class);
-      when(transport.isConnected()).thenReturn(transportConnected);
     }
+    when(transport.isConnected()).thenReturn(transportConnected);
+
+    MessageHandler messageHandler = new MessageHandlerImpl();
     SessionPolicy sessionPolicy = new SimpleSessionPolicy();
-    Connection connection = spy(new Connection(transport, sessionPolicy));
+    Connection connection = spy(new Connection(transport, sessionPolicy, messageHandler));
     sessionPolicy.setConnection(connection);
+    messageHandler.setListener(connection);
     return new ConnectionSpy(connection, transport);
   }
 
