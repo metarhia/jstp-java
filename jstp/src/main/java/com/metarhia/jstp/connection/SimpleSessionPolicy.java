@@ -8,6 +8,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
@@ -15,7 +16,7 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
   private boolean reconnectWhenTransportReady;
 
-  private HashMap<Long, String> sentMessages;
+  private Map<Long, Message> sentMessages;
 
   private long lastDeliveredNumber;
 
@@ -30,7 +31,7 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
     this.sendBufferCapacity = 0;
     this.sessionData = new SessionData();
     this.data = new HashMap<>();
-    this.sentMessages = new HashMap<>();
+    this.sentMessages = new ConcurrentSkipListMap<>();
   }
 
   public static SimpleSessionPolicy restoreFrom(StorageInterface storageInterface) {
@@ -42,8 +43,9 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
   @Override
   public void restore(long numServerReceivedMessages) {
     removeBufferedMessages(numServerReceivedMessages);
-    for (String message : sentMessages.values()) {
-      connection.send(message);
+
+    for (Message message : sentMessages.values()) {
+      connection.send(message.getStringRepresentation());
     }
   }
 
@@ -94,12 +96,12 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
   @Override
   public void onMessageSent(Message message) {
-    String msg = message.getStringRepresentation();
-    if (msg == null) {
-      msg = message.stringify();
+    if (message.getStringRepresentation() == null) {
+      message.stringify();
     }
-    sessionData.setNumSentMessages(message.getMessageNumber());
-    sentMessages.put(message.getMessageNumber(), msg);
+    long messageNumber = message.getMessageNumber();
+    sessionData.setNumSentMessages(messageNumber);
+    sentMessages.put(messageNumber, message);
     if (sendBufferCapacity > 0 && sentMessages.size() >= sendBufferCapacity) {
       removeBufferedMessages(lastDeliveredNumber + 1);
     }
@@ -158,7 +160,7 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
     return data;
   }
 
-  public HashMap<Long, String> getSentMessages() {
+  public Map<Long, Message> getSentMessages() {
     return sentMessages;
   }
 

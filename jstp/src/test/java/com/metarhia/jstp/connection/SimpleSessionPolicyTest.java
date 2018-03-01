@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
+import org.mockito.Mockito;
 
 class SimpleSessionPolicyTest {
 
@@ -127,8 +129,31 @@ class SimpleSessionPolicyTest {
         expectedSessionPolicy.getSessionData().getSessionId(),
         new HashMap<Long, ManualHandler>());
 
-
     assertEquals(expectedSessionPolicy, sessionPolicy,
         "must have correct values after onNewConnection");
+  }
+
+  @Test
+  void orderedMessageResend() {
+    SessionPolicy sessionPolicy = new SimpleSessionPolicy();
+    Connection connection = mock(Connection.class);
+    sessionPolicy.setConnection(connection);
+
+    Message[] messages = {
+        new Message(1, MessageType.EVENT),
+        new Message(2, MessageType.EVENT),
+        new Message(3, MessageType.EVENT)
+    };
+    for (Message message : messages) {
+      sessionPolicy.onMessageSent(message);
+    }
+
+    sessionPolicy.restore(0);
+
+    InOrder orderVerifier = Mockito.inOrder(connection);
+    orderVerifier.verify(connection).send(messages[0].getStringRepresentation());
+    orderVerifier.verify(connection).send(messages[1].getStringRepresentation());
+    orderVerifier.verify(connection).send(messages[2].getStringRepresentation());
+    orderVerifier.verifyNoMoreInteractions();
   }
 }
