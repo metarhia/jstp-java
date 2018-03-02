@@ -169,11 +169,16 @@ public class ConnectionTest {
     Transport transport = cs.transport;
     Connection connection = cs.connection;
 
+    ConnectionListener listener = mock(ConnectionListener.class);
+    connection.addSocketListener(listener);
+
     doAnswer(new HandshakeAnswer(connection)).when(transport)
         .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
 
     connection.handshake(TestConstants.MOCK_APP_NAME, null);
 
+    verify(listener, times(1))
+        .onConnected(false);
     assertTrue(connection.isConnected());
   }
 
