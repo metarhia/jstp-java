@@ -212,6 +212,11 @@ public class TCPTransport implements Transport {
         } catch (InterruptedException | ClosedByInterruptException | NullPointerException e) {
           // all ok - manually closing
           // npe - 'in' was null, means we are closing transport right now
+          // otherwise error happened so close and report
+          if (in != null) {
+            logger.info("Receiver thread failed", e);
+            closeInternal();
+          }
         } catch (IOException e) {
           if (!Thread.currentThread().isInterrupted()) {
             // means this thread was closed
