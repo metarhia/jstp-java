@@ -887,7 +887,7 @@ public class Connection implements
    *
    * @param listener connection events listener
    */
-  public void addSocketListener(ConnectionListener listener) {
+  public void addListener(ConnectionListener listener) {
     this.connectionListeners.add(listener);
   }
 

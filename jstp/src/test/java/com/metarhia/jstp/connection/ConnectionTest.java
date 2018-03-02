@@ -148,7 +148,7 @@ public class ConnectionTest {
   @Test
   public void illFormedMessages() throws Exception {
     ConnectionListener listener = spy(ConnectionListener.class);
-    connection.addSocketListener(listener);
+    connection.addListener(listener);
     JSParser parser = new JSParser();
     for (Map.Entry<String, List<String>> illList : illFormedMessages.entrySet()) {
       for (String messageString : illList.getValue()) {
@@ -170,7 +170,7 @@ public class ConnectionTest {
     Connection connection = cs.connection;
 
     ConnectionListener listener = mock(ConnectionListener.class);
-    connection.addSocketListener(listener);
+    connection.addListener(listener);
 
     doAnswer(new HandshakeAnswer(connection)).when(transport)
         .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
@@ -209,7 +209,7 @@ public class ConnectionTest {
     ConnectionListener listener = mock(ConnectionListener.class);
     OkErrorHandler handler = spy(OkErrorHandler.class);
 
-    connection.addSocketListener(listener);
+    connection.addListener(listener);
 
     connection.handshake(TestConstants.MOCK_APP_NAME, handler);
 
