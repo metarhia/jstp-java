@@ -5,9 +5,9 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSTypes.JSElements;
 import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import com.metarhia.jstp.exceptions.MessageHandlingException;
-import com.metarhia.jstp.storage.StorageInterface;
 import com.metarhia.jstp.messagehandling.MessageHandler;
 import com.metarhia.jstp.messagehandling.MessageHandlerImpl;
+import com.metarhia.jstp.storage.StorageInterface;
 import com.metarhia.jstp.transport.Transport;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -965,7 +965,13 @@ public class Connection implements
   }
 
   public void setSessionPolicy(SessionPolicy sessionPolicy) {
-    this.sessionPolicy = sessionPolicy;
-    this.sessionPolicy.setConnection(this);
+    synchronized (stateLock) {
+      // guard by stateLock to avoid setting it to null in the middle of session restore
+      if (this.sessionPolicy != null) {
+        this.sessionPolicy.setConnection(null);
+      }
+      this.sessionPolicy = sessionPolicy;
+      this.sessionPolicy.setConnection(this);
+    }
   }
 }
