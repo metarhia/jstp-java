@@ -10,6 +10,8 @@ import java.util.Objects;
 
 public class DropSessionPolicy implements SessionPolicy, Serializable {
 
+  private static final long serialVersionUID = -346678830813726170L;
+
   private SessionData sessionData;
 
   private boolean reconnectWhenTransportReady;

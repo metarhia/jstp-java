@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
+  private static final long serialVersionUID = -3453132564056499599L;
+
   private boolean reconnectWhenTransportReady;
 
   private Map<Long, Message> sentMessages;
