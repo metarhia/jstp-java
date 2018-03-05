@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +107,7 @@ public class Connection implements
 
     setSessionPolicy(sessionPolicy);
 
-    this.connectionListeners = new ArrayList<>();
+    this.connectionListeners = new CopyOnWriteArrayList<>();
     this.eventHandlers = new ConcurrentHashMap<>();
     this.clientMethodNames = new ConcurrentHashMap<>();
     this.handlers = new ConcurrentHashMap<>();

@@ -528,6 +528,26 @@ public class ConnectionTest {
   }
 
   @Test
+  void removeListenerFromCallback() {
+    final ConnectionSpy cs = TestUtils.createConnectionSpy();
+    final Connection connection = cs.connection;
+    doAnswer(new HandshakeAnswer(connection)).when(cs.transport)
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
+    SimpleConnectionListener listener = spy(new SimpleConnectionListener() {
+      @Override
+      public void onConnected(boolean restored) {
+        connection.removeListener(this);
+      }
+    });
+    connection.addListener(listener);
+
+    connection.connect(TestConstants.MOCK_APP_NAME);
+
+    verify(listener, times(1))
+        .onConnected(false);
+  }
+
+  @Test
   void messageHandler() throws Exception {
     OkErrorHandler handler = mock(OkErrorHandler.class);
     connection.addHandler(13, handler);
