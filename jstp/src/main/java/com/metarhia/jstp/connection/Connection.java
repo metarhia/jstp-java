@@ -899,6 +899,10 @@ public class Connection implements
     this.connectionListeners.add(listener);
   }
 
+  public void removeListener(ConnectionListener listener) {
+    this.connectionListeners.remove(listener);
+  }
+
   private void reportClosed() {
     for (ConnectionListener listener : connectionListeners) {
       listener.onConnectionClosed();
