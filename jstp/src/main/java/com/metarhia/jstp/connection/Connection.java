@@ -114,13 +114,21 @@ public class Connection implements
   }
 
   /**
+   * Calls {@link #useTransport(Transport, boolean)} with connect set to true
+   */
+  public void useTransport(Transport transport) {
+    useTransport(transport, true);
+  }
+
+  /**
    * Changes transport used by a connection. It closes the previous transport if it was present,
    * and establishes connection via {@link #connect(String)} if Application was provided
    * before.
    *
    * @param transport new transport to be used for sending JSTP messages
+   * @param connect   if true it will try to {@link #connect(AppData)} if applicable
    */
-  public void useTransport(Transport transport) {
+  public void useTransport(Transport transport, boolean connect) {
     synchronized (stateLock) {
       if (this.transport != null) {
         this.transport.setListener(null);
@@ -131,7 +139,7 @@ public class Connection implements
       this.state = ConnectionState.AWAITING_HANDSHAKE;
     }
 
-    if (getAppName() != null) {
+    if (connect && getAppName() != null) {
       connect(getAppData());
     }
   }
