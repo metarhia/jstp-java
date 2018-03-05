@@ -940,6 +940,14 @@ public class Connection implements
     return sessionPolicy.getSessionData().getSessionId();
   }
 
+  public void setAppData(AppData appData) {
+    sessionPolicy.getSessionData().setAppData(appData);
+  }
+
+  public void setSessionId(String sessionId) {
+    sessionPolicy.getSessionData().setSessionId(sessionId);
+  }
+
   public Transport getTransport() {
     return transport;
   }
