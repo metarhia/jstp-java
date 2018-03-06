@@ -980,7 +980,13 @@ public class Connection implements
     this.messageHandler.setListener(this);
   }
 
-  private void setTransport(Transport transport) {
+  /**
+   * Simple transport setter, will not ensure any transport or state transition.
+   * Refer to {@link #useTransport(Transport, boolean)} for those features.
+   *
+   * @param transport new transport
+   */
+  public void setTransport(Transport transport) {
     this.transport = transport;
     this.transport.setListener(this);
   }
