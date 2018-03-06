@@ -79,7 +79,7 @@ public class TCPTransport implements Transport {
    * @param listener socket events listener
    */
   public TCPTransport(String host, int port, TransportListener listener) {
-    this(host, port, false, listener);
+    this(host, port, true, listener);
   }
 
   /**
