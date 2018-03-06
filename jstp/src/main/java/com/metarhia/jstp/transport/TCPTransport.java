@@ -116,12 +116,25 @@ public class TCPTransport implements Transport {
 
   @Override
   public boolean connect() {
+    return connect(null);
+  }
+
+  public boolean connect(final ConnectCallback callback) {
+    return connect(this.host, this.port, callback);
+  }
+
+  public boolean connect(String host, int port, final ConnectCallback callback) {
     if (isConnected()) {
+      AlreadyConnectedException error = new AlreadyConnectedException();
       if (socketListener != null) {
-        socketListener.onTransportError(new AlreadyConnectedException());
+        socketListener.onTransportError(error);
       }
+      errorCallback(callback, error);
       return false;
     }
+
+    this.host = host;
+    this.port = port;
 
     connecting = true;
     new Thread(new Runnable() {
@@ -132,18 +145,33 @@ public class TCPTransport implements Transport {
             closeInternal(false);
           }
           if (initConnection()) {
+            connectCallback(callback);
             startReceiverThread();
             startSenderThread();
           } else {
+            errorCallback(callback, null);
             closeInternal();
           }
         } catch (IOException e) {
           logger.info("Cannot create socket", e);
+          errorCallback(callback, e);
           closeInternal();
         }
       }
     }).start();
     return true;
+  }
+
+  private void connectCallback(ConnectCallback callback) {
+    if (callback != null) {
+      callback.onConnected(TCPTransport.this);
+    }
+  }
+
+  private void errorCallback(ConnectCallback callback, Exception e) {
+    if (callback != null) {
+      callback.onError(e);
+    }
   }
 
   private synchronized void startSenderThread() {
@@ -490,5 +518,12 @@ public class TCPTransport implements Transport {
    */
   public void setClosingTimeout(long closingTimeout) {
     this.closingTimeout = closingTimeout;
+  }
+
+  public interface ConnectCallback {
+
+    void onConnected(TCPTransport transport);
+
+    void onError(Exception e);
   }
 }
