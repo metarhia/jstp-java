@@ -1,9 +1,10 @@
 package com.metarhia.jstp.storage;
 
+import com.metarhia.jstp.session.SessionPolicy;
 import java.io.Serializable;
 
 /**
- * Storage interface for {@link com.metarhia.jstp.connection.SessionPolicy}
+ * Storage interface for {@link SessionPolicy}
  */
 public interface StorageInterface {
 

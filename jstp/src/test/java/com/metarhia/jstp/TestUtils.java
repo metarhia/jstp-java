@@ -5,10 +5,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import com.metarhia.jstp.connection.Connection;
-import com.metarhia.jstp.connection.SessionPolicy;
-import com.metarhia.jstp.connection.SimpleSessionPolicy;
 import com.metarhia.jstp.messagehandling.MessageHandler;
 import com.metarhia.jstp.messagehandling.MessageHandlerImpl;
+import com.metarhia.jstp.session.SessionPolicy;
+import com.metarhia.jstp.session.SimpleSessionPolicy;
 import com.metarhia.jstp.transport.Transport;
 
 public class TestUtils {

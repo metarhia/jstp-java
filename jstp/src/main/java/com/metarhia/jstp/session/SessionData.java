@@ -1,5 +1,6 @@
-package com.metarhia.jstp.connection;
+package com.metarhia.jstp.session;
 
+import com.metarhia.jstp.connection.AppData;
 import java.io.Serializable;
 import java.util.Objects;
 

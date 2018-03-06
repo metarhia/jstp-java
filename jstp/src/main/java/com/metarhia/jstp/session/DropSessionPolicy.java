@@ -1,6 +1,10 @@
-package com.metarhia.jstp.connection;
+package com.metarhia.jstp.session;
 
 import com.metarhia.jstp.Constants;
+import com.metarhia.jstp.connection.AppData;
+import com.metarhia.jstp.connection.Connection;
+import com.metarhia.jstp.connection.Message;
+import com.metarhia.jstp.connection.MessageType;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.storage.StorageInterface;

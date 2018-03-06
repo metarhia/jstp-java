@@ -7,6 +7,9 @@ import com.metarhia.jstp.exceptions.AlreadyConnectedException;
 import com.metarhia.jstp.exceptions.MessageHandlingException;
 import com.metarhia.jstp.messagehandling.MessageHandler;
 import com.metarhia.jstp.messagehandling.MessageHandlerImpl;
+import com.metarhia.jstp.session.SessionData;
+import com.metarhia.jstp.session.SessionPolicy;
+import com.metarhia.jstp.session.SimpleSessionPolicy;
 import com.metarhia.jstp.storage.StorageInterface;
 import com.metarhia.jstp.transport.Transport;
 import java.util.ArrayList;
@@ -945,7 +948,7 @@ public class Connection implements
     }
   }
 
-  protected long getMessageNumberCounter() {
+  public long getMessageNumberCounter() {
     return messageNumberCounter.get();
   }
 

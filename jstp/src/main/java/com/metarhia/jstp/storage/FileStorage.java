@@ -1,5 +1,6 @@
 package com.metarhia.jstp.storage;
 
+import com.metarhia.jstp.session.SessionPolicy;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * File storage for {@link com.metarhia.jstp.connection.SessionPolicy}
+ * File storage for {@link SessionPolicy}
  */
 public class FileStorage implements StorageInterface {
 
