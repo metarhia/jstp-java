@@ -863,6 +863,26 @@ public class Connection implements
     clientMethodNames.put(interfaceName, methods);
   }
 
+  public ConnectionListener setReconnectCallback(final ReconnectCallback reconnectCallback) {
+    SimpleConnectionListener reconnectListener = new SimpleConnectionListener() {
+      @Override
+      public void onConnectionClosed() {
+        reconnectCallback.onConnectionLost(Connection.this, new TransportConnector() {
+          @Override
+          public void connect(Transport newTransport) {
+            if (newTransport == null) {
+              getTransport().connect();
+            } else {
+              useTransport(newTransport);
+            }
+          }
+        });
+      }
+    };
+    addListener(reconnectListener);
+    return reconnectListener;
+  }
+
   /**
    * Checks if connection is established
    *
@@ -1001,4 +1021,29 @@ public class Connection implements
       this.sessionPolicy.setConnection(this);
     }
   }
+
+  public interface ReconnectCallback {
+
+    /**
+     * Will be called upon transport connection loss to try to restore the connection.
+     * Should use {@param transportConnector} as needed to do so.
+     *
+     * @param connection         instance that has lost a connection
+     * @param transportConnector connector to be used to establish a new transport
+     */
+    void onConnectionLost(Connection connection, TransportConnector transportConnector);
+  }
+
+  public interface TransportConnector {
+
+    /**
+     * Called when new transport connection can be established
+     *
+     * @param newTransport either new transport or null upon which it will try to
+     *                     reconnect to the same address
+     */
+    void connect(Transport newTransport);
+  }
+
+
 }

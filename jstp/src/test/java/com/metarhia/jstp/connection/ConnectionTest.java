@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -23,6 +24,8 @@ import static org.mockito.Mockito.when;
 import com.metarhia.jstp.TestConstants;
 import com.metarhia.jstp.TestUtils;
 import com.metarhia.jstp.TestUtils.ConnectionSpy;
+import com.metarhia.jstp.connection.Connection.ReconnectCallback;
+import com.metarhia.jstp.connection.Connection.TransportConnector;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
 import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.core.JSParser;
@@ -545,6 +548,66 @@ public class ConnectionTest {
 
     verify(listener, times(1))
         .onConnected(false);
+  }
+
+  @Test
+  void reconnectCallbackDefault() {
+    final ConnectionSpy cs = TestUtils.createConnectionSpy();
+    final Connection connection = cs.connection;
+    final Transport transport = cs.transport;
+    doAnswer(new HandshakeAnswer(connection)).when(transport)
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
+
+    ReconnectCallback reconnectCallback = spy(new ReconnectCallback() {
+      @Override
+      public void onConnectionLost(Connection connection,
+                                   TransportConnector transportConnector) {
+        // must connect to the same transport
+        transportConnector.connect(null);
+      }
+    });
+    connection.setReconnectCallback(reconnectCallback);
+
+    connection.connect(TestConstants.MOCK_APP_NAME);
+
+    TestUtils.simulateDisconnect(connection, transport);
+
+    verify(reconnectCallback, times(1))
+        .onConnectionLost(isA(Connection.class), isA(TransportConnector.class));
+    verify(transport, times(1))
+        .connect();
+  }
+
+  @Test
+  void reconnectCallbackNewTransport() {
+    final ConnectionSpy cs = TestUtils.createConnectionSpy();
+    final Connection connection = cs.connection;
+    final Transport transport = cs.transport;
+
+    doAnswer(new HandshakeAnswer(connection)).when(transport)
+        .send(matches(TestConstants.ANY_HANDSHAKE_REQUEST));
+
+    final Transport newTransport = mock(Transport.class);
+    ReconnectCallback reconnectCallback = spy(new ReconnectCallback() {
+      @Override
+      public void onConnectionLost(Connection connection,
+                                   TransportConnector transportConnector) {
+        // must use the new transport
+        transportConnector.connect(newTransport);
+      }
+    });
+    connection.setReconnectCallback(reconnectCallback);
+
+    connection.connect(TestConstants.MOCK_APP_NAME);
+
+    TestUtils.simulateDisconnect(connection, transport);
+
+    verify(reconnectCallback, times(1))
+        .onConnectionLost(isA(Connection.class), isA(TransportConnector.class));
+    verify(transport, never())
+        .connect();
+    verify(newTransport, times(1))
+        .connect();
   }
 
   @Test
