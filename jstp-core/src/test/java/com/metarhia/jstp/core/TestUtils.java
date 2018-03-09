@@ -13,16 +13,21 @@ public class TestUtils {
   }
 
   public static <T, F, R extends Map<T, F>> R mapOfClass(Class<R> clazz, Object... keyValuePairs) {
-    final R map;
     try {
-      map = clazz.newInstance();
-      for (int i = 0; i < keyValuePairs.length; i += 2) {
-        if (i + 1 < keyValuePairs.length) {
-          map.put((T) keyValuePairs[i], (F) keyValuePairs[i + 1]);
-        }
-      }
+      R map = clazz.newInstance();
+      return mapOfClass(map, keyValuePairs);
     } catch (InstantiationException | IllegalAccessException e) {
       throw new RuntimeException("Failed to instantiate map object", e);
+    }
+  }
+
+  public static <T, F, R extends Map<T, F>> R mapOfClass(R map, Object... keyValuePairs) {
+    for (int i = 0; i < keyValuePairs.length; i += 2) {
+      if (i + 1 < keyValuePairs.length) {
+        T key = (T) keyValuePairs[i];
+        F value = (F) keyValuePairs[i + 1];
+        map.put(key, value);
+      }
     }
     return map;
   }
