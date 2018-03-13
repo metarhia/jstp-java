@@ -123,13 +123,17 @@ public class TCPTransport implements Transport {
     return connect(this.host, this.port, callback);
   }
 
-  public boolean connect(String host, int port, final ConnectCallback callback) {
+  public synchronized boolean connect(String host, int port, final ConnectCallback callback) {
     if (isConnected()) {
       AlreadyConnectedException error = new AlreadyConnectedException();
       if (socketListener != null) {
         socketListener.onTransportError(error);
       }
       errorCallback(callback, error);
+      return false;
+    }
+
+    if (connecting) {
       return false;
     }
 
@@ -141,21 +145,32 @@ public class TCPTransport implements Transport {
       @Override
       public void run() {
         try {
-          if (closing) {
-            closeInternal(false);
+          boolean connected;
+          synchronized (TCPTransport.this) {
+            if (closing) {
+              closeInternal(false);
+            }
+            connected = initConnection();
+            if (connected) {
+              startReceiverThread();
+              startSenderThread();
+            }
+            connecting = false;
           }
-          if (initConnection()) {
+          if (connected) {
+            if (socketListener != null) {
+              socketListener.onTransportConnected();
+            }
             connectCallback(callback);
-            startReceiverThread();
-            startSenderThread();
           } else {
-            errorCallback(callback, null);
             closeInternal();
+            errorCallback(callback, null);
           }
-        } catch (IOException e) {
-          logger.info("Cannot create socket", e);
-          errorCallback(callback, e);
+        } catch (Exception e) {
+          connecting = false;
+          logger.info("Cannot create socket: ", e);
           closeInternal();
+          errorCallback(callback, e);
         }
       }
     }).start();
@@ -174,7 +189,11 @@ public class TCPTransport implements Transport {
     }
   }
 
-  private synchronized void startSenderThread() {
+  private void startSenderThread() {
+    if (this.senderThread != null) {
+      throw new RuntimeException("Starting new sender thread before closing the previous one");
+    }
+
     this.senderThread = new Thread(new Runnable() {
       @Override
       public void run() {
@@ -202,7 +221,7 @@ public class TCPTransport implements Transport {
           }
         } catch (InterruptedException | ClosedByInterruptException e) {
           // all ok - manually closing
-        } catch (IOException e) {
+        } catch (Exception e) {
           logger.info("Sender thread failed", e);
           closeInternal();
         }
@@ -220,6 +239,10 @@ public class TCPTransport implements Transport {
   }
 
   private synchronized void startReceiverThread() {
+    if (this.receiverThread != null) {
+      throw new RuntimeException("Starting new receiver thread before closing the previous one");
+    }
+
     final ByteArrayOutputStream localMessageBuilder =
         new ByteArrayOutputStream(DEFAULT_MESSAGE_SIZE);
     final BufferedInputStream localIn = in;
@@ -237,20 +260,11 @@ public class TCPTransport implements Transport {
               }
             }
           }
-        } catch (InterruptedException | ClosedByInterruptException | NullPointerException e) {
+        } catch (InterruptedException | ClosedByInterruptException e) {
           // all ok - manually closing
-          // npe - 'in' was null, means we are closing transport right now
-          // otherwise error happened so close and report
-          if (in != null) {
-            logger.info("Receiver thread failed", e);
-            closeInternal();
-          }
-        } catch (IOException e) {
-          if (!Thread.currentThread().isInterrupted()) {
-            // means this thread was closed
-            logger.info("Receiver thread failed", e);
-            closeInternal();
-          }
+        } catch (Exception e) {
+          logger.info("Receiver thread failed", e);
+          closeInternal();
         }
       }
     });
@@ -262,9 +276,6 @@ public class TCPTransport implements Transport {
     int b = 0;
     while ((b = in.read()) > 0) {
       messageBuilder.write(b);
-    }
-    if (Thread.currentThread().isInterrupted()) {
-      return;
     }
     if (messageBuilder.size() != 0 && socketListener != null) {
       messageBuilder.write('\0');
@@ -282,29 +293,19 @@ public class TCPTransport implements Transport {
   }
 
   private boolean initConnection() throws IOException {
-    final boolean connected;
-    synchronized (TCPTransport.this) {
-      if (socket == null || !socket.isConnected() || socket.isClosed()) {
-        if (sslEnabled) {
-          socket = createSSLSocket(host, port);
-        } else {
-          socket = new Socket(host, port);
-        }
+    if (socket == null || !socket.isConnected() || socket.isClosed()) {
+      if (sslEnabled) {
+        socket = createSSLSocket(host, port);
+      } else {
+        socket = new Socket(host, port);
       }
-
-      connected = socket != null && socket.isConnected();
-      if (connected) {
-        logger.trace("Created socket: {}:{}", host, port);
-        running = true;
-        out = socket.getOutputStream();
-        in = new BufferedInputStream(socket.getInputStream());
-      }
-      connecting = false;
     }
-    if (connected) {
-      if (socketListener != null) {
-        socketListener.onTransportConnected();
-      }
+
+    if (socket != null && socket.isConnected()) {
+      logger.trace("Created socket: {}:{}", host, port);
+      running = true;
+      out = socket.getOutputStream();
+      in = new BufferedInputStream(socket.getInputStream());
       return true;
     }
     return false;
@@ -354,20 +355,29 @@ public class TCPTransport implements Transport {
 
   @Override
   public void close(final boolean forced) {
-    logger.trace("Public close transport");
-    closing = true;
+    synchronized (TCPTransport.this) {
+      if (closing) {
+        return;
+      }
+      logger.trace("Public close transport");
+      closing = true;
+    }
+
+    if (forced || messageQueue.isEmpty()) {
+      closeInternal();
+      return;
+    }
+
     new Thread(new Runnable() {
       @Override
       public void run() {
         try {
           closing = true;
-          if (!forced) {
-            synchronized (this) {
-              long delay = 0;
-              while (delay <= DEFAULT_CLOSING_TIMEOUT && !messageQueue.isEmpty()) {
-                wait(DEFAULT_CLOSING_TICK);
-                delay += DEFAULT_CLOSING_TICK;
-              }
+          synchronized (this) {
+            long delay = 0;
+            while (delay <= DEFAULT_CLOSING_TIMEOUT && !messageQueue.isEmpty()) {
+              wait(DEFAULT_CLOSING_TICK);
+              delay += DEFAULT_CLOSING_TICK;
             }
           }
           synchronized (TCPTransport.this) {
@@ -422,12 +432,12 @@ public class TCPTransport implements Transport {
 
   @Override
   public boolean isConnected() {
-    return !connecting && !closing && socket != null && socket.isConnected();
+    return !connecting && socket != null && socket.isConnected();
   }
 
   @Override
   public boolean isClosed() {
-    return closing || socket == null || socket.isClosed();
+    return socket == null || socket.isClosed();
   }
 
   public String getHost() {
