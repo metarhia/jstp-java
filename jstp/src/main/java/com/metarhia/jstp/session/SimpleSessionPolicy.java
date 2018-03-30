@@ -3,6 +3,7 @@ package com.metarhia.jstp.session;
 import com.metarhia.jstp.Constants;
 import com.metarhia.jstp.connection.AppData;
 import com.metarhia.jstp.connection.Connection;
+import com.metarhia.jstp.connection.ConnectionError;
 import com.metarhia.jstp.connection.Message;
 import com.metarhia.jstp.connection.MessageType;
 import com.metarhia.jstp.core.Handlers.ManualHandler;
@@ -10,7 +11,9 @@ import com.metarhia.jstp.core.JSInterfaces.JSObject;
 import com.metarhia.jstp.storage.StorageInterface;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -45,6 +48,16 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
 
   @Override
   public void restore(long numServerReceivedMessages) {
+    // remove and report handlers that were left out before connection broke
+    Iterator<Entry<Long, ManualHandler>> it = connection.getHandlers().entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<Long, ManualHandler> next = it.next();
+      if (next.getKey() <= lastDeliveredNumber) {
+        next.getValue().onError(ConnectionError.CALLBACK_LOST.getErrorCode());
+        it.remove();
+      }
+    }
+
     removeBufferedMessages(numServerReceivedMessages);
 
     for (Message message : sentMessages.values()) {
@@ -65,7 +78,8 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
   public void onMessageReceived(JSObject message, MessageType type) {
     long messageNumber = Connection.getMessageNumber(message);
     if (type == MessageType.CALLBACK || type == MessageType.PONG) {
-      removeBufferedMessages(messageNumber);
+      // we don't want to report error because we might receive a callback later
+      removeBufferedMessages(messageNumber, null);
     }
     if (messageNumber > sessionData.getNumReceivedMessages()) {
       sessionData.setNumReceivedMessages(messageNumber);
@@ -73,9 +87,19 @@ public class SimpleSessionPolicy implements SessionPolicy, Serializable {
   }
 
   private void removeBufferedMessages(long lastDeliveredNumber) {
+    removeBufferedMessages(lastDeliveredNumber,
+        ConnectionError.CALLBACK_LOST.getErrorCode());
+  }
+
+  private void removeBufferedMessages(long lastDeliveredNumber, Integer errorCode) {
     for (long i = this.lastDeliveredNumber + 1; i <= lastDeliveredNumber; ++i) {
       sentMessages.remove(i);
-      connection.removeHandler(i);
+      if (errorCode != null) {
+        ManualHandler handler = connection.removeHandler(i);
+        if (handler != null) {
+          handler.onError(errorCode);
+        }
+      }
     }
     this.lastDeliveredNumber = lastDeliveredNumber;
   }

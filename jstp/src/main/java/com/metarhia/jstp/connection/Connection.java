@@ -321,6 +321,9 @@ public class Connection implements
    * Sends a call message over the connection. If session is preserved this call is guaranteed
    * to be received by the other party but this doesn't mean that you will always receive
    * a callback.
+   * If you need to get the callback please refer to
+   * {@link #callResendable(String, String, List, ManualHandler)} method or resend manually
+   * upon {@link ConnectionError#CALLBACK_LOST} error.
    *
    * @param interfaceName name of an interface
    * @param methodName    name of a method
@@ -339,6 +342,50 @@ public class Connection implements
 
     if (handler != null) {
       handlers.put(messageNumber, handler);
+    }
+
+    sendBuffered(callMessage);
+  }
+
+  /**
+   * Sends a call message over the connection resending it if is not possible to
+   * get a callback (resends upon receiving
+   * {@link ConnectionError#CALLBACK_LOST} error).
+   *
+   * @param interfaceName name of an interface
+   * @param methodName    name of a method
+   * @param args          call arguments
+   * @param handler       callback that will be called when appropriate callback message is
+   *                      received
+   */
+  public void callResendable(final String interfaceName,
+                             String methodName,
+                             List<?> args,
+                             final ManualHandler handler) {
+    long messageNumber = getNextMessageNumber();
+    final Message callMessage = new Message(messageNumber, MessageType.CALL)
+        .putArg(methodName, args)
+        .addProtocolArg(interfaceName);
+
+    if (handler != null) {
+      handlers.put(messageNumber, new ManualHandler() {
+        @Override
+        public void onMessage(JSObject message) {
+          handler.onMessage(message);
+        }
+
+        @Override
+        public void onError(int errorCode) {
+          if (errorCode == ConnectionError.CALLBACK_LOST.getErrorCode()) {
+            long messageNumber = getNextMessageNumber();
+            callMessage.setMessageNumber(messageNumber);
+            handlers.put(messageNumber, this);
+            sendBuffered(callMessage);
+          } else {
+            handler.onError(errorCode);
+          }
+        }
+      });
     }
 
     sendBuffered(callMessage);
@@ -671,11 +718,15 @@ public class Connection implements
         state = ConnectionState.CLOSED;
         reportClosed();
       } else if (getAppName() != null) {
-        state = ConnectionState.AWAITING_RECONNECT;
-        reportClosed();
+        if (state != ConnectionState.AWAITING_RECONNECT) {
+          state = ConnectionState.AWAITING_RECONNECT;
+          reportClosed();
+        }
       } else {
-        state = ConnectionState.AWAITING_HANDSHAKE;
-        // app name is null -> connection was not established yet, so don't report
+        if (state != ConnectionState.AWAITING_HANDSHAKE) {
+          state = ConnectionState.AWAITING_HANDSHAKE;
+          reportClosed();
+        }
       }
       sessionPolicy.onConnectionClosed();
       transport.clearQueue();
@@ -774,6 +825,10 @@ public class Connection implements
 
   public ManualHandler removeHandler(long messageNumber) {
     return handlers.remove(messageNumber);
+  }
+
+  public Map<Long, ManualHandler> getHandlers() {
+    return handlers;
   }
 
   public void saveSession(StorageInterface storageInterface) {
@@ -1047,6 +1102,4 @@ public class Connection implements
      */
     void connect(Transport newTransport);
   }
-
-
 }

@@ -8,7 +8,8 @@ public enum ConnectionError {
   METHOD_NOT_FOUND(14),
   NOT_A_SERVER(15),
   INTERNAL_API_ERROR(16),
-  INVALID_SIGNATURE(17);
+  INVALID_SIGNATURE(17),
+  CALLBACK_LOST(18);
 
   private int errorCode;
 
