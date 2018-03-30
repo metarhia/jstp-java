@@ -10,6 +10,7 @@ buildscript {
 }
 
 plugins {
+    id "com.github.spotbugs" version "1.6.1" apply true
     id "com.github.dcendents.android-maven" version "2.0" apply false
     id "com.jfrog.bintray" version "1.7.3" apply false
 }

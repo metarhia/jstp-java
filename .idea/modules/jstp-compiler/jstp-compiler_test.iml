@@ -11,12 +11,13 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="jstp-compiler_main" />
     <orderEntry type="library" name="Gradle: com.squareup:javapoet:1.9.0" level="project" />
-    <orderEntry type="library" name="Gradle: com.metarhia.jstp:jstp:0.9.0" level="project" />
+    <orderEntry type="library" name="Gradle: com.metarhia.jstp:jstp:0.10.0" level="project" />
     <orderEntry type="library" name="Gradle: org.junit.platform:junit-platform-runner:1.0.2" level="project" />
     <orderEntry type="library" name="Gradle: org.junit.jupiter:junit-jupiter-engine:5.0.2" level="project" />
     <orderEntry type="library" name="Gradle: org.junit.jupiter:junit-jupiter-api:5.0.2" level="project" />
     <orderEntry type="library" name="Gradle: org.mockito:mockito-core:2.13.0" level="project" />
     <orderEntry type="library" name="Gradle: org.slf4j:slf4j-api:1.7.25" level="project" />
+    <orderEntry type="library" name="Gradle: com.github.zafarkhaja:java-semver:0.9.0" level="project" />
     <orderEntry type="library" name="Gradle: org.junit.platform:junit-platform-launcher:1.0.2" level="project" />
     <orderEntry type="library" name="Gradle: org.junit.platform:junit-platform-suite-api:1.0.2" level="project" />
     <orderEntry type="library" name="Gradle: junit:junit:4.12" level="project" />
