@@ -5,7 +5,6 @@
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../../jstp-core/src/main">
       <sourceFolder url="file://$MODULE_DIR$/../../../jstp-core/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../../../jstp-core/src/main/resources" type="java-resource" />
     </content>
     <orderEntry type="jdk" jdkName="1.7" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />

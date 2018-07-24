@@ -3,10 +3,7 @@
   <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_7">
     <output-test url="file://$MODULE_DIR$/../../../jstp-compiler/out/test/classes" />
     <exclude-output />
-    <content url="file://$MODULE_DIR$/../../../jstp-compiler/src/test">
-      <sourceFolder url="file://$MODULE_DIR$/../../../jstp-compiler/src/test/java" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/../../../jstp-compiler/src/test/resources" type="java-test-resource" />
-    </content>
+    <content url="file://$MODULE_DIR$/../../../jstp-compiler/src/test" />
     <orderEntry type="jdk" jdkName="1.8" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="jstp-compiler_main" />
