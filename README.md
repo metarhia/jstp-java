@@ -1,6 +1,6 @@
 # Java JSTP implementation
 
-[JSTP documentation](https://github.com/metarhia/JSTP)
+[jstp js](https://github.com/metarhia/jstp)
 
 [Check for the latest JSTP version](https://bintray.com/metarhia/maven/jstp)
 
@@ -10,7 +10,7 @@ Gradle:
 Add this to your build.gradle (check for the latest version):
 ```
 dependencies {
-  compile group: 'com.metarhia.jstp', name: 'jstp', version: '0.8.0'
+  compile group: 'com.metarhia.jstp', name: 'jstp', version: '0.10.0'
 }
 ```
 
@@ -19,7 +19,7 @@ Maven:
 <dependency>
   <groupId>com.metarhia.jstp</groupId>
   <artifactId>jstp</artifactId>
-  <version>0.8.0</version>
+  <version>0.10.0</version>
   <type>pom</type>
 </dependency>
 ```
@@ -33,10 +33,10 @@ Few simple examples
 ```java
 JSObject a = JSParser.parse("{a: 3, b: 2}");
 // Get field 'a' of object {a: 3, b: 2}
-a.get("a"); // returns 3.0
+a.get("a"); // returns 3
 
 // Get second field of object {a: 3, b: 2}
-a.getByIndex(1); // returns 2.0
+a.getByIndex(1); // returns 2
 
 // But you can easily use it as a Map
 Map<String, Number> map = (Map<String, Number>) a;
@@ -46,11 +46,11 @@ Map<String, Number> a = JSParser.parse("{a: 3, b: 2}");
 
 List<Double> arr = JSParser.parse("[1, 2, 3]");
 // Get second element of array [1, 2, 3];
-arr.get(1); // returns 2.0
+arr.get(1); // returns 2
 
 
 String str = JSParser.parse("'abc'");
-// str now equals to 'abc'
+// str now equals to "abc"
 
 
 List<?> arr = JSParser.parse("[1,, 3]");
@@ -68,12 +68,12 @@ Map<String, Number> a = JSParser.parse("{a: 3, b: 2}");
 JSSerializer.stringify(a); // returns "{a:3,b:2}"
 ```
 
-If it doesn't know how to serialize input it'll be serialized as `undefined`,
+If it doesn't know how to serialize input it'll be serialized as `"undefined"`,
 also you can define how your objects will be serialized via `JSSerializable`
 interface.
 
 They can be parsed in js with a simple eval statement or
-[js parser](https://github.com/metarhia/JSTP)
+[jstp](https://github.com/metarhia/jstp) and [mdsf](https://github.com/metarhia/mdsf)
 
 ## Connection
 
@@ -81,48 +81,44 @@ They can be parsed in js with a simple eval statement or
 
 To establish JSTP connection, you need to provide transport.
 As of now the only available transport is TCP. Optionally you can
-define restoration policy (there are 2 basic ones in SDK:
-`DropRestorationPolicy` - which will create new connection every
-time transport is restored and `SessionRestorationPolicy` - which
+define session policy (there are 2 basic ones in SDK:
+`DropSessionPolicy` - which will create new connection every
+time transport is restored and `SimpleSessionPolicy` - which
 will resend cached messages and try to restore session.
-`SessionRestorationPolicy` is used by default). For example:
+`SimpleSessionPolicy` is used by default). For example:
 
 ```java
 String host = "metarhia.com";
 int port = 80;
-boolean usesSSL = true;
 
-AbstractSocket transport = new TCPTransport(host, port, usesSSL);
+Transport transport = new TCPTransport(host, port /*, useSSl == true */);
 Connection connection = new Connection(transport);
 ```
 
 You can change used transport by calling `useTransport()` method.
 This will close previous transport if available and set provided one
 as current transport. It will try to connect and upon connection
-appropriate method of restoration policy will be called when transport
+appropriate method of session policy will be called when transport
 reports that it's connected.
 
-To react to connection events, you can use `ConnectionListener`:
+To react to connection events, you can use `ConnectionListener` (there is
+also `SimpleConnectionListener` version that defaults to ignoring all calls):
 
 ```java
-connection.addSocketListener(new ConnectionListener() {
+connection.addListener(new ConnectionListener() {
+
   @Override
   public void onConnected(boolean restored) {
     // ...
   }
 
   @Override
-  public void onMessageRejected(JSObject message) {
-    // ...
-  }
-
-  @Override
-  public void onConnectionError(int errorCode) {
-    // ...
-  }
-
-  @Override
   public void onConnectionClosed() {
+    // ...
+  }
+
+  @Override
+  public void onMessageRejected(JSObject message) {
     // ...
   }
 });
@@ -144,30 +140,48 @@ connection.connect("applicationName", "sessionId");
 #### Handshake
 
 Usually you don't have to send handshake messages manually. You may need
-them if If you need to implement your own restoration policy or change
+them if If you need to implement your own session policy or change
 transport on active connection. You can send `handshake` message as follows:
 
 ```java
 // anonymous handshake message
 connection.handshake("applicationName", new ManualHandler() {
+
   @Override
-  public void handle(JSObject message) {
+  public void onMessage(JSObject message) {
+    // ...
+  }
+
+  @Override
+  public void onError(int errorCode) {
     // ...
   }
 });
 
-// handshake with attempt to restore session
+// handshake with attempt to restore session "sessionId"
 connection.handshake("applicationName", "sessionId", new ManualHandler() {
+
   @Override
-  public void handle(JSObject message) {
+  public void onMessage(JSObject message) {
+    // ...
+  }
+
+  @Override
+  public void onError(int errorCode) {
     // ...
   }
 });
 
-// handshake message with authorization
+// handshake message with authorization (login and password)
 connection.handshake("applicationName", "name", "pass", new ManualHandler() {
+
   @Override
-  public void handle(JSObject  message) {
+  public void onMessage(JSObject message) {
+    // ...
+  }
+
+  @Override
+  public void onError(int errorCode) {
     // ...
   }
 });
@@ -179,17 +193,40 @@ connection.handshake("applicationName", "name", "pass", new ManualHandler() {
 To send `call` message:
 
 ```java
-List<?> args = new ArrayList();
-// ...
+List<?> args = Arrays.asList('a', 'b', 'c');
 connection.call("interfaceName", "methodName", args, new ManualHandler() {
+
   @Override
-  public void handle(final JSObject message) {
+  public void onMessage(JSObject message) {
+    // ...
+  }
+
+  @Override
+  public void onError(int errorCode) {
     // ...
   }
 );
 ```
 
-To handle incoming `call` messages, you have to `setCallHandler()` for that call.
+Or you can use `OkErrorHandler` that will make this much simpler and clearer:
+
+```java
+List<?> args = Arrays.asList('a', 'b', 'c');
+connection.call("interfaceName", "methodName", args, new OkErrorHandler() {
+
+  @Override
+  public void handleOk(List<?> data) {
+    // ...
+  }
+
+  @Override
+  public void handleError(Integer errorCode, List<?> data) {
+    // ...
+  }
+);
+```
+
+To handle incoming `call` messages, you have to set `setCallHandler()` for that call.
 There can only be one call handler for each call.
 
 #### Callback
@@ -199,11 +236,11 @@ While sending callback you should specify callback type (`JSCallback.OK` or
 
 ```java
 connection.setCallHandler("interfaceName", "methodName", new CallHandler() {
+
   @Override
-  public void handleCallback(List<?> data) {
-    List<Object> args = new ArrayList<>();
+  public void handleCall(String methodName, List<?> data) {
     // ...
-    callback(connection, JSCallback.OK, args);
+    callback(connection, JSCallback.OK, Arrays.asList('Hello'));
   }
 });
 ```
@@ -222,7 +259,7 @@ connection.callback(JSCallback.OK, args, customIndex);
 
 #### Inspect
 
-Incoming inspect messages are handled by Connection itself. To make
+Incoming inspect messages are handled by the Connection itself. To make
 methods visible through inspect message you just need to define method
 names with appropriate interfaces.
 
@@ -235,8 +272,14 @@ connection.setClientMethodNames("interfaceName2", "methodName1", "methodName2");
 To send `inspect` message:
 ```java
 connection.inspect("interfaceName", new ManualHandler() {
+
   @Override
-  public void handle(JSObject message) {
+  public void onMessage(JSObject message) {
+    // ...
+  }
+
+  @Override
+  public void onError(int errorCode) {
     // ...
   }
 });
@@ -248,9 +291,10 @@ To handle incoming events, you add event handlers with `addEventHandler()`.
 There can be multiple event handlers for each event.
 
 ```java
-connection.addEventHandler("interfaceName", "methodName", new ManualHandler() {
+connection.addEventHandler("interfaceName", "methodName", new EventHandler() {
+
   @Override
-  public void handle(JSObject message) {
+  public void handleEvent(String eventName, List<?> data) {
     // ...
   }
 });
@@ -258,8 +302,7 @@ connection.addEventHandler("interfaceName", "methodName", new ManualHandler() {
 
 Sending `event` message:
 ```java
-List<Object> args = new ArrayList<>();
-// ...
+List<String> args = Arrays.asList('Hello');
 connection.event("interfaceName", "methodName", args);
 ```
 
@@ -271,16 +314,20 @@ the packet handling method on it. Incoming `message` is a protected parameter in
 ExecutableHandler. You can use it like this:
 
 ```java
-Connection connection;
-Executor executor;
-// ...
+Connection connection = ...;
+Executor executor = ...;
 connection.call("interfaceName", "methodName", new ArrayList<>(),
-  new ExecutableHandler(executor) {
-   @Override
-   public void run() {
-     Collection keys = message.keys();
-     // ...
-   }
+  new ExecutableHandler(executor, new OkErrorHandler() {
+    @Override
+    public void handleOk(List<?> data) {
+      // ...
+    }
+
+    @Override
+    public void handleError(Integer errorCode, List<?> data) {
+      // ...
+    }
+  })
 });
 ```
 
@@ -298,7 +345,7 @@ compiler will parse those at compile time and generate implementations.
 Gradle:
 ```
 dependencies {
-  compile group: 'com.metarhia.jstp', name: 'jstp-compiler', version: '0.2.2'
+  compile group: 'com.metarhia.jstp', name: 'jstp-compiler', version: '0.4.0'
 }
 ```
 
@@ -308,10 +355,12 @@ Maven:
 <dependency>
   <groupId>com.metarhia.jstp</groupId>
   <artifactId>jstp-compiler</artifactId>
-  <version>0.2.2</version>
+  <version>0.4.0</version>
   <type>pom</type>
 </dependency>
 ```
+
+## Be aware that compiler documentation is currently outdated and needs a refresh as some methods/usages have changed.
 
 #### Handlers usage
 
