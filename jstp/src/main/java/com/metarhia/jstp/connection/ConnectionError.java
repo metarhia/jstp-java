@@ -9,7 +9,9 @@ public enum ConnectionError {
   NOT_A_SERVER(15),
   INTERNAL_API_ERROR(16),
   INVALID_SIGNATURE(17),
-  CALLBACK_LOST(18);
+
+  // Local Errors
+  CALLBACK_LOST(-1);
 
   private int errorCode;
 
