@@ -250,6 +250,8 @@ public class Connection implements
     long messageNumber = getNextMessageNumber();
     if (handler != null) {
       handlers.put(messageNumber, handler);
+    } else {
+      handlers.remove(messageNumber);
     }
 
     Message hm = new Message(messageNumber, MessageType.HANDSHAKE)
@@ -293,6 +295,8 @@ public class Connection implements
     long messageNumber = 0;
     if (handler != null) {
       handlers.put(messageNumber, handler);
+    } else {
+      handlers.remove(messageNumber);
     }
 
     Message hm = new Message(messageNumber, MessageType.HANDSHAKE)
