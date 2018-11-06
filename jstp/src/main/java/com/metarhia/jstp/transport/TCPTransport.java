@@ -169,8 +169,8 @@ public class TCPTransport implements Transport {
         } catch (Exception e) {
           connecting = false;
           logger.info("Cannot create socket: ", e);
-          closeInternal();
           errorCallback(callback, e);
+          closeInternal();
         }
       }
     }).start();
