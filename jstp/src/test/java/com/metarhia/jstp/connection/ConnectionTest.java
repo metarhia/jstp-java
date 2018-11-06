@@ -40,6 +40,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -548,6 +550,45 @@ public class ConnectionTest {
 
     verify(listener, times(1))
         .onConnected(false);
+  }
+
+  @Test
+  void multipleConnectMustReportClosed() throws Exception {
+    final int connectCalls = 3;
+    final CountDownLatch latch = new CountDownLatch(connectCalls);
+    final ConnectionSpy cs = TestUtils.createConnectionSpy(null, false);
+    final Transport transport = cs.transport;
+    final Connection connection = cs.connection;
+    when(transport.connect()).then(new Answer<Boolean>() {
+      @Override
+      public Boolean answer(InvocationOnMock invocation) {
+        new Thread(new Runnable() {
+          @Override
+          public void run() {
+            connection.onTransportClosed();
+          }
+        }).start();
+        return true;
+      }
+    });
+    final ConnectionListener listener = spy(ConnectionListener.class);
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) {
+        latch.countDown();
+        if (latch.getCount() > 0) {
+          connection.connect(TestConstants.MOCK_APP_NAME);
+        }
+        return null;
+      }
+    }).when(listener).onConnectionClosed();
+    connection.addListener(listener);
+
+    connection.connect(TestConstants.MOCK_APP_NAME);
+
+    latch.await(10, TimeUnit.SECONDS);
+    verify(listener, times(connectCalls))
+        .onConnectionClosed();
   }
 
   @Test

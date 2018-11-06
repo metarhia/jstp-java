@@ -192,6 +192,9 @@ public class Connection implements
     }
     sessionPolicy.getSessionData().setParameters(appData, sessionID);
     if (!transport.isConnected()) {
+      synchronized (stateLock) {
+        state = ConnectionState.AWAITING_HANDSHAKE;
+      }
       transport.connect();
     } else {
       onTransportConnected();
