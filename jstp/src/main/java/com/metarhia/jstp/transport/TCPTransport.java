@@ -13,6 +13,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -315,7 +317,11 @@ public class TCPTransport implements Transport {
     try {
       SSLContext context = SSLContext.getInstance("TLSv1.2");
       context.init(null, null, null);
-      return context.getSocketFactory().createSocket(host, port);
+      SSLSocket socket = (SSLSocket) context.getSocketFactory().createSocket(host, port);
+      SSLParameters params = new SSLParameters();
+      params.setEndpointIdentificationAlgorithm("HTTPS");
+      socket.setSSLParameters(params);
+      return socket;
     } catch (NoSuchAlgorithmException | KeyManagementException e) {
       logger.warn("Cannot create SSL socket", e);
     }
