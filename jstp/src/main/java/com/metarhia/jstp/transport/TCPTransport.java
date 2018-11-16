@@ -12,8 +12,11 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -317,15 +320,22 @@ public class TCPTransport implements Transport {
     try {
       SSLContext context = SSLContext.getInstance("TLSv1.2");
       context.init(null, null, null);
-      SSLSocket socket = (SSLSocket) context.getSocketFactory().createSocket(host, port);
-      SSLParameters params = new SSLParameters();
-      params.setEndpointIdentificationAlgorithm("HTTPS");
-      socket.setSSLParameters(params);
+      Socket socket = context.getSocketFactory().createSocket(host, port);
+      verifySSLHostname((SSLSocket) socket);
       return socket;
     } catch (NoSuchAlgorithmException | KeyManagementException e) {
       logger.warn("Cannot create SSL socket", e);
     }
     return null;
+  }
+
+  private void verifySSLHostname(SSLSocket socket) throws IOException {
+    HostnameVerifier hv = HttpsURLConnection.getDefaultHostnameVerifier();
+    SSLSession session = socket.getSession();
+    if (!hv.verify(host, socket.getSession())) {
+      throw new SSLHandshakeException(
+          "Expected " + host + ", found " + session.getPeerPrincipal());
+    }
   }
 
   @Override
